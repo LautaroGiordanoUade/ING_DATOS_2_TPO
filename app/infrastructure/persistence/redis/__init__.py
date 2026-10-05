@@ -1,0 +1,2 @@
+"""Redis operational-data adapter."""
+
