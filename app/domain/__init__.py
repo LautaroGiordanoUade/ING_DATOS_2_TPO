@@ -1,0 +1,2 @@
+"""Technology-independent domain model."""
+
