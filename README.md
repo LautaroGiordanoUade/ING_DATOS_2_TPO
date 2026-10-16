@@ -8,17 +8,60 @@ como `TODO(TP)`. Sin modo demo, los endpoints pendientes responden `501`.
 
 - `app/domain`: entidades dataclass y repositories orientados al negocio; no importa frameworks.
 - `app/application`: DTO, puertos, ocho casos de uso y coordinación compensable.
-- `app/infrastructure`: adaptadores PostgreSQL, MongoDB, Redis y Neo4j.
+- `app/infrastructure`: adaptadores MongoDB, Redis y Neo4j (los archivos PostgreSQL son legado sin uso).
 - `app/api`: schemas Pydantic, dependencias y rutas FastAPI.
 - `docs`: decisiones, matriz de persistencia y guías de los problemas.
 
-PostgreSQL es fuente de verdad de identidad, estado de cuenta y moderación. MongoDB lo es de
-contenido y mensajería. Neo4j lo es del grafo social. Redis mantiene datos operativos propios:
+MongoDB es el motor elegido para identidad, estado de cuenta, moderación, registro durable de
+operaciones, contenido y mensajería. Los adaptadores de identidad y moderación siguen pendientes. Neo4j lo es del grafo social. Redis mantiene datos operativos propios:
 feed materializado, contadores, notificaciones, presencia, sesiones e idempotencia.
+
+## Docker Compose (branch feature/docker)
+
+Requiere Docker Desktop iniciado con contenedores Linux. Desde la raíz del repo:
+
+```powershell
+docker compose up -d --build
+docker compose ps
+Invoke-RestMethod http://localhost:8000/health/ready
+```
+
+Levanta la API y tres motores: MongoDB, Redis y Neo4j. Swagger está en
+http://localhost:8000/docs y Neo4j Browser en http://localhost:7474.
+El usuario Neo4j es `neo4j`; la contraseña local predeterminada es `local_dev_password`.
+Puede cambiarse con `NEO4J_PASSWORD` en `.env` antes del primer inicio.
+Neo4j conserva la contraseña inicial en su volumen: cambiar solo `.env` luego no la cambia.
+Los puertos se publican únicamente en localhost. Esta configuración es para desarrollo local.
+
+Dentro de Docker, la API conecta por nombres de servicio (`mongo`, `redis`, `neo4j`);
+fuera de Docker, `.env.example` usa localhost. No hace falta copiar `.env` para usar Compose.
+El modo demo está desactivado: los casos pendientes responden 501, no datos simulados.
+El readiness comprueba los tres motores y devuelve 503 si alguno no responde.
+
+```powershell
+# Ver errores de arranque
+docker compose logs --tail 100 api neo4j
+# Apagar y volver a iniciar conservando los datos
+docker compose down
+docker compose up -d
+```
+
+Solo para borrar todos los datos y arrancar desde cero (destructivo):
+
+```powershell
+docker compose down --volumes
+docker compose up -d --build
+```
+
+MongoDB y Neo4j guardan sus datos en volúmenes; Redis usa volumen y AOF con sincronización
+cada segundo (puede perder el último segundo ante una caída abrupta).
+El registro de operaciones ahora se guarda en MongoDB. Esto conserva los pasos al reiniciar,
+pero aún falta implementar la recuperación automática y resolver las fallas parciales.
+Las carpetas PostgreSQL y Alembic quedan como legado; la API ya no las usa.
 
 ## Instalación local
 
-Requiere Python 3.12 o superior. No usa Docker.
+Requiere Python 3.12 o superior si se ejecuta fuera de Docker.
 
 ```powershell
 python -m venv .venv
@@ -27,7 +70,7 @@ python -m pip install -e ".[dev]"
 Copy-Item .env.example .env
 ```
 
-Configure en `.env` las URLs/credenciales de PostgreSQL, MongoDB, Redis y Neo4j. Los clientes son
+Configure en `.env` las URLs/credenciales de MongoDB, Redis y Neo4j. Los clientes son
 compartidos durante el lifespan y se cierran al apagar la aplicación. El proceso puede arrancar sin
 los motores; `/health/ready` indicará cuáles no están disponibles.
 
@@ -84,15 +127,6 @@ UUID útiles para completar requests desde Swagger:
 En `development`, los flujos compensables aceptan `X-Fail-At-Step`. Ejemplo para publicación:
 `mongo_create_post`, `neo4j_load_followers` o `redis_feed_update`. En producción se rechaza.
 
-## Alembic
-
-```powershell
-alembic revision --autogenerate -m "initial identity and moderation"
-alembic upgrade head
-```
-
-La URL se toma de `.env`; no use la contraseña de ejemplo fuera de desarrollo.
-
 ## Calidad y tests
 
 ```powershell
@@ -116,7 +150,6 @@ parte del trabajo pendiente.
 
 ## Conexión de motores
 
-- PostgreSQL: variables `POSTGRES_*`; SQLAlchemy crea un pool async con `asyncpg`.
 - MongoDB: `MONGODB_URL` y `MONGODB_DATABASE`; se usa `AsyncMongoClient` oficial de PyMongo.
 - Redis: `REDIS_URL`; `redis-py` async administra el pool.
 - Neo4j: `NEO4J_URI`, `NEO4J_USER`, `NEO4J_PASSWORD`; se usa el driver async oficial.

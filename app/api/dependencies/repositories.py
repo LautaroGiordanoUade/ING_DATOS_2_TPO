@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from app.api.dependencies.databases import PostgresSessionDep, ResourcesDep
+from app.api.dependencies.databases import ResourcesDep
 from app.core.config import get_settings
 from app.infrastructure.persistence.mongodb.database import get_mongo_database
 from app.infrastructure.persistence.mongodb.repositories import (
@@ -10,11 +10,11 @@ from app.infrastructure.persistence.mongodb.repositories import (
     MongoPostRepository,
     MongoReactionRepository,
 )
-from app.infrastructure.persistence.neo4j.repositories import Neo4jSocialGraphRepository
-from app.infrastructure.persistence.postgres.repositories import (
-    PostgresModerationRepository,
-    PostgresUserRepository,
+from app.infrastructure.persistence.mongodb.repositories.identity import (
+    MongoModerationRepository,
+    MongoUserRepository,
 )
+from app.infrastructure.persistence.neo4j.repositories import Neo4jSocialGraphRepository
 from app.infrastructure.persistence.redis.repositories import (
     RedisCounterRepository,
     RedisFeedRepository,
@@ -24,8 +24,8 @@ from app.infrastructure.persistence.redis.repositories import (
 
 @dataclass(slots=True)
 class RepositoryContainer:
-    users: PostgresUserRepository
-    moderation: PostgresModerationRepository
+    users: MongoUserRepository
+    moderation: MongoModerationRepository
     posts: MongoPostRepository
     comments: MongoCommentRepository
     reactions: MongoReactionRepository
@@ -39,13 +39,12 @@ class RepositoryContainer:
 
 def get_repositories(
     resources: ResourcesDep,
-    session: PostgresSessionDep,
 ) -> RepositoryContainer:
     settings = get_settings()
     mongo_database = get_mongo_database(resources.mongo_client, settings.mongodb_database)
     return RepositoryContainer(
-        users=PostgresUserRepository(session),
-        moderation=PostgresModerationRepository(session),
+        users=MongoUserRepository(mongo_database),
+        moderation=MongoModerationRepository(mongo_database),
         posts=MongoPostRepository(mongo_database),
         comments=MongoCommentRepository(mongo_database),
         reactions=MongoReactionRepository(mongo_database),
