@@ -1,23 +1,32 @@
 from uuid import UUID
 
 from pymongo.asynchronous.database import AsyncDatabase
+from pymongo.errors import DuplicateKeyError
 
 from app.core.exceptions import FeatureNotImplementedError
 from app.domain.entities import Comment, Post, Reaction
-
+from app.infrastructure.persistence.mongodb.collections import MongoCollection
+from app.infrastructure.persistence.mongodb.mappers.post_mapper import (
+    document_to_post,
+    post_to_document,
+)
 
 class MongoPostRepository:
     def __init__(self, database: AsyncDatabase[dict[str, object]]) -> None:
         self._database = database
+        self._collection = database[MongoCollection.POSTS.value]
 
     async def create(self, post: Post) -> Post:
-        # TODO(TP): Persistir publicación e índices necesarios en MongoDB.
-        raise FeatureNotImplementedError("MongoPostRepository.create")
+        try:
+            await self._collection.insert_one(post_to_document(post))
+        except DuplicateKeyError:
+            pass  # mismo id = misma publicación: un reintento no duplica nada
+        return post
 
     async def get(self, post_id: UUID) -> Post | None:
-        # TODO(TP): Implementar consulta MongoDB por UUID de negocio.
-        raise FeatureNotImplementedError("MongoPostRepository.get")
-
+        document = await self._collection.find_one({"_id": str(post_id)})
+        return None if document is None else document_to_post(document)
+    
     async def get_many(self, post_ids: tuple[UUID, ...]) -> tuple[Post, ...]:
         # TODO(TP): Implementar lectura por lote preservando el orden del feed.
         raise FeatureNotImplementedError("MongoPostRepository.get_many")
