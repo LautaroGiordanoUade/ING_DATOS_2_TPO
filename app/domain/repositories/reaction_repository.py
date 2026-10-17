@@ -1,3 +1,4 @@
+#Guardar o cambiar la reacción de alguien, y quitársela
 from typing import Protocol
 from uuid import UUID
 
