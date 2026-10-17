@@ -2,6 +2,7 @@ from uuid import UUID
 
 from pymongo.asynchronous.database import AsyncDatabase
 from pymongo.errors import DuplicateKeyError
+from pymongo import ASCENDING, ReturnDocument
 
 from app.core.exceptions import FeatureNotImplementedError
 from app.domain.entities import Comment, Post, Reaction
@@ -10,6 +11,7 @@ from app.infrastructure.persistence.mongodb.mappers.post_mapper import (
     document_to_post,
     post_to_document,
 )
+from app.infrastructure.persistence.mongodb.mappers.reaction_mapper import document_to_reaction
 
 class MongoPostRepository:
     def __init__(self, database: AsyncDatabase[dict[str, object]]) -> None:
@@ -62,12 +64,36 @@ class MongoCommentRepository:
 class MongoReactionRepository:
     def __init__(self, database: AsyncDatabase[dict[str, object]]) -> None:
         self._database = database
+        self._collection = database[MongoCollection.REACTIONS.value]
 
-    async def upsert(self, reaction: Reaction) -> Reaction:
-        # TODO(TP): Garantizar una reacción por (post_id, user_id) con operación atómica.
-        raise FeatureNotImplementedError("MongoReactionRepository.upsert")
+    async def ensure_indexes(self) -> None:
+        # Una sola reacción por persona y publicación: lo garantiza Mongo, no el código.
+        await self._collection.create_index(
+            [("post_id", ASCENDING), ("user_id", ASCENDING)],
+            unique=True,
+            name="uq_reaction_post_user",
+        )
 
-    async def delete_for_user(self, post_id: UUID, user_id: UUID) -> None:
-        # TODO(TP): Eliminar reacción y coordinar contador derivado.
-        raise FeatureNotImplementedError("MongoReactionRepository.delete_for_user")
+    async def upsert(self, reaction: Reaction) -> Reaction | None:
+        filtro = {"post_id": str(reaction.post_id), "user_id": str(reaction.user_id)}
+        cambios = {
+            "$set": {"kind": reaction.kind},
+            "$setOnInsert": {"_id": str(reaction.id), "created_at": reaction.created_at},
+        }
+        try:
+            anterior = await self._collection.find_one_and_update(
+                filtro, cambios, upsert=True, return_document=ReturnDocument.BEFORE
+            )
+        except DuplicateKeyError:
+            # Dos pedidos simultáneos intentaron crear la primera reacción.
+            # El segundo reintenta y ahora la encuentra: se convierte en cambio.
+            anterior = await self._collection.find_one_and_update(
+                filtro, cambios, upsert=True, return_document=ReturnDocument.BEFORE
+            )
+        return None if anterior is None else document_to_reaction(anterior)
 
+    async def delete_for_user(self, post_id: UUID, user_id: UUID) -> Reaction | None:
+        borrada = await self._collection.find_one_and_delete(
+            {"post_id": str(post_id), "user_id": str(user_id)}
+        )
+        return None if borrada is None else document_to_reaction(borrada)
