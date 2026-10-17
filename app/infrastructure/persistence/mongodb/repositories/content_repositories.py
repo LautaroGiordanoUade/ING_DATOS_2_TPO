@@ -2,7 +2,7 @@ from uuid import UUID
 
 from pymongo.asynchronous.database import AsyncDatabase
 from pymongo.errors import DuplicateKeyError
-from pymongo import ASCENDING, ReturnDocument
+from pymongo import ASCENDING, DESCENDING, ReturnDocument
 
 from app.core.exceptions import FeatureNotImplementedError
 from app.domain.entities import Comment, Post, Reaction
@@ -12,6 +12,7 @@ from app.infrastructure.persistence.mongodb.mappers.post_mapper import (
     post_to_document,
 )
 from app.infrastructure.persistence.mongodb.mappers.reaction_mapper import document_to_reaction
+from app.infrastructure.persistence.mongodb.mappers.comment_mapper import comment_to_document
 
 class MongoPostRepository:
     def __init__(self, database: AsyncDatabase[dict[str, object]]) -> None:
@@ -51,15 +52,24 @@ class MongoCommentRepository:
 
     def __init__(self, database: AsyncDatabase[dict[str, object]]) -> None:
         self._database = database
+        self._collection = database[MongoCollection.COMMENTS.value]
+
+    async def ensure_indexes(self) -> None:
+        # Para listar los comentarios de una publicación, del más nuevo al más viejo.
+        await self._collection.create_index(
+            [("post_id", ASCENDING), ("created_at", DESCENDING)],
+            name="ix_comment_post_created",
+        )
 
     async def create(self, comment: Comment) -> Comment:
-        # TODO(TP): Persistir comentario y definir índices/consistencia.
-        raise FeatureNotImplementedError("MongoCommentRepository.create")
+        try:
+            await self._collection.insert_one(comment_to_document(comment))
+        except DuplicateKeyError:
+            pass  # mismo id = mismo comentario: un reintento no duplica nada
+        return comment
 
     async def delete(self, comment_id: UUID) -> None:
-        # TODO(TP): Implementar compensación de comentario.
-        raise FeatureNotImplementedError("MongoCommentRepository.delete")
-
+        await self._collection.delete_one({"_id": str(comment_id)})
 
 class MongoReactionRepository:
     def __init__(self, database: AsyncDatabase[dict[str, object]]) -> None:
