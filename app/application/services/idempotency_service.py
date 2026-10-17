@@ -16,9 +16,15 @@ class IdempotencyService:
             return previous
         reserved = await self._repository.reserve(key, operation_name, self._ttl_seconds)
         if not reserved:
+            # Puede que la otra operación haya terminado justo ahora.
+            previous = await self._repository.get_result(key)
+            if previous is not None:
+                return previous
             raise IdempotencyConflictError("La operación con esta clave ya está en curso")
         return None
 
     async def complete(self, key: str, result: bytes) -> None:
         await self._repository.store_result(key, result, self._ttl_seconds)
 
+    async def release(self, key: str) -> None:
+        await self._repository.release(key)
