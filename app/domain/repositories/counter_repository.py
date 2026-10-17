@@ -1,3 +1,4 @@
+#	Sumar o restar al contador, y leer varios contadores
 from typing import Protocol
 from uuid import UUID
 

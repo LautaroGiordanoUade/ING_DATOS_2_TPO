@@ -13,6 +13,7 @@ from app.infrastructure.persistence.mongodb.client import create_mongo_client
 from app.infrastructure.persistence.mongodb.repositories.operation_log import MongoOperationLogRepository
 from app.infrastructure.persistence.neo4j.client import create_neo4j_driver
 from app.infrastructure.persistence.redis.client import create_redis_client
+from app.infrastructure.persistence.mongodb.indexes import ensure_mongo_indexes
 
 logger = logging.getLogger(__name__)
 
@@ -43,7 +44,11 @@ def build_lifespan(
             neo4j=neo4j,
             operation_log=MongoOperationLogRepository(mongo[settings.mongodb_database]),
         )
-        logger.info("Application resources initialized lazily")
+        try:
+            await ensure_mongo_indexes(mongo[settings.mongodb_database])
+        except Exception:
+            logger.exception("No se pudieron crear los índices de MongoDB")
+        logger.info("Application resources initialized lazily")        
         try:
             yield
         finally:
