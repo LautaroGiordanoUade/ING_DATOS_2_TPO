@@ -1,4 +1,5 @@
 import json
+from typing import Any, cast
 from uuid import UUID
 
 from redis.asyncio import Redis
@@ -50,7 +51,8 @@ class RedisCounterRepository:
 
     async def increment(self, namespace: str, entity_id: UUID, amount: int = 1) -> int:
         key = RedisKeys.counter(namespace, entity_id)
-        result = await self._client.eval(_INCREMENT_NOT_NEGATIVE, 1, key, amount)
+        client = cast(Any, self._client)
+        result = await client.eval(_INCREMENT_NOT_NEGATIVE, 1, key, str(amount))
         return int(result)
 
     async def get_many(
@@ -59,7 +61,8 @@ class RedisCounterRepository:
         if not entity_ids:
             return {}
         keys = [RedisKeys.counter(namespace, entity_id) for entity_id in entity_ids]
-        values = await self._client.mget(keys)
+        client = cast(Any, self._client)
+        values = await client.mget(keys)
         return {
             entity_id: int(value) if value is not None else 0
             for entity_id, value in zip(entity_ids, values, strict=True)
@@ -73,14 +76,15 @@ class RedisNotificationRepository:
     async def publish(self, recipient_id: UUID, event: dict[str, object]) -> None:
         event_id = str(event["event_id"])
         payload = json.dumps(event, default=str)
+        client = cast(Any, self._client)
         # Guardada (hash por event_id: repetir el mismo evento no la duplica)...
-        await self._client.hset(RedisKeys.notifications(recipient_id), event_id, payload)
+        await client.hset(RedisKeys.notifications(recipient_id), event_id, payload)
         # ...y entregada al instante a quien esté conectado (Pub/Sub).
-        await self._client.publish(RedisKeys.notification_channel(recipient_id), payload)
+        await client.publish(RedisKeys.notification_channel(recipient_id), payload)
 
     async def revoke(self, recipient_id: UUID, event_id: UUID) -> None:
-        await self._client.hdel(RedisKeys.notifications(recipient_id), str(event_id))
-
+        client = cast(Any, self._client)
+        await client.hdel(RedisKeys.notifications(recipient_id), str(event_id))
 
 class RedisIdempotencyRepository:
     def __init__(self, client: Redis) -> None:

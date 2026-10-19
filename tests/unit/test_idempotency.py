@@ -24,6 +24,10 @@ class FakeIdempotencyRepository:
     async def store_result(self, key: str, result: bytes, ttl_seconds: int) -> None:
         del ttl_seconds
         self.results[key] = result
+    
+    async def release(self, key: str) -> None:
+        self.reserved.discard(key)
+        self.results.pop(key, None)
 
 
 @pytest.mark.asyncio
