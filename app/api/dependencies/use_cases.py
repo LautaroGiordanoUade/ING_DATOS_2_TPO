@@ -9,7 +9,7 @@ from app.application.ports import (
     FailureInjector,
     NoOpFailureInjector,
 )
-from app.application.services import CompensationService
+from app.application.services import CompensationService, IdempotencyService
 from app.application.use_cases import (
     FollowUserUseCase,
     GetFeedUseCase,
@@ -21,6 +21,10 @@ from app.application.use_cases import (
     SuspendAndTraceUserUseCase,
 )
 from app.core.config import get_settings
+
+from app.infrastructure.persistence.redis.repositories.operational_repositories import (
+    RedisIdempotencyRepository,
+)
 
 RepositoriesDep = Annotated[RepositoryContainer, Depends(get_repositories)]
 
@@ -86,6 +90,7 @@ def get_interaction_use_case(
         repositories.counters,
         repositories.notifications,
         CompensationService(resources.operation_log, failure_injector),
+        idempotency=IdempotencyService(RedisIdempotencyRepository(resources.redis)),
     )
 
 
