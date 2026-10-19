@@ -7,6 +7,7 @@ from app.core.exceptions import FeatureNotImplementedError
 from app.domain.value_objects import FeedCursor, Page
 from app.infrastructure.persistence.redis.keys import RedisKeys
 
+
 class RedisFeedRepository:
     def __init__(self, client: Redis) -> None:
         self._client = client

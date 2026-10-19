@@ -21,7 +21,6 @@ from app.application.use_cases import (
     SuspendAndTraceUserUseCase,
 )
 from app.core.config import get_settings
-
 from app.infrastructure.persistence.redis.repositories.operational_repositories import (
     RedisIdempotencyRepository,
 )
