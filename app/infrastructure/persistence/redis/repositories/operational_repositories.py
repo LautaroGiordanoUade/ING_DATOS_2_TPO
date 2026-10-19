@@ -1,10 +1,11 @@
+import json
 from uuid import UUID
 
 from redis.asyncio import Redis
 
 from app.core.exceptions import FeatureNotImplementedError
 from app.domain.value_objects import FeedCursor, Page
-
+from app.infrastructure.persistence.redis.keys import RedisKeys
 
 class RedisFeedRepository:
     def __init__(self, client: Redis) -> None:
@@ -31,19 +32,37 @@ class RedisFeedRepository:
         raise FeatureNotImplementedError("RedisFeedRepository.clear_user_feed")
 
 
+# Suma/resta de forma atómica (un solo comando en el servidor) y nunca baja de 0.
+_INCREMENT_NOT_NEGATIVE = """
+local value = redis.call('INCRBY', KEYS[1], ARGV[1])
+if value < 0 then
+    redis.call('SET', KEYS[1], 0)
+    return 0
+end
+return value
+"""
+
+
 class RedisCounterRepository:
     def __init__(self, client: Redis) -> None:
         self._client = client
 
     async def increment(self, namespace: str, entity_id: UUID, amount: int = 1) -> int:
-        # TODO(TP): Elegir comando atómico, límites y reconciliación de contadores.
-        raise FeatureNotImplementedError("RedisCounterRepository.increment")
+        key = RedisKeys.counter(namespace, entity_id)
+        result = await self._client.eval(_INCREMENT_NOT_NEGATIVE, 1, key, amount)
+        return int(result)
 
     async def get_many(
         self, namespace: str, entity_ids: tuple[UUID, ...]
     ) -> dict[UUID, int]:
-        # TODO(TP): Implementar lectura por lote de contadores.
-        raise FeatureNotImplementedError("RedisCounterRepository.get_many")
+        if not entity_ids:
+            return {}
+        keys = [RedisKeys.counter(namespace, entity_id) for entity_id in entity_ids]
+        values = await self._client.mget(keys)
+        return {
+            entity_id: int(value) if value is not None else 0
+            for entity_id, value in zip(entity_ids, values, strict=True)
+        }
 
 
 class RedisNotificationRepository:
@@ -51,12 +70,15 @@ class RedisNotificationRepository:
         self._client = client
 
     async def publish(self, recipient_id: UUID, event: dict[str, object]) -> None:
-        # TODO(TP): Definir persistencia/entrega y comando Redis de notificaciones.
-        raise FeatureNotImplementedError("RedisNotificationRepository.publish")
+        event_id = str(event["event_id"])
+        payload = json.dumps(event, default=str)
+        # Guardada (hash por event_id: repetir el mismo evento no la duplica)...
+        await self._client.hset(RedisKeys.notifications(recipient_id), event_id, payload)
+        # ...y entregada al instante a quien esté conectado (Pub/Sub).
+        await self._client.publish(RedisKeys.notification_channel(recipient_id), payload)
 
     async def revoke(self, recipient_id: UUID, event_id: UUID) -> None:
-        # TODO(TP): Implementar compensación de notificación si el modelo lo permite.
-        raise FeatureNotImplementedError("RedisNotificationRepository.revoke")
+        await self._client.hdel(RedisKeys.notifications(recipient_id), str(event_id))
 
 
 class RedisIdempotencyRepository:
@@ -64,14 +86,20 @@ class RedisIdempotencyRepository:
         self._client = client
 
     async def reserve(self, key: str, operation_name: str, ttl_seconds: int) -> bool:
-        # TODO(TP): Implementar reserva atómica con TTL y ownership de operación.
-        raise FeatureNotImplementedError("RedisIdempotencyRepository.reserve")
+        # SET con NX: solo el primero que llega logra reservar la clave.
+        reserved = await self._client.set(
+            RedisKeys.idempotency(key), operation_name, nx=True, ex=ttl_seconds
+        )
+        return bool(reserved)
 
     async def get_result(self, key: str) -> bytes | None:
-        # TODO(TP): Implementar lectura del resultado idempotente.
-        raise FeatureNotImplementedError("RedisIdempotencyRepository.get_result")
+        value = await self._client.get(RedisKeys.idempotency_result(key))
+        if value is None:
+            return None
+        return value if isinstance(value, bytes) else str(value).encode()
 
     async def store_result(self, key: str, result: bytes, ttl_seconds: int) -> None:
-        # TODO(TP): Implementar finalización atómica de la clave.
-        raise FeatureNotImplementedError("RedisIdempotencyRepository.store_result")
+        await self._client.set(RedisKeys.idempotency_result(key), result, ex=ttl_seconds)
 
+    async def release(self, key: str) -> None:
+        await self._client.delete(RedisKeys.idempotency(key))

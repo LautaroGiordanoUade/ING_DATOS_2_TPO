@@ -20,3 +20,14 @@ class RedisKeys:
     def idempotency(key: str) -> str:
         return f"idempotency:{key}"
 
+    @staticmethod
+    def idempotency_result(key: str) -> str:
+        return f"idempotency:{key}:result"
+
+    @staticmethod
+    def notifications(user_id: UUID) -> str:
+        return f"user:{user_id}:notifications"
+
+    @staticmethod
+    def notification_channel(user_id: UUID) -> str:
+        return f"user:{user_id}:notifications:live"
