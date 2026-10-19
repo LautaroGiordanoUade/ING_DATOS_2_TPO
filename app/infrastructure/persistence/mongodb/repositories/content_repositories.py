@@ -1,18 +1,19 @@
 from uuid import UUID
 
+from pymongo import ASCENDING, DESCENDING, ReturnDocument
 from pymongo.asynchronous.database import AsyncDatabase
 from pymongo.errors import DuplicateKeyError
-from pymongo import ASCENDING, DESCENDING, ReturnDocument
 
 from app.core.exceptions import FeatureNotImplementedError
 from app.domain.entities import Comment, Post, Reaction
 from app.infrastructure.persistence.mongodb.collections import MongoCollection
+from app.infrastructure.persistence.mongodb.mappers.comment_mapper import comment_to_document
 from app.infrastructure.persistence.mongodb.mappers.post_mapper import (
     document_to_post,
     post_to_document,
 )
 from app.infrastructure.persistence.mongodb.mappers.reaction_mapper import document_to_reaction
-from app.infrastructure.persistence.mongodb.mappers.comment_mapper import comment_to_document
+
 
 class MongoPostRepository:
     def __init__(self, database: AsyncDatabase[dict[str, object]]) -> None:

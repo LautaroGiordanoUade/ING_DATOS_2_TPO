@@ -11,4 +11,6 @@ async def ensure_mongo_indexes(database: AsyncDatabase[dict[str, object]]) -> No
     await MongoReactionRepository(database).ensure_indexes()
     await MongoCommentRepository(database).ensure_indexes()
     
-#Los dos métodos son idempotentes: delete_one sobre algo que no existe no falla, y create ignora el duplicado. Eso permite reintentar una compensación sin riesgo.
+#Los dos métodos son idempotentes: delete_one sobre 
+# algo que no existe no falla, y create ignora el duplicado. 
+# Eso permite reintentar una compensación sin riesgo.

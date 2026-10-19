@@ -10,10 +10,12 @@ from redis.asyncio import Redis
 
 from app.core.config import Settings
 from app.infrastructure.persistence.mongodb.client import create_mongo_client
-from app.infrastructure.persistence.mongodb.repositories.operation_log import MongoOperationLogRepository
+from app.infrastructure.persistence.mongodb.indexes import ensure_mongo_indexes
+from app.infrastructure.persistence.mongodb.repositories.operation_log import (
+    MongoOperationLogRepository,
+)
 from app.infrastructure.persistence.neo4j.client import create_neo4j_driver
 from app.infrastructure.persistence.redis.client import create_redis_client
-from app.infrastructure.persistence.mongodb.indexes import ensure_mongo_indexes
 
 logger = logging.getLogger(__name__)
 
