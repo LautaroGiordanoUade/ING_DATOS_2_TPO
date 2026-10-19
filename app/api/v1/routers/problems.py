@@ -46,6 +46,7 @@ from app.schemas.models import (
     OperationResponse,
     PostCreate,
     ReactionCreate,
+    ReactionRemove,
     SuspensionRequest,
     UserTraceResponse,
 )
@@ -68,7 +69,6 @@ async def get_operation(operation_id: UUID, resources: ResourcesDep) -> Operatio
         created_at=operation.created_at,
         updated_at=operation.updated_at,
     )
-
 
 @router.post("/1/publish", response_model=OperationResponse, status_code=status.HTTP_202_ACCEPTED)
 async def publish(
@@ -102,7 +102,6 @@ async def publish(
     operation = await use_case.execute(post)
     return OperationResponse(operation_id=operation.operation_id, status=operation.status.value)
 
-
 @router.post("/2/follow", status_code=status.HTTP_204_NO_CONTENT)
 async def follow(
     payload: FollowRequest,
@@ -113,7 +112,6 @@ async def follow(
         return
     await use_case.follow(payload.user_id, payload.followed_user_id)
 
-
 @router.delete("/2/follow", status_code=status.HTTP_204_NO_CONTENT)
 async def unfollow(
     payload: FollowRequest,
@@ -123,7 +121,6 @@ async def unfollow(
     if demo_mode:
         return
     await use_case.unfollow(payload.user_id, payload.followed_user_id)
-
 
 @router.get("/3/feed/{user_id}", response_model=FeedResponse)
 async def feed(
@@ -138,7 +135,6 @@ async def feed(
         return demo_feed(user_id)
     return await use_case.execute(user_id)
 
-
 @router.get("/4/recommendations/{user_id}")
 async def recommendations(
     user_id: UUID,
@@ -148,7 +144,6 @@ async def recommendations(
     if demo_mode:
         return (DEMO_OTHER_USER_ID,)
     return await use_case.recommendations(user_id)
-
 
 @router.get("/4/mutual-friends")
 async def mutual_friends(
@@ -160,32 +155,50 @@ async def mutual_friends(
         return (DEMO_USER_ID,)
     return await use_case.mutual_friends(query.user_id, query.other_user_id)
 
-
-@router.post("/5/reaction", status_code=status.HTTP_204_NO_CONTENT)
+@router.post("/5/reaction", response_model=OperationResponse, status_code=status.HTTP_202_ACCEPTED)
 async def react(
     payload: ReactionCreate,
     use_case: Annotated[InteractWithPostUseCase, Depends(get_interaction_use_case)],
     demo_mode: DemoModeDep,
-) -> None:
+) -> OperationResponse:
     if demo_mode:
-        return
-    await use_case.react(
+        return OperationResponse(
+            operation_id=DEMO_OPERATION_ID, status=OperationStatus.COMPLETED.value
+        )
+    operation = await use_case.react(
         Reaction(post_id=payload.post_id, user_id=payload.user_id, kind=payload.kind)
     )
+    return OperationResponse(operation_id=operation.operation_id, status=operation.status.value)
 
+@router.delete("/5/reaction", response_model=OperationResponse)
+async def remove_reaction(
+    payload: ReactionRemove,
+    use_case: Annotated[InteractWithPostUseCase, Depends(get_interaction_use_case)],
+    demo_mode: DemoModeDep,
+) -> OperationResponse:
+    if demo_mode:
+        return OperationResponse(
+            operation_id=DEMO_OPERATION_ID, status=OperationStatus.COMPLETED.value
+        )
+    operation = await use_case.remove_reaction(payload.post_id, payload.user_id)
+    return OperationResponse(operation_id=operation.operation_id, status=operation.status.value)
 
-@router.post("/5/comment", status_code=status.HTTP_204_NO_CONTENT)
+@router.post("/5/comment", response_model=OperationResponse, status_code=status.HTTP_202_ACCEPTED)
 async def comment(
     payload: CommentCreate,
     use_case: Annotated[InteractWithPostUseCase, Depends(get_interaction_use_case)],
     demo_mode: DemoModeDep,
-) -> None:
+    idempotency_key: Annotated[str | None, Header(alias="Idempotency-Key")] = None,
+) -> OperationResponse:
     if demo_mode:
-        return
-    await use_case.comment(
-        Comment(post_id=payload.post_id, user_id=payload.user_id, text=payload.text)
+        return OperationResponse(
+            operation_id=DEMO_OPERATION_ID, status=OperationStatus.COMPLETED.value
+        )
+    operation = await use_case.comment(
+        Comment(post_id=payload.post_id, user_id=payload.user_id, text=payload.text),
+        idempotency_key,
     )
-
+    return OperationResponse(operation_id=operation.operation_id, status=operation.status.value)
 
 @router.post("/6/message", status_code=status.HTTP_202_ACCEPTED)
 async def send_message(
@@ -204,7 +217,6 @@ async def send_message(
         )
     )
 
-
 @router.post("/7/moderate", status_code=status.HTTP_204_NO_CONTENT)
 async def moderate(
     payload: ModerationRequest,
@@ -217,7 +229,6 @@ async def moderate(
         payload.report_id, payload.post_id, payload.moderator_id, payload.decision
     )
 
-
 @router.post("/8/suspend", status_code=status.HTTP_204_NO_CONTENT)
 async def suspend(
     payload: SuspensionRequest,
@@ -227,7 +238,6 @@ async def suspend(
     if demo_mode:
         return
     await use_case.suspend_user(payload.user_id, payload.reason)
-
 
 @router.get("/8/trace/{user_id}", response_model=UserTraceResponse)
 async def trace(
