@@ -21,6 +21,9 @@ from app.application.use_cases import (
     SuspendAndTraceUserUseCase,
 )
 from app.core.config import get_settings
+from app.infrastructure.persistence.mongodb.repositories.publication_jobs import (
+    MongoPublicationJobs,
+)
 from app.infrastructure.persistence.redis.reaction_lock import RedisReactionLock
 from app.infrastructure.persistence.redis.repositories.operational_repositories import (
     RedisIdempotencyRepository,
@@ -43,15 +46,9 @@ def get_failure_injector(
 FailureInjectorDep = Annotated[FailureInjector, Depends(get_failure_injector)]
 
 
-def get_publish_use_case(
-    repositories: RepositoriesDep,
-    resources: ResourcesDep,
-    failure_injector: FailureInjectorDep,
-) -> PublishContentUseCase:
-    compensation = CompensationService(resources.operation_log, failure_injector)
-    return PublishContentUseCase(
-        repositories.posts, repositories.graph, repositories.feeds, compensation
-    )
+def get_publish_use_case(resources: ResourcesDep) -> PublishContentUseCase:
+    database = resources.mongo_client[get_settings().mongodb_database]
+    return PublishContentUseCase(MongoPublicationJobs(database))
 
 
 def get_follow_use_case(
@@ -136,4 +133,3 @@ def get_suspend_trace_use_case(
         repositories.conversations,
         CompensationService(resources.operation_log, failure_injector),
     )
-

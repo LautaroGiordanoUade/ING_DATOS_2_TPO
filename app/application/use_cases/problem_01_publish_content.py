@@ -1,51 +1,29 @@
-from uuid import UUID
-
-from app.application.services import CompensationService, OperationContext, OperationStep
+from app.application.ports.publication_jobs import PublicationJobs
+from app.application.services.publication_job import PublicationJob
+from app.core.exceptions import InvalidOperationError
 from app.domain.entities import Post
-from app.domain.repositories import FeedRepository, PostRepository, SocialGraphRepository
 
 
 class PublishContentUseCase:
-    def __init__(
-        self,
-        posts: PostRepository,
-        graph: SocialGraphRepository,
-        feeds: FeedRepository,
-        compensation: CompensationService,
-    ) -> None:
-        self._posts = posts
-        self._graph = graph
-        self._feeds = feeds
-        self._compensation = compensation
+    def __init__(self, jobs: PublicationJobs) -> None:
+        self._jobs = jobs
 
-    async def execute(self, post: Post) -> OperationContext:
-        followers: tuple[UUID, ...] = ()
-
-        async def create_post() -> None:
-            await self._posts.create(post)
-
-        async def delete_post() -> None:
-            # TODO(TP): Validar si borrar es la compensación adecuada o usar tombstone.
-            await self._posts.delete(post.id)
-
-        async def load_followers() -> None:
-            nonlocal followers
-            followers = await self._graph.follower_ids(post.user_id)
-
-        async def fan_out() -> None:
-            # TODO(TP): Elegir fan-out síncrono, diferido o híbrido para cuentas masivas.
-            await self._feeds.add_to_feeds(followers, post.id, post.published_at.timestamp())
-
-        async def remove_from_feeds() -> None:
-            # TODO(TP): Implementar compensación exacta e idempotente del fan-out.
-            await self._feeds.remove_from_feeds(post.id)
-
-        operation = OperationContext(operation_type="problem_01_publish_content")
-        return await self._compensation.execute(
-            operation,
-            (
-                OperationStep("mongo_create_post", create_post, delete_post),
-                OperationStep("neo4j_load_followers", load_followers),
-                OperationStep("redis_feed_update", fan_out, remove_from_feeds),
-            ),
-        )
+    async def execute(
+        self, post: Post, idempotency_key: str | None = None, fail_at: str | None = None
+    ) -> PublicationJob:
+        if not post.interests or any(not interest.strip() for interest in post.interests):
+            raise InvalidOperationError("La publicacion requiere al menos un interes no vacio")
+        if post.visibility != "public":
+            raise InvalidOperationError("Problema 1 admite publicaciones publicas")
+        if idempotency_key is not None and not 1 <= len(idempotency_key) <= 200:
+            raise InvalidOperationError("Idempotency-Key debe tener entre 1 y 200 caracteres")
+        allowed = {
+            "mongo_create_post",
+            "neo4j_load_followers",
+            "redis_feed_update",
+            "redis_feed_partial",
+            "publication_commit",
+        }
+        if fail_at is not None and fail_at not in allowed:
+            raise InvalidOperationError("Paso de falla desconocido para el problema 1")
+        return await self._jobs.enqueue(post, idempotency_key, fail_at)

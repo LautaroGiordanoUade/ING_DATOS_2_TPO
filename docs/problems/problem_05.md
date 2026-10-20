@@ -1,12 +1,12 @@
-# Problema 05 — Reacciones y comentarios
+# Problema 5: reacciones y comentarios
 
-- **Objetivo:** interacción única por usuario/post, contadores y notificaciones.
-- **Motores:** MongoDB (interacción), Redis (contador/notificación).
-- **Secuencia:** `TODO(TP)` upsert/insert → delta contador → evento.
-- **Identificadores:** reaction/comment/post/user/operation UUID.
-- **Fallas:** persistencia exitosa con derivados incompletos.
-- **Compensaciones:** `TODO(TP)` revertir delta/evento sin borrar cambios concurrentes.
-- **Idempotencia:** clave de request y unicidad `(post_id,user_id)`.
-- **Concurrencia:** cambio/eliminación simultánea y delta correcto.
-- **Código:** `InteractWithPostUseCase` y cuatro repositories de interacción.
+Implementado en InteractWithPostUseCase y adaptadores MongoDB/Redis:
+- Reacción única por usuario/post, cambio de tipo y eliminación.
+- Comentarios, contadores Redis y notificaciones persistidas/PubSub.
+- Idempotencia por clave para comentarios.
+- Serialización Redis de cambios de reacción y compensación de notificaciones parciales.
 
+La guía de consistencia, pruebas y límites está en docs/problem_05_consistency.md.
+No se garantiza recuperación automática del bloqueo huérfano tras caída de API ni entrega
+exactamente una vez. Falta fingerprint de comentarios y recuperación de resultados inciertos
+adicionales. Esos pendientes están explícitos en TODO.md.

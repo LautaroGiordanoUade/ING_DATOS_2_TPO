@@ -73,10 +73,12 @@ class ReactionCreate(ApiModel):
     post_id: UUID
     user_id: UUID
     kind: str = Field(min_length=1, max_length=30)
-    
+
+
 class ReactionRemove(ApiModel):
     post_id: UUID
     user_id: UUID
+
 
 class CommentCreate(ApiModel):
     post_id: UUID
@@ -124,6 +126,10 @@ class OperationResponse(ApiModel):
     status: str
 
 
+class PublicationResponse(OperationResponse):
+    post_id: UUID
+
+
 class OperationDetailResponse(OperationResponse):
     operation_type: str
     current_step: str | None
@@ -140,4 +146,3 @@ class HealthResponse(ApiModel):
 class ReadinessResponse(ApiModel):
     status: str
     services: dict[str, str]
-

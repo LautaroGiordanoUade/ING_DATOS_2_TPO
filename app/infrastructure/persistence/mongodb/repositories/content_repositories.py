@@ -28,9 +28,11 @@ class MongoPostRepository:
         return post
 
     async def get(self, post_id: UUID) -> Post | None:
-        document = await self._collection.find_one({"_id": str(post_id)})
+        document = await self._collection.find_one(
+            {"_id": str(post_id), "publication_state": {"$ne": "pending"}}
+        )
         return None if document is None else document_to_post(document)
-    
+
     async def get_many(self, post_ids: tuple[UUID, ...]) -> tuple[Post, ...]:
         # TODO(TP): Implementar lectura por lote preservando el orden del feed.
         raise FeatureNotImplementedError("MongoPostRepository.get_many")
@@ -71,6 +73,7 @@ class MongoCommentRepository:
 
     async def delete(self, comment_id: UUID) -> None:
         await self._collection.delete_one({"_id": str(comment_id)})
+
 
 class MongoReactionRepository:
     def __init__(self, database: AsyncDatabase[dict[str, object]]) -> None:

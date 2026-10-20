@@ -18,7 +18,7 @@ class SeedOptions:
 async def seed(options: SeedOptions) -> None:
     random.seed(options.seed)
     # TODO(TP): Implementar dataset realista, carga por lotes y volumen mínimo de 50.000.
-    # TODO(TP): Mantener UUID compartidos y orden seguro entre los cuatro motores.
+    # TODO(TP): Mantener UUID compartidos y orden seguro entre MongoDB, Neo4j y Redis.
     logger.info(
         "Seed skeleton ready: users=%s posts=%s messages=%s seed=%s",
         options.users,
