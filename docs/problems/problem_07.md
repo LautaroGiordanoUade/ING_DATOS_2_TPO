@@ -1,7 +1,9 @@
 # Problema 07 — Moderación
 
+**Estado: pendiente de implementación.**
+
 - **Objetivo:** ocultar/revertir contenido y derivados de forma auditable.
-- **Motores:** PostgreSQL, MongoDB, Redis y Neo4j si existe nodo Post.
+- **Motores:** MongoDB, Redis y Neo4j si existe nodo Post.
 - **Secuencia:** `TODO(TP)` resolver reporte, estado del post, feeds, contadores y grafo.
 - **Identificadores:** report/post/moderator/operation UUID.
 - **Fallas:** decisión durable con vistas incompletas.

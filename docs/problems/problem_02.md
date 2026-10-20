@@ -1,7 +1,9 @@
 # Problema 02 — Follow / unfollow
 
+**Estado: pendiente de implementación.**
+
 - **Objetivo:** gestionar relación pública/privada y derivados.
-- **Motores:** PostgreSQL (estado/tipo), Neo4j (relación), Redis (contadores/feed).
+- **Motores:** MongoDB (estado/tipo), Neo4j (relación), Redis (contadores/feed).
 - **Secuencia:** `TODO(TP)` validar → crear/pending/aprobar/eliminar → actualizar derivados.
 - **Identificadores:** ambos `user_id` y `operation_id` UUID.
 - **Fallas/compensaciones:** arista sin contador o feed desalineado; `TODO(TP)` reconciliar/revertir.

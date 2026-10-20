@@ -30,7 +30,7 @@ class SuspendAndTraceUserUseCase:
         self._compensation = compensation
 
     async def suspend_user(self, user_id: UUID, reason: str) -> None:
-        # TODO(TP): Coordinar estado SQL y efectos Mongo/Redis/Neo4j con compensaciones.
+        # TODO(TP): Coordinar estado de cuenta MongoDB y efectos Redis/Neo4j con compensaciones.
         raise FeatureNotImplementedError("Problema 8: suspensión")
 
     async def trace_user(self, user_id: UUID) -> UserTrace:

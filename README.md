@@ -16,7 +16,7 @@ MongoDB es el motor elegido para identidad, estado de cuenta, moderación, regis
 operaciones, contenido y mensajería. Los adaptadores de identidad y moderación siguen pendientes. Neo4j lo es del grafo social. Redis mantiene datos operativos propios:
 feed materializado, contadores, notificaciones, presencia, sesiones e idempotencia.
 
-## Docker Compose (branch feature/docker)
+## Docker Compose
 
 Requiere Docker Desktop iniciado con contenedores Linux. Desde la raíz del repo:
 
@@ -26,7 +26,7 @@ docker compose ps
 Invoke-RestMethod http://localhost:8000/health/ready
 ```
 
-Levanta la API y tres motores: MongoDB, Redis y Neo4j. Swagger está en
+Levanta la API, el worker de publicaciones y tres motores: MongoDB, Redis y Neo4j. Swagger está en
 http://localhost:8000/docs y Neo4j Browser en http://localhost:7474.
 El usuario Neo4j es `neo4j`; la contraseña local predeterminada es `local_dev_password`.
 Puede cambiarse con `NEO4J_PASSWORD` en `.env` antes del primer inicio.
@@ -56,8 +56,38 @@ docker compose up -d --build
 MongoDB y Neo4j guardan sus datos en volúmenes; Redis usa volumen y AOF con sincronización
 cada segundo (puede perder el último segundo ante una caída abrupta).
 El registro de operaciones ahora se guarda en MongoDB. Esto conserva los pasos al reiniciar,
-pero aún falta implementar la recuperación automática y resolver las fallas parciales.
+el P1 retoma automáticamente lotes y compensaciones con los volúmenes conservados.
+La recuperación automática de los demás flujos sigue pendiente.
 Las carpetas PostgreSQL y Alembic quedan como legado; la API ya no las usa.
+
+## Problemas implementados
+
+P1 publica mediante una cola durable y distribución en lotes. P5 implementa reacciones,
+comentarios, contadores y notificaciones, con los límites descritos en su guía.
+Los demás problemas conservan operaciones pendientes; el preview del P1 no reemplaza P3.
+
+En Git Bash, para probar P1 con 2000 seguidores aislados:
+
+```bash
+docker compose exec -T api python < scripts/validar_problema1.py
+```
+
+En PowerShell:
+
+```powershell
+Get-Content -Raw scripts/validar_problema1.py | docker compose exec -T api python -
+```
+
+En Swagger, `POST /api/v1/problems/1/publish` requiere al menos un interés; admite
+`Idempotency-Key` y devuelve `operation_id`, `post_id` y `status: pending`.
+Consultar `/api/v1/problems/operations/{operation_id}` hasta `completed` o `compensated`.
+La falla asíncrona se ve en esa consulta, no como error inmediato del POST aceptado.
+`/api/v1/problems/1/feed-preview/{user_id}` muestra los IDs visibles para demostrar P1.
+
+El worker debe estar levantado incluso si la API corre localmente. El despliegue soportado
+es Docker Linux en un host; el bloqueo local compartido permite un solo consumidor.
+Guía de fallas, recuperación, modelo Neo4j y secuencia: [Problema 1](docs/problems/problem_01.md).
+Límites de P5: [Consistencia del problema 5](docs/problem_05_consistency.md).
 
 ## Instalación local
 
@@ -125,7 +155,8 @@ UUID útiles para completar requests desde Swagger:
 - Conversación demo: `20000000-0000-0000-0000-000000000001`
 
 En `development`, los flujos compensables aceptan `X-Fail-At-Step`. Ejemplo para publicación:
-`mongo_create_post`, `neo4j_load_followers` o `redis_feed_update`. En producción se rechaza.
+`mongo_create_post`, `neo4j_load_followers`, `redis_feed_update`, `redis_feed_partial`
+o `publication_commit`. En producción se rechaza.
 
 ## Calidad y tests
 
@@ -136,8 +167,9 @@ mypy app tests
 pytest
 ```
 
-Las pruebas de integración están deshabilitadas por defecto. Para ejecutarlas después de completar
-los adaptadores y levantar los motores, establezca `RUN_INTEGRATION_TESTS=1`.
+La prueba de integración original sigue siendo un placeholder; RUN_INTEGRATION_TESTS=1
+no valida el TP completo. Las verificaciones reales P1/P5 están en scripts/validar_*.py
+y crean datos aislados en los motores levantados.
 
 ## Datos reproducibles
 

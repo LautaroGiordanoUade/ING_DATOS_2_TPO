@@ -1,114 +1,95 @@
-# TODO del Trabajo Práctico
+# Estado del Trabajo Práctico
 
-Los ítems siguientes son deliberadamente parte de la resolución académica. Formato: **archivo —
-clase/método — problema — motor — qué falta — por qué pendiente**.
+Estado del código de esta rama. Los puntos marcados pendientes siguen pendientes aunque tengan
+rutas en Swagger o respuestas en modo demo.
 
-## Modo demo
+## Problema 1: publicación
 
-- `app/api/demo_data.py` contiene datos mínimos y deterministas exclusivamente para probar contratos
-  HTTP y Swagger. `run_api.cmd` activa `APP_DEMO_MODE=true` en desarrollo.
-- Reemplazar los mocks gradualmente al implementar cada `TODO(TP)`. Nunca usar estas respuestas como
-  dataset, algoritmo, estrategia de consistencia o evidencia de funcionamiento de los motores.
-- Con `APP_DEMO_MODE=false`, toda funcionalidad académica todavía pendiente debe conservar la
-  respuesta controlada `501 Not Implemented`.
+- [x] API real con respuesta 202 y trabajo durable MongoDB.
+- [x] Contenido e intereses persistidos; identificadores compartidos de post y operación.
+- [x] Seguidores aceptados/activos y exclusión de bloqueos mediante Cypher real.
+- [x] Worker fuera del request para cuentas con miles de seguidores; lotes de 250.
+- [x] Audiencia y cursor persistidos; replay de lotes sin duplicados.
+- [x] Marcador común de visibilidad: referencias parciales no son un feed visible.
+- [x] Compensación de toda la audiencia, incluido el lote con resultado incierto.
+- [x] Reanudación tras reinicio, también de compensaciones interrumpidas.
+- [x] Idempotency-Key acotada al autor, fingerprint y conflicto 409.
+- [x] Cinco escenarios de falla, incluido fan-out parcial real.
+- [x] Prueba contra MongoDB/Neo4j/Redis con 2000 seguidores; scripts reproducibles.
+- [x] Guía y secuencia en docs/problems/problem_01.md.
+- Límites de esta entrega: publicaciones públicas, snapshot de hasta 100000 seguidores,
+  consumidor único coordinado por volumen local. Multi-host y pérdida de datos de motores
+  requieren estrategias adicionales; no son garantías de esta implementación.
 
-## Problema 1
+## Problema 2: seguir/dejar de seguir
 
-- `problem_01_publish_content.py` — `PublishContentUseCase.execute` — P1 — Mongo/Neo4j/Redis —
-  elegir fan-out, consistencia, idempotencia y rollback — depende del análisis de escala.
-- `content_repositories.py` / `social_graph_repository.py` / `operational_repositories.py` — métodos
-  usados por publicación — P1 — respectivos motores — implementar consultas/comandos — son la
-  solución concreta evaluada.
+- [ ] Implementar usuarios en MongoDB (get/create/update_account_status e índices únicos).
+- [ ] Follow/unfollow Neo4j; cuentas privadas y aprobación; evitar duplicados.
+- [ ] Coordinar snapshot del P1 con cambios de seguimiento.
+- [ ] Contadores, feed, compensaciones, idempotencia y concurrencia.
 
-## Problema 2
+## Problema 3: feed personalizado
 
-- `problem_02_follow_user.py` — `follow/unfollow` — P2 — PostgreSQL/Neo4j/Redis — estado privado,
-  pending/approve, duplicados, contadores y feed — requiere estrategia concurrente y compensable.
+- [ ] Ranking de relevancia/recencia y 20 publicaciones por página.
+- [ ] Cursor validado y paginación hacia atrás.
+- [ ] Lectura por lote de contenido y contadores sin N+1.
+- [ ] Respetar publicación committed y moderación en todas las lecturas.
+- El preview del P1 muestra IDs visibles; no reemplaza este problema.
 
-## Problema 3
+## Problema 4: amigos en común y sugerencias
 
-- `problem_03_get_feed.py` — `execute` — P3 — Redis/MongoDB/Neo4j — ranking, cursor opaco, lotes y
-  enriquecimiento de 20 posts — algoritmo evaluado.
+- [ ] Cypher de amigos en común y 10 sugerencias por segundo grado/intereses.
+- [ ] Excluir bloqueados, suspendidos y cuentas ya seguidas.
 
-## Problema 4
+## Problema 5: reacciones y comentarios
 
-- `problem_04_social_recommendations.py` — `recommendations` — P4 — Neo4j/PostgreSQL — score,
-  Cypher, bloqueados, suspendidos e intereses — consulta y heurística evaluadas.
+- [x] Alta, cambio y baja de reacción única por usuario/publicación en MongoDB.
+- [x] Comentarios persistidos y contadores Redis.
+- [x] Notificaciones almacenadas y publicación Pub/Sub.
+- [x] Idempotency-Key para comentarios y replay concurrente.
+- [x] Bloqueo Redis por publicación para cambios de reacción y sus compensaciones.
+- [x] Compensación de notificaciones parciales, sin borrar eventos de otras altas.
+- [x] Pruebas con motores reales y regresiones de concurrencia/falla parcial.
+- [ ] Recuperación automática del bloqueo huérfano tras caída de API.
+- [ ] Reconciliación e idempotencia de compensaciones ante resultados inciertos adicionales.
+- [ ] Fingerprint del contenido para idempotencia de comentarios.
+- Ver docs/problem_05_consistency.md para las garantías y límites actuales.
 
-## Problema 5
+## Problema 6: mensajería grupal
 
-- `problem_05_interact_with_post.py` — `react/comment` — P5 — MongoDB/Redis — unicidad, cambio,
-  eliminación, contador y notificación — exige atomicidad/idempotencia específicas.
+- [ ] Conversaciones/historial MongoDB y validación de participantes.
+- [ ] Presencia y entrega Redis, unread y lectura por participante.
+- [ ] Idempotencia, concurrencia, compensaciones y recuperación.
 
-## Problema 6
+## Problema 7: moderación
 
-- `problem_06_send_group_message.py` — `execute` — P6 — MongoDB/Redis — orden persistir/entregar,
-  unread por participante y compensación — política distribuida evaluada.
+- [ ] Reportes y decisión en MongoDB, con validación de rol.
+- [ ] Ocultamiento global, retiro de feed y ajuste de contadores.
+- [ ] Revertir al estado anterior; compensaciones, reintentos y concurrencia.
 
-## Problema 7
+## Problema 8: suspensión y trazabilidad
 
-- `problem_07_moderate_post.py` — ambos métodos — P7 — todos — ocultar/revertir feed, contadores,
-  reporte y representaciones — requiere compensaciones y reconstrucción exactas.
+- [ ] Estado de cuenta y efectos coordinados MongoDB/Neo4j/Redis.
+- [ ] Quitar publicaciones/sugerencias y cerrar presencia.
+- [ ] Consulta real de perfil, relaciones, publicaciones y conversaciones.
 
-## Problema 8
+## Infraestructura y datos
 
-- `problem_08_suspend_and_trace_user.py` — ambos métodos — P8 — todos — suspensión transversal y
-  agregación real sin copiar todo — demuestra trazabilidad poliglota.
+- [x] Dockerfile/Compose: API, worker P1, MongoDB, Redis y Neo4j.
+- [x] Volúmenes y healthchecks de motores/API.
+- [x] La API ya no inicializa PostgreSQL; identidad/moderación se asignan a MongoDB.
+- [x] Registro de operaciones durable MongoDB y consulta por operation_id.
+- [ ] Generador general realista, reproducible y con al menos 50000 registros.
+- [ ] Completar índices/constraints de los problemas restantes.
+- [ ] Procedimiento de reconstrucción frente a pérdida de datos Redis.
+- PostgreSQL/Alembic quedan como código legado sin uso en ejecución; no son un cuarto motor.
 
-## PostgreSQL
+## Informe y entrega
 
-- Repositories PostgreSQL — P2/P7/P8 — SQL, transacciones, conflictos y locking — pendiente para
-  justificar integridad y concurrencia.
-- `alembic/versions` — todos — generar/revisar migración inicial y evoluciones.
-
-## MongoDB
-
-- Repositories MongoDB — P1/P3/P5/P6/P7/P8 — filtros, updates, índices y paginación — no se
-  incluyen queries definitivas.
-- Definir índices únicos para UUID y reacción `(post_id,user_id)`, además de retención/mensajes.
-
-## Redis
-
-- Repositories Redis — P1/P2/P3/P5/P6/P7/P8 — estructuras, comandos atómicos, TTL y Pub/Sub —
-  elección forma parte del diseño.
-- Definir reconciliación de contadores, trimming de feed y semántica durable de notificaciones.
-
-## Neo4j
-
-- `Neo4jSocialGraphRepository` — P1/P2/P4/P8 — todas las consultas Cypher e índices/constraints —
-  parte central del TP.
-- Decidir nodo Post liviano y metadata mínima sin convertir el grafo en réplica de MongoDB.
-
-## Consistencia
-
-- Definir orden de pasos, retry, timeout, estado incierto y reconciliación por cada operación.
-- Implementar el adaptador durable PostgreSQL de `OperationLogRepository`; memoria sirve sólo para
-  demo/test.
-
-## Compensaciones
-
-- Implementar compensación idempotente por P1, P5, P6, P7 y P8; documentar datos irreversibles y
-  estrategia ante falla de la propia compensación.
-- Definir recuperación cuando un paso produce efecto parcial pero falla antes de registrarse como
-  completado (estado incierto, probe/reconciliación).
-
-## Idempotencia
-
-- Implementar `RedisIdempotencyRepository`; integrar `Idempotency-Key`, fingerprint del request,
-  ownership, TTL y replay de respuesta en endpoints relevantes.
-
-## Concurrencia
-
-- Analizar follow/unfollow, upsert de reacción, deltas de contadores, envío/unread, moderación y
-  retries. Evitar read-modify-write; justificar primitivas atómicas/constraints.
-
-## Carga de datos
-
-- `scripts/seed_data.py` — todos — lotes, relaciones coherentes, distribución realista y mínimo de
-  50.000 registros en el proceso de mayor volumen.
-
-## Testing
-
-- Completar fakes por use case, contract tests de repositories, integración por motor, fallas en
-  cada checkpoint, compensación parcial, concurrencia y trazabilidad end-to-end.
-
+- [x] Guía de Docker y guías concretas P1/P5.
+- [ ] Completar matriz con estimaciones y mediciones finales.
+- [ ] Actualizar DER y justificar cambios/desnormalizaciones.
+- [ ] Documentar secuencias, fallas y evidencia de los demás problemas.
+- [ ] Responder tres contrafactuales y conclusión.
+- [ ] Informe PDF y anexo completo de carga/ejecución.
+- [ ] Todos los integrantes deben poder explicar cualquier parte del sistema.

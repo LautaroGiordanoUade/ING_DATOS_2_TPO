@@ -33,8 +33,13 @@ from app.application.use_cases import (
     SocialRecommendationsUseCase,
     SuspendAndTraceUserUseCase,
 )
+from app.core.config import get_settings
 from app.core.exceptions import ResourceNotFoundError
 from app.domain.entities import Comment, Message, Post, Reaction
+from app.infrastructure.persistence.mongodb.repositories.publication_jobs import (
+    MongoPublicationJobs,
+)
+from app.infrastructure.persistence.redis.publication_feeds import RedisPublicationFeeds
 from app.schemas.models import (
     CommentCreate,
     FeedResponse,
@@ -45,6 +50,7 @@ from app.schemas.models import (
     OperationDetailResponse,
     OperationResponse,
     PostCreate,
+    PublicationResponse,
     ReactionCreate,
     ReactionRemove,
     SuspensionRequest,
@@ -56,7 +62,11 @@ router = APIRouter()
 
 @router.get("/operations/{operation_id}", response_model=OperationDetailResponse)
 async def get_operation(operation_id: UUID, resources: ResourcesDep) -> OperationDetailResponse:
-    operation = await resources.operation_log.get(operation_id)
+    database = resources.mongo_client[get_settings().mongodb_database]
+    publication = await MongoPublicationJobs(database).get(operation_id)
+    operation = (
+        publication.operation if publication else await resources.operation_log.get(operation_id)
+    )
     if operation is None:
         raise ResourceNotFoundError("Operación no encontrada")
     return OperationDetailResponse(
@@ -70,28 +80,20 @@ async def get_operation(operation_id: UUID, resources: ResourcesDep) -> Operatio
         updated_at=operation.updated_at,
     )
 
-@router.post("/1/publish", response_model=OperationResponse, status_code=status.HTTP_202_ACCEPTED)
+
+@router.post("/1/publish", response_model=PublicationResponse, status_code=status.HTTP_202_ACCEPTED)
 async def publish(
     payload: PostCreate,
     use_case: Annotated[PublishContentUseCase, Depends(get_publish_use_case)],
     resources: ResourcesDep,
     demo_mode: DemoModeDep,
     idempotency_key: Annotated[str | None, Header(alias="Idempotency-Key")] = None,
-) -> OperationResponse:
-    # TODO(TP): Integrar la clave con IdempotencyService y persistir resultado.
-    del idempotency_key
-    if demo_mode:
-        operation = OperationContext(
-            operation_type="problem_01_publish_content_demo",
-            operation_id=DEMO_OPERATION_ID,
-            completed_steps=["mock_demo_step"],
-            status=OperationStatus.COMPLETED,
-        )
-        await resources.operation_log.save(operation)
-        return OperationResponse(
-            operation_id=operation.operation_id,
-            status=operation.status.value,
-        )
+    x_fail_at_step: Annotated[str | None, Header(alias="X-Fail-At-Step")] = None,
+) -> PublicationResponse:
+    if x_fail_at_step is not None and get_settings().app_env != "development":
+        from app.core.exceptions import InvalidOperationError
+
+        raise InvalidOperationError("Failure injection is development-only")
     post = Post(
         user_id=payload.user_id,
         text=payload.text,
@@ -99,8 +101,28 @@ async def publish(
         interests=tuple(payload.interests),
         visibility=payload.visibility,
     )
-    operation = await use_case.execute(post)
-    return OperationResponse(operation_id=operation.operation_id, status=operation.status.value)
+    if demo_mode:
+        operation = OperationContext(
+            operation_type="problem_01_publish_content_demo", status=OperationStatus.COMPLETED
+        )
+        await resources.operation_log.save(operation)
+        return PublicationResponse(
+            operation_id=operation.operation_id, status=operation.status.value, post_id=post.id
+        )
+    job = await use_case.execute(post, idempotency_key, x_fail_at_step)
+    return PublicationResponse(
+        operation_id=job.operation.operation_id,
+        status=job.operation.status.value,
+        post_id=job.post.id,
+    )
+
+
+@router.get("/1/feed-preview/{user_id}")
+async def publication_feed_preview(user_id: UUID, resources: ResourcesDep) -> dict[str, object]:
+    """Visible P1 publication IDs only. Personalized feed belongs to problem 3."""
+    ids = await RedisPublicationFeeds(resources.redis).visible_ids(user_id)
+    return {"user_id": str(user_id), "post_ids": [str(post_id) for post_id in ids]}
+
 
 @router.post("/2/follow", status_code=status.HTTP_204_NO_CONTENT)
 async def follow(
@@ -112,6 +134,7 @@ async def follow(
         return
     await use_case.follow(payload.user_id, payload.followed_user_id)
 
+
 @router.delete("/2/follow", status_code=status.HTTP_204_NO_CONTENT)
 async def unfollow(
     payload: FollowRequest,
@@ -121,6 +144,7 @@ async def unfollow(
     if demo_mode:
         return
     await use_case.unfollow(payload.user_id, payload.followed_user_id)
+
 
 @router.get("/3/feed/{user_id}", response_model=FeedResponse)
 async def feed(
@@ -135,6 +159,7 @@ async def feed(
         return demo_feed(user_id)
     return await use_case.execute(user_id)
 
+
 @router.get("/4/recommendations/{user_id}")
 async def recommendations(
     user_id: UUID,
@@ -145,6 +170,7 @@ async def recommendations(
         return (DEMO_OTHER_USER_ID,)
     return await use_case.recommendations(user_id)
 
+
 @router.get("/4/mutual-friends")
 async def mutual_friends(
     query: Annotated[MutualFriendsRequest, Query()],
@@ -154,6 +180,7 @@ async def mutual_friends(
     if demo_mode:
         return (DEMO_USER_ID,)
     return await use_case.mutual_friends(query.user_id, query.other_user_id)
+
 
 @router.post("/5/reaction", response_model=OperationResponse, status_code=status.HTTP_202_ACCEPTED)
 async def react(
@@ -170,6 +197,7 @@ async def react(
     )
     return OperationResponse(operation_id=operation.operation_id, status=operation.status.value)
 
+
 @router.delete("/5/reaction", response_model=OperationResponse)
 async def remove_reaction(
     payload: ReactionRemove,
@@ -182,6 +210,7 @@ async def remove_reaction(
         )
     operation = await use_case.remove_reaction(payload.post_id, payload.user_id)
     return OperationResponse(operation_id=operation.operation_id, status=operation.status.value)
+
 
 @router.post("/5/comment", response_model=OperationResponse, status_code=status.HTTP_202_ACCEPTED)
 async def comment(
@@ -200,6 +229,7 @@ async def comment(
     )
     return OperationResponse(operation_id=operation.operation_id, status=operation.status.value)
 
+
 @router.post("/6/message", status_code=status.HTTP_202_ACCEPTED)
 async def send_message(
     payload: MessageCreate,
@@ -217,6 +247,7 @@ async def send_message(
         )
     )
 
+
 @router.post("/7/moderate", status_code=status.HTTP_204_NO_CONTENT)
 async def moderate(
     payload: ModerationRequest,
@@ -229,6 +260,7 @@ async def moderate(
         payload.report_id, payload.post_id, payload.moderator_id, payload.decision
     )
 
+
 @router.post("/8/suspend", status_code=status.HTTP_204_NO_CONTENT)
 async def suspend(
     payload: SuspensionRequest,
@@ -239,6 +271,7 @@ async def suspend(
         return
     await use_case.suspend_user(payload.user_id, payload.reason)
 
+
 @router.get("/8/trace/{user_id}", response_model=UserTraceResponse)
 async def trace(
     user_id: UUID,
@@ -248,4 +281,3 @@ async def trace(
     if demo_mode:
         return demo_trace(user_id)
     return await use_case.trace_user(user_id)
-

@@ -13,7 +13,7 @@ class SocialRecommendationsUseCase:
         return await self._graph.get_mutual_friends(user_id, other_user_id)
 
     async def recommendations(self, user_id: UUID) -> tuple[UUID, ...]:
-        # TODO(TP): Filtrar suspendidos desde PostgreSQL sin degradar a N+1.
+        # TODO(TP): Filtrar suspendidos desde MongoDB sin degradar a N+1.
         # TODO(TP): Justificar score de segundo grado/intereses y máximo 10.
         raise FeatureNotImplementedError("Problema 4: recomendaciones")
 

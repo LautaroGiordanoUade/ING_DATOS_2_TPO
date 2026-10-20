@@ -38,6 +38,28 @@ services:
       timeout: 5s
       retries: 10
 
+  publication-worker:
+    build: .
+    command: ["python", "-m", "app.workers.publications"]
+    restart: unless-stopped
+    volumes:
+      - publication_worker_lock:/home/appuser/publication-worker
+    environment:
+      APP_ENV: development
+      MONGODB_URL: mongodb://mongo:27017
+      MONGODB_DATABASE: niche_social
+      REDIS_URL: redis://redis:6379/0
+      NEO4J_URI: bolt://neo4j:7687
+      NEO4J_USER: neo4j
+      NEO4J_PASSWORD: ${NEO4J_PASSWORD:-local_dev_password}
+    depends_on:
+      mongo:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      neo4j:
+        condition: service_healthy
+
   redis:
     image: redis:7.4-alpine
     command: ["redis-server", "--appendonly", "yes", "--appendfsync", "everysec"]
@@ -71,3 +93,4 @@ volumes:
   mongo_data:
   redis_data:
   neo4j_data:
+  publication_worker_lock:
