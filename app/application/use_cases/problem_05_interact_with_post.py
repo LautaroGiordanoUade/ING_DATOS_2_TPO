@@ -1,6 +1,7 @@
 from dataclasses import dataclass
-from uuid import NAMESPACE_URL, UUID, uuid5
+from uuid import UUID
 
+from app.application.ports.reaction_lock import ReactionLock
 from app.application.services import (
     CompensationService,
     IdempotencyService,
@@ -45,6 +46,7 @@ class InteractWithPostUseCase:
         notifications: NotificationRepository,
         compensation: CompensationService,
         idempotency: IdempotencyService | None = None,
+        reaction_lock: ReactionLock | None = None,
     ) -> None:
         self._posts = posts
         self._reactions = reactions
@@ -53,6 +55,7 @@ class InteractWithPostUseCase:
         self._notifications = notifications
         self._compensation = compensation
         self._idempotency = idempotency
+        self._reaction_lock = reaction_lock
 
     async def _get_active_post(self, post_id: UUID) -> Post:
         post = await self._posts.get(post_id)
@@ -63,9 +66,15 @@ class InteractWithPostUseCase:
         return post
 
     async def react(self, reaction: Reaction) -> OperationContext:
+        if self._reaction_lock is None:
+            raise RuntimeError("ReactionLock es obligatorio para modificar reacciones")
+        async with self._reaction_lock.hold(reaction.post_id):
+            return await self._react(reaction)
+
+    async def _react(self, reaction: Reaction) -> OperationContext:
         post = await self._get_active_post(reaction.post_id)
         state = _ReactionState()
-        event_id = uuid5(NAMESPACE_URL, f"reaction:{reaction.post_id}:{reaction.user_id}")
+        event_id = reaction.id
 
         async def save_reaction() -> None:
             state.previous = await self._reactions.upsert(reaction)
@@ -87,6 +96,8 @@ class InteractWithPostUseCase:
 
         async def notify_author() -> None:
             if state.previous is None and post.user_id != reaction.user_id:
+                # The server may commit HSET and lose the response or fail at PUBLISH.
+                state.notified = True
                 await self._notifications.publish(
                     post.user_id,
                     {
@@ -97,7 +108,6 @@ class InteractWithPostUseCase:
                         "kind": reaction.kind,
                     },
                 )
-                state.notified = True
 
         async def revoke_notification() -> None:
             if state.notified:
@@ -109,11 +119,22 @@ class InteractWithPostUseCase:
             [
                 OperationStep("mongo_upsert_reaction", save_reaction, restore_reaction),
                 OperationStep("redis_increment_reaction_counter", count_reaction, uncount_reaction),
-                OperationStep("redis_publish_notification", notify_author, revoke_notification),
+                OperationStep(
+                    "redis_publish_notification",
+                    notify_author,
+                    revoke_notification,
+                    compensate_on_failure=True,
+                ),
             ],
         )
 
     async def remove_reaction(self, post_id: UUID, user_id: UUID) -> OperationContext:
+        if self._reaction_lock is None:
+            raise RuntimeError("ReactionLock es obligatorio para modificar reacciones")
+        async with self._reaction_lock.hold(post_id):
+            return await self._remove_reaction(post_id, user_id)
+
+    async def _remove_reaction(self, post_id: UUID, user_id: UUID) -> OperationContext:
         state = _RemovalState()
 
         async def delete_reaction() -> None:
@@ -201,7 +222,12 @@ class InteractWithPostUseCase:
                     OperationStep(
                         "redis_increment_comment_counter", count_comment, uncount_comment
                     ),
-                    OperationStep("redis_publish_notification", notify_author, revoke_notification),
+                    OperationStep(
+                        "redis_publish_notification",
+                        notify_author,
+                        revoke_notification,
+                        compensate_on_failure=True,
+                    ),
                 ],
             )
         except Exception:

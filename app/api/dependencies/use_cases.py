@@ -21,6 +21,7 @@ from app.application.use_cases import (
     SuspendAndTraceUserUseCase,
 )
 from app.core.config import get_settings
+from app.infrastructure.persistence.redis.reaction_lock import RedisReactionLock
 from app.infrastructure.persistence.redis.repositories.operational_repositories import (
     RedisIdempotencyRepository,
 )
@@ -90,6 +91,7 @@ def get_interaction_use_case(
         repositories.notifications,
         CompensationService(resources.operation_log, failure_injector),
         idempotency=IdempotencyService(RedisIdempotencyRepository(resources.redis)),
+        reaction_lock=RedisReactionLock(resources.redis),
     )
 
 
