@@ -9,8 +9,8 @@ Se eligieron tres motores NoSQL: MongoDB, Neo4j y Redis. PostgreSQL no se inicia
 necesario para ejecutar el sistema. Sus archivos y Alembic quedan como legado.
 
 MongoDB es fuente de verdad del contenido, comentarios y reacciones. También se asignan aquí
-usuarios, moderación, conversaciones y mensajes, cuyos adaptadores aún están pendientes.
-Los índices únicos cubren una reacción por (post_id, user_id). Usuarios necesitará índices
+usuarios y moderación (implementados para P7), además de conversaciones y mensajes pendientes.
+Los índices únicos cubren una reacción por (post_id, user_id). Usuarios tiene índices
 únicos de username/email. Historial documental e interacciones crecientes no se almacenan
 como listas ilimitadas dentro de un único usuario/post.
 
@@ -31,7 +31,7 @@ La justificación no depende solamente de replicar contenido para acelerar lectu
 
 | Dato | Fuente de verdad | Otras representaciones / responsable |
 |---|---|---|
-| Perfil/estado de cuenta | MongoDB (adaptador pendiente) | Estado mínimo Neo4j; P2/P8 deben sincronizarlo |
+| Perfil/estado de cuenta | MongoDB (implementado para P7) | Estado mínimo Neo4j; P2/P8 deben sincronizarlo |
 | Texto e intereses de post | MongoDB | UUID y score en Redis; worker P1 mantiene referencias |
 | Seguimientos y bloqueos | Neo4j | Audiencia snapshot en trabajo MongoDB para recuperación |
 | Decisión de publicación | publication_jobs MongoDB | Marcador Redis; worker termina commit/rollback |
@@ -58,3 +58,20 @@ Su recuperación tras caída de proceso todavía requiere reconciliación manual
 
 Detalles: docs/problems/problem_01.md y docs/problem_05_consistency.md.
 El feed completo P3, la carga de 50000 registros y el informe final siguen pendientes.
+
+## Moderación P7
+
+MongoDB guarda reportes, jobs y auditoría. La API valida credenciales firmadas y consulta el
+rol/estado actual en users. El worker P7 mantiene un solo consumidor mediante flock en su
+volumen compartido, siguiendo el despliegue P1. Cada comando reserva atómicamente el post
+mediante índice único parcial de jobs activos. Un snapshot durable precede a los efectos.
+
+El estado hidden de MongoDB protege lecturas públicas incluso si Redis está incompleto.
+Redis usa un gate separado del commit P1 y Lua atómico para ocultar/restaurar los dos contadores
+P5. Los incrementos en vuelo se conservan en claves auxiliares; no se sobrescriben con un
+snapshot viejo. Las referencias del feed se eliminan y restauran con sus scores previos.
+
+La fase committing completa reporte/auditoría sin compensar; fases anteriores compensan desde
+el snapshot. Los pasos son repetibles tras caídas, hay tres intentos transitorios y recuperación
+explícita de failed/compensated. No se añade un nodo Post a Neo4j: actualmente no existe.
+Ver docs/problems/problem_07.md y docs/problem_7_moderation_test_guide.md.

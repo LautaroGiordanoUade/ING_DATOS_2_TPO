@@ -6,7 +6,8 @@ COPY pyproject.toml ./
 COPY app ./app
 RUN pip install --no-cache-dir . && useradd --create-home appuser \
     && mkdir -p /home/appuser/publication-worker \
-    && chown appuser:appuser /home/appuser/publication-worker
+    && mkdir -p /home/appuser/moderation-worker \
+    && chown appuser:appuser /home/appuser/publication-worker /home/appuser/moderation-worker
 USER appuser
 EXPOSE 8000
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

@@ -135,6 +135,7 @@ class InteractWithPostUseCase:
             return await self._remove_reaction(post_id, user_id)
 
     async def _remove_reaction(self, post_id: UUID, user_id: UUID) -> OperationContext:
+        await self._get_active_post(post_id)
         state = _RemovalState()
 
         async def delete_reaction() -> None:

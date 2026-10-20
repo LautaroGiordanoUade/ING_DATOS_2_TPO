@@ -15,6 +15,8 @@ class Settings(BaseSettings):
     app_debug: bool = False
     app_demo_mode: bool = False
     api_v1_prefix: str = "/api/v1"
+    auth_secret: SecretStr = SecretStr("local-development-only-change-before-deployment")
+    access_token_seconds: int = 3600
     postgres_host: str = "localhost"
     postgres_port: int = 5432
     postgres_db: str = "niche_social"
@@ -30,6 +32,11 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def prevent_demo_mode_in_production(self) -> Self:
+        if self.app_env == "production" and (
+            self.auth_secret.get_secret_value() == "local-development-only-change-before-deployment"
+            or len(self.auth_secret.get_secret_value()) < 32
+        ):
+            raise ValueError("Production requires AUTH_SECRET with at least 32 characters")
         if self.app_env == "production" and self.app_demo_mode:
             raise ValueError("APP_DEMO_MODE cannot be enabled in production")
         return self
@@ -46,4 +53,3 @@ class Settings(BaseSettings):
 @lru_cache
 def get_settings() -> Settings:
     return Settings()
-

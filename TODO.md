@@ -23,7 +23,7 @@ rutas en Swagger o respuestas en modo demo.
 
 ## Problema 2: seguir/dejar de seguir
 
-- [ ] Implementar usuarios en MongoDB (get/create/update_account_status e índices únicos).
+- [x] Usuarios MongoDB (get/create/update_account_status e índices únicos), completado para P7.
 - [ ] Follow/unfollow Neo4j; cuentas privadas y aprobación; evitar duplicados.
 - [ ] Coordinar snapshot del P1 con cambios de seguimiento.
 - [ ] Contadores, feed, compensaciones, idempotencia y concurrencia.
@@ -33,7 +33,7 @@ rutas en Swagger o respuestas en modo demo.
 - [ ] Ranking de relevancia/recencia y 20 publicaciones por página.
 - [ ] Cursor validado y paginación hacia atrás.
 - [ ] Lectura por lote de contenido y contadores sin N+1.
-- [ ] Respetar publicación committed y moderación en todas las lecturas.
+- [x] Filtro de publicación committed y moderación en lecturas implementadas (P7).
 - El preview del P1 muestra IDs visibles; no reemplaza este problema.
 
 ## Problema 4: amigos en común y sugerencias
@@ -61,11 +61,20 @@ rutas en Swagger o respuestas en modo demo.
 - [ ] Presencia y entrega Redis, unread y lectura por participante.
 - [ ] Idempotencia, concurrencia, compensaciones y recuperación.
 
-## Problema 7: moderación
+## Problema 7: moderación — IMPLEMENTADO
 
-- [ ] Reportes y decisión en MongoDB, con validación de rol.
-- [ ] Ocultamiento global, retiro de feed y ajuste de contadores.
-- [ ] Revertir al estado anterior; compensaciones, reintentos y concurrencia.
+- [x] Reportes y decisiones reales en MongoDB; roles user/moderator/admin y bearer firmado.
+- [x] Ocultamiento global; retiro físico del feed; preservación/ocultamiento de contadores P5.
+- [x] Snapshot durable; revert del estado, pertenencia y scores anteriores; auditoría.
+- [x] Workflow compensable y recuperable después de reiniciar el consumidor.
+- [x] Tres intentos por paso transitorio, backoff y retry explícito para recuperación fallida.
+- [x] Idempotencia, exclusión atómica por post, decisiones/reintentos concurrentes.
+- [x] Tests unitarios, API e integración con MongoDB/Redis reales, incluidos crashes entre pasos.
+- [x] Swagger/OpenAPI con ejemplos, seed de desarrollo y smoke HTTP reproducible.
+- Validación: suite completa 94 passed / 0 failed; smoke HTTP sobre Compose exitoso.
+- Despliegue soportado: Docker Linux, un host, consumidores P7 con volumen de flock compartido.
+  No cubre pérdida de volúmenes ni consumidores independientes en múltiples hosts.
+- Guía: docs/problem_7_moderation_test_guide.md; diseño: docs/problems/problem_07.md.
 
 ## Problema 8: suspensión y trazabilidad
 

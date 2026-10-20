@@ -1,0 +1,51 @@
+{
+  "http_smoke": "passed",
+  "swagger": "http://127.0.0.1:8000/docs",
+  "cases": [
+    {
+      "post_id": "71000000-0000-0000-0000-000000000001",
+      "report_id": "0462abc2-15a6-4f51-853d-931850405371",
+      "operation_id": "c637b08a-ec4f-5db8-a4c5-367abf5497db",
+      "status": "completed"
+    },
+    {
+      "post_id": "71000000-0000-0000-0000-000000000002",
+      "report_id": "c26c22cf-28de-4b1f-9d98-6978bbbe463d",
+      "operation_id": "fe1e2ded-ecca-5df8-8d6b-989e2cc4f33f",
+      "status": "completed"
+    },
+    {
+      "post_id": "71000000-0000-0000-0000-000000000003",
+      "report_id": "eabcce4d-c5cb-42a6-9036-c6b342f9082d",
+      "operation_id": "e3bb61e5-c3de-56df-be95-07bf3344daee",
+      "status": "compensated"
+    },
+    {
+      "post_id": "71000000-0000-0000-0000-000000000004",
+      "report_id": "ee3b8069-85bf-43d1-b301-23c02bccc787",
+      "operation_id": "4c529576-31e7-5a2e-983c-db7f81193e69",
+      "status": "completed"
+    }
+  ],
+  "validation": {
+    "date": "2026-10-20",
+    "branch": "feature/problem-7-moderation",
+    "pytest": {
+      "passed": 94,
+      "failed": 0,
+      "skipped": 0,
+      "warnings": 1,
+      "seconds": 137.44
+    },
+    "p7_integration_tests": 57,
+    "new_unit_tests": 12,
+    "baseline": {
+      "passed": 24,
+      "skipped": 1
+    },
+    "ruff_check": "passed",
+    "mypy": "passed (152 source files, Linux target)",
+    "changed_python_format": "passed (40 files)",
+    "global_format_existing_debt_files": 100
+  }
+}

@@ -44,6 +44,7 @@ line-length = 100
 select = ["E", "F", "I", "UP", "B", "ASYNC"]
 
 [tool.mypy]
+platform = "linux"
 python_version = "3.12"
 strict = true
 plugins = ["pydantic.mypy"]

@@ -4,15 +4,15 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Header, Query, status
 
 from app.api.demo_data import (
-    DEMO_OPERATION_ID,
     DEMO_OTHER_USER_ID,
     DEMO_USER_ID,
-    demo_feed,
     demo_trace,
 )
+from app.api.dependencies.auth import ModeratorDep
 from app.api.dependencies.databases import ResourcesDep
 from app.api.dependencies.demo import DemoModeDep
 from app.api.dependencies.use_cases import (
+    RepositoriesDep,
     get_feed_use_case,
     get_follow_use_case,
     get_interaction_use_case,
@@ -22,7 +22,7 @@ from app.api.dependencies.use_cases import (
     get_recommendations_use_case,
     get_suspend_trace_use_case,
 )
-from app.application.services import OperationContext, OperationStatus
+from app.application.services.content_queries import ContentQueries
 from app.application.use_cases import (
     FollowUserUseCase,
     GetFeedUseCase,
@@ -50,6 +50,7 @@ from app.schemas.models import (
     OperationDetailResponse,
     OperationResponse,
     PostCreate,
+    PostResponse,
     PublicationResponse,
     ReactionCreate,
     ReactionRemove,
@@ -101,14 +102,6 @@ async def publish(
         interests=tuple(payload.interests),
         visibility=payload.visibility,
     )
-    if demo_mode:
-        operation = OperationContext(
-            operation_type="problem_01_publish_content_demo", status=OperationStatus.COMPLETED
-        )
-        await resources.operation_log.save(operation)
-        return PublicationResponse(
-            operation_id=operation.operation_id, status=operation.status.value, post_id=post.id
-        )
     job = await use_case.execute(post, idempotency_key, x_fail_at_step)
     return PublicationResponse(
         operation_id=job.operation.operation_id,
@@ -118,10 +111,13 @@ async def publish(
 
 
 @router.get("/1/feed-preview/{user_id}")
-async def publication_feed_preview(user_id: UUID, resources: ResourcesDep) -> dict[str, object]:
+async def publication_feed_preview(
+    user_id: UUID, resources: ResourcesDep, repositories: RepositoriesDep
+) -> dict[str, object]:
     """Visible P1 publication IDs only. Personalized feed belongs to problem 3."""
     ids = await RedisPublicationFeeds(resources.redis).visible_ids(user_id)
-    return {"user_id": str(user_id), "post_ids": [str(post_id) for post_id in ids]}
+    posts = await repositories.posts.get_many(ids)
+    return {"user_id": str(user_id), "post_ids": [str(post.id) for post in posts]}
 
 
 @router.post("/2/follow", status_code=status.HTTP_204_NO_CONTENT)
@@ -153,10 +149,10 @@ async def feed(
     demo_mode: DemoModeDep,
     cursor: Annotated[str | None, Query()] = None,
 ) -> object:
-    # TODO(TP): Decodificar/validar cursor opaco score+timestamp+UUID.
-    del cursor
-    if demo_mode:
-        return demo_feed(user_id)
+    if cursor is not None:
+        from app.core.exceptions import InvalidOperationError
+
+        raise InvalidOperationError("Personalized cursors belong to pending P3")
     return await use_case.execute(user_id)
 
 
@@ -188,10 +184,6 @@ async def react(
     use_case: Annotated[InteractWithPostUseCase, Depends(get_interaction_use_case)],
     demo_mode: DemoModeDep,
 ) -> OperationResponse:
-    if demo_mode:
-        return OperationResponse(
-            operation_id=DEMO_OPERATION_ID, status=OperationStatus.COMPLETED.value
-        )
     operation = await use_case.react(
         Reaction(post_id=payload.post_id, user_id=payload.user_id, kind=payload.kind)
     )
@@ -204,10 +196,6 @@ async def remove_reaction(
     use_case: Annotated[InteractWithPostUseCase, Depends(get_interaction_use_case)],
     demo_mode: DemoModeDep,
 ) -> OperationResponse:
-    if demo_mode:
-        return OperationResponse(
-            operation_id=DEMO_OPERATION_ID, status=OperationStatus.COMPLETED.value
-        )
     operation = await use_case.remove_reaction(payload.post_id, payload.user_id)
     return OperationResponse(operation_id=operation.operation_id, status=operation.status.value)
 
@@ -219,10 +207,6 @@ async def comment(
     demo_mode: DemoModeDep,
     idempotency_key: Annotated[str | None, Header(alias="Idempotency-Key")] = None,
 ) -> OperationResponse:
-    if demo_mode:
-        return OperationResponse(
-            operation_id=DEMO_OPERATION_ID, status=OperationStatus.COMPLETED.value
-        )
     operation = await use_case.comment(
         Comment(post_id=payload.post_id, user_id=payload.user_id, text=payload.text),
         idempotency_key,
@@ -252,13 +236,13 @@ async def send_message(
 async def moderate(
     payload: ModerationRequest,
     use_case: Annotated[ModeratePostUseCase, Depends(get_moderation_use_case)],
-    demo_mode: DemoModeDep,
+    actor: ModeratorDep,
 ) -> None:
-    if demo_mode:
-        return
-    await use_case.moderate_post(
-        payload.report_id, payload.post_id, payload.moderator_id, payload.decision
-    )
+    from fastapi import HTTPException
+
+    if payload.moderator_id != actor.id:
+        raise HTTPException(status_code=403, detail="moderator_id must match bearer identity")
+    await use_case.moderate_post(payload.report_id, payload.post_id, actor.id, payload.decision)
 
 
 @router.post("/8/suspend", status_code=status.HTTP_204_NO_CONTENT)
@@ -277,7 +261,15 @@ async def trace(
     user_id: UUID,
     use_case: Annotated[SuspendAndTraceUserUseCase, Depends(get_suspend_trace_use_case)],
     demo_mode: DemoModeDep,
+    repositories: RepositoriesDep,
 ) -> object:
     if demo_mode:
-        return demo_trace(user_id)
+        result = demo_trace(user_id)
+        result.recent_posts = [
+            PostResponse.model_validate(post)
+            for post in await ContentQueries(repositories.posts, repositories.counters).by_author(
+                user_id
+            )
+        ]
+        return result
     return await use_case.trace_user(user_id)

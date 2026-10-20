@@ -24,6 +24,7 @@ from app.core.config import get_settings
 from app.infrastructure.persistence.mongodb.repositories.publication_jobs import (
     MongoPublicationJobs,
 )
+from app.infrastructure.persistence.redis.moderation import RedisModerationViews
 from app.infrastructure.persistence.redis.reaction_lock import RedisReactionLock
 from app.infrastructure.persistence.redis.repositories.operational_repositories import (
     RedisIdempotencyRepository,
@@ -111,13 +112,7 @@ def get_moderation_use_case(
     resources: ResourcesDep,
     failure_injector: FailureInjectorDep,
 ) -> ModeratePostUseCase:
-    return ModeratePostUseCase(
-        repositories.moderation,
-        repositories.posts,
-        repositories.feeds,
-        repositories.counters,
-        CompensationService(resources.operation_log, failure_injector),
-    )
+    return ModeratePostUseCase(repositories.moderation, RedisModerationViews(resources.redis))
 
 
 def get_suspend_trace_use_case(

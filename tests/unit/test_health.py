@@ -21,14 +21,13 @@ def test_pending_endpoint_returns_controlled_501(client: TestClient) -> None:
     assert response.json()["code"] == "todo_tp"
 
 
-def test_demo_feed_can_be_exercised_without_databases(
+def test_unrelated_demo_recommendations_remain_available(
     client: TestClient,
 ) -> None:
     app.dependency_overrides[demo_mode_enabled] = lambda: True
     try:
-        response = client.get(f"/api/v1/problems/3/feed/{uuid4()}")
+        response = client.get(f"/api/v1/problems/4/recommendations/{uuid4()}")
         assert response.status_code == 200
-        assert len(response.json()["items"]) == 1
+        assert len(response.json()) == 1
     finally:
         app.dependency_overrides.pop(demo_mode_enabled, None)
-
