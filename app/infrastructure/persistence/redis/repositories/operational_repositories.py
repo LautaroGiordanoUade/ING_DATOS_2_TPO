@@ -7,15 +7,14 @@ from redis.asyncio import Redis
 from app.core.exceptions import FeatureNotImplementedError
 from app.domain.value_objects import FeedCursor, Page
 from app.infrastructure.persistence.redis.keys import RedisKeys
+from app.infrastructure.persistence.redis.publication_feeds import RedisPublicationFeeds
 
 
 class RedisFeedRepository:
     def __init__(self, client: Redis) -> None:
         self._client = client
 
-    async def add_to_feeds(
-        self, user_ids: tuple[UUID, ...], post_id: UUID, score: float
-    ) -> None:
+    async def add_to_feeds(self, user_ids: tuple[UUID, ...], post_id: UUID, score: float) -> None:
         # TODO(TP): Definir fan-out y comandos/estructura Redis del feed.
         raise FeatureNotImplementedError("RedisFeedRepository.add_to_feeds")
 
@@ -23,11 +22,12 @@ class RedisFeedRepository:
         # TODO(TP): Implementar retiro compensable de todos los feeds afectados.
         raise FeatureNotImplementedError("RedisFeedRepository.remove_from_feeds")
 
-    async def get_feed(
-        self, user_id: UUID, cursor: FeedCursor | None, limit: int
-    ) -> Page[UUID]:
-        # TODO(TP): Implementar cursor score/timestamp/UUID y ranking final.
-        raise FeatureNotImplementedError("RedisFeedRepository.get_feed")
+    async def get_feed(self, user_id: UUID, cursor: FeedCursor | None, limit: int) -> Page[UUID]:
+        if cursor is not None:
+            from app.core.exceptions import InvalidOperationError
+
+            raise InvalidOperationError("Personalized cursors belong to pending P3")
+        return Page(items=await RedisPublicationFeeds(self._client).visible_ids(user_id, limit))
 
     async def clear_user_feed(self, user_id: UUID) -> None:
         # TODO(TP): Definir efecto de suspensión sobre el feed materializado.
@@ -36,9 +36,13 @@ class RedisFeedRepository:
 
 # Suma/resta de forma atómica (un solo comando en el servidor) y nunca baja de 0.
 _INCREMENT_NOT_NEGATIVE = """
-local value = redis.call('INCRBY', KEYS[1], ARGV[1])
+local key = KEYS[1]
+if ARGV[2] ~= '' and redis.call('EXISTS', ARGV[2]) == 1 then
+    key = key .. ':moderation_saved'
+end
+local value = redis.call('INCRBY', key, ARGV[1])
 if value < 0 then
-    redis.call('SET', KEYS[1], 0)
+    redis.call('SET', key, 0)
     return 0
 end
 return value
@@ -52,12 +56,15 @@ class RedisCounterRepository:
     async def increment(self, namespace: str, entity_id: UUID, amount: int = 1) -> int:
         key = RedisKeys.counter(namespace, entity_id)
         client = cast(Any, self._client)
-        result = await client.eval(_INCREMENT_NOT_NEGATIVE, 1, key, str(amount))
+        gate = (
+            f"moderation:{entity_id}:hidden"
+            if namespace in ("post_reactions", "post_comments")
+            else ""
+        )
+        result = await client.eval(_INCREMENT_NOT_NEGATIVE, 1, key, str(amount), gate)
         return int(result)
 
-    async def get_many(
-        self, namespace: str, entity_ids: tuple[UUID, ...]
-    ) -> dict[UUID, int]:
+    async def get_many(self, namespace: str, entity_ids: tuple[UUID, ...]) -> dict[UUID, int]:
         if not entity_ids:
             return {}
         keys = [RedisKeys.counter(namespace, entity_id) for entity_id in entity_ids]
@@ -85,6 +92,7 @@ class RedisNotificationRepository:
     async def revoke(self, recipient_id: UUID, event_id: UUID) -> None:
         client = cast(Any, self._client)
         await client.hdel(RedisKeys.notifications(recipient_id), str(event_id))
+
 
 class RedisIdempotencyRepository:
     def __init__(self, client: Redis) -> None:

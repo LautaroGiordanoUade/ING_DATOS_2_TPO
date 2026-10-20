@@ -41,6 +41,7 @@ class User:
     account_type: AccountType = AccountType.PUBLIC
     account_status: AccountStatus = AccountStatus.ACTIVE
     registered_at: datetime = field(default_factory=utc_now)
+    role: str = "user"
 
 
 @dataclass(slots=True)
@@ -101,4 +102,4 @@ class ModerationReport:
     resolution_status: str = "pending"
     reported_at: datetime = field(default_factory=utc_now)
     resolved_at: datetime | None = None
-
+    description: str | None = None

@@ -3,6 +3,7 @@ from fastapi.responses import JSONResponse
 
 from app.application.ports import InjectedFailureError
 from app.core.exceptions import (
+    AuthenticationError,
     ConflictError,
     FeatureNotImplementedError,
     InvalidOperationError,
@@ -41,3 +42,9 @@ def install_exception_handlers(app: FastAPI) -> None:
             content={"detail": str(exc), "code": "injected_demo_failure"},
         )
 
+    @app.exception_handler(AuthenticationError)
+    async def authentication_failed(request: Request, exc: AuthenticationError) -> JSONResponse:
+        del request
+        return JSONResponse(
+            status_code=401, content={"detail": str(exc)}, headers={"WWW-Authenticate": "Bearer"}
+        )

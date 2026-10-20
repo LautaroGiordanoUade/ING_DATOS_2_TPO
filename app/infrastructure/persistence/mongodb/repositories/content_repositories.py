@@ -29,21 +29,46 @@ class MongoPostRepository:
 
     async def get(self, post_id: UUID) -> Post | None:
         document = await self._collection.find_one(
-            {"_id": str(post_id), "publication_state": {"$ne": "pending"}}
+            {
+                "_id": str(post_id),
+                "publication_state": {"$ne": "pending"},
+                "moderation_status": {"$ne": "hidden"},
+            }
         )
         return None if document is None else document_to_post(document)
 
     async def get_many(self, post_ids: tuple[UUID, ...]) -> tuple[Post, ...]:
-        # TODO(TP): Implementar lectura por lote preservando el orden del feed.
-        raise FeatureNotImplementedError("MongoPostRepository.get_many")
+        docs = await self._collection.find(
+            {
+                "_id": {"$in": [str(i) for i in post_ids]},
+                "publication_state": {"$ne": "pending"},
+                "moderation_status": {"$ne": "hidden"},
+                "visibility": "public",
+            }
+        ).to_list()
+        by_id = {str(doc["_id"]): document_to_post(doc) for doc in docs}
+        return tuple(by_id[str(i)] for i in post_ids if str(i) in by_id)
 
     async def list_recent_by_user(self, user_id: UUID, limit: int) -> tuple[Post, ...]:
-        # TODO(TP): Implementar consulta de publicaciones recientes para trazabilidad.
-        raise FeatureNotImplementedError("MongoPostRepository.list_recent_by_user")
+        docs = (
+            await self._collection.find(
+                {
+                    "user_id": str(user_id),
+                    "publication_state": {"$ne": "pending"},
+                    "moderation_status": {"$ne": "hidden"},
+                    "visibility": "public",
+                }
+            )
+            .sort("published_at", -1)
+            .limit(limit)
+            .to_list()
+        )
+        return tuple(document_to_post(doc) for doc in docs)
 
     async def update_moderation_status(self, post_id: UUID, status: str) -> None:
-        # TODO(TP): Actualizar el estado documental con control de concurrencia.
-        raise FeatureNotImplementedError("MongoPostRepository.update_moderation_status")
+        await self._collection.update_one(
+            {"_id": str(post_id)}, {"$set": {"moderation_status": status}}
+        )
 
     async def delete(self, post_id: UUID) -> None:
         # TODO(TP): Implementar compensación de creación de publicación.

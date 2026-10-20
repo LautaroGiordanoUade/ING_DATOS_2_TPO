@@ -13,7 +13,7 @@ como `TODO(TP)`. Sin modo demo, los endpoints pendientes responden `501`.
 - `docs`: decisiones, matriz de persistencia y guías de los problemas.
 
 MongoDB es el motor elegido para identidad, estado de cuenta, moderación, registro durable de
-operaciones, contenido y mensajería. Los adaptadores de identidad y moderación siguen pendientes. Neo4j lo es del grafo social. Redis mantiene datos operativos propios:
+operaciones, contenido y mensajería. Los adaptadores de identidad y moderación están implementados para P7. Neo4j lo es del grafo social. Redis mantiene datos operativos propios:
 feed materializado, contadores, notificaciones, presencia, sesiones e idempotencia.
 
 ## Docker Compose
@@ -26,7 +26,7 @@ docker compose ps
 Invoke-RestMethod http://localhost:8000/health/ready
 ```
 
-Levanta la API, el worker de publicaciones y tres motores: MongoDB, Redis y Neo4j. Swagger está en
+Levanta la API, los workers de publicaciones/moderación y tres motores: MongoDB, Redis y Neo4j. Swagger está en
 http://localhost:8000/docs y Neo4j Browser en http://localhost:7474.
 El usuario Neo4j es `neo4j`; la contraseña local predeterminada es `local_dev_password`.
 Puede cambiarse con `NEO4J_PASSWORD` en `.env` antes del primer inicio.
@@ -57,10 +57,13 @@ MongoDB y Neo4j guardan sus datos en volúmenes; Redis usa volumen y AOF con sin
 cada segundo (puede perder el último segundo ante una caída abrupta).
 El registro de operaciones ahora se guarda en MongoDB. Esto conserva los pasos al reiniciar,
 el P1 retoma automáticamente lotes y compensaciones con los volúmenes conservados.
-La recuperación automática de los demás flujos sigue pendiente.
+P7 también reanuda su workflow durable al reiniciar el worker; la recuperación de otros flujos sigue pendiente.
 Las carpetas PostgreSQL y Alembic quedan como legado; la API ya no las usa.
 
 ## Problemas implementados
+
+P7 implementa reportes, autorización y moderación/revert durable con compensaciones, retries y
+concurrencia. Guía completa de Swagger y datos reales: [Problema 7](docs/problem_7_moderation_test_guide.md).
 
 P1 publica mediante una cola durable y distribución en lotes. P5 implementa reacciones,
 comentarios, contadores y notificaciones, con los límites descritos en su guía.
@@ -142,7 +145,8 @@ uvicorn app.main:app --reload
 - Problemas: `/api/v1/problems/1/...` hasta `/api/v1/problems/8/...`
 - Registro de operación: `GET /api/v1/problems/operations/{operation_id}`
 
-El script establece `APP_DEMO_MODE=true`. Las respuestas mock están centralizadas en
+El script establece `APP_DEMO_MODE=true`. P1, P5, identidad, moderación y las lecturas de posts/feed usan motores reales incluso en modo demo.
+Las respuestas mock de los problemas restantes están centralizadas en
 `app/api/demo_data.py`, usan UUID deterministas y permiten probar desde Swagger sin levantar bases.
 No contienen consultas, algoritmos ni decisiones académicas. La configuración impide habilitar este
 modo cuando `APP_ENV=production`.
@@ -167,9 +171,18 @@ mypy app tests
 pytest
 ```
 
-La prueba de integración original sigue siendo un placeholder; RUN_INTEGRATION_TESTS=1
-no valida el TP completo. Las verificaciones reales P1/P5 están en scripts/validar_*.py
-y crean datos aislados en los motores levantados.
+La integración original sigue siendo un placeholder de otros problemas. P7 agrega 57 pruebas
+reales de MongoDB/Redis, API, concurrencia y recuperación:
+
+```powershell
+$env:RUN_INTEGRATION_TESTS = "1"
+pytest -q
+Remove-Item Env:RUN_INTEGRATION_TESTS
+```
+
+La base y claves de P7 son aisladas por test. Las verificaciones P1/P5 también están en
+scripts/validar_*.py. El formatter global tiene deuda previa; los archivos cambiados en P7
+están formateados. Mypy comprueba el destino Linux utilizado por los workers de Compose.
 
 ## Datos reproducibles
 

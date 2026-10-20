@@ -40,7 +40,8 @@ class RedisPublicationFeeds:
         local rows = redis.call('ZREVRANGE', KEYS[1], 0, -1)
         local visible = {}
         for _, id in ipairs(rows) do
-            if redis.call('GET', 'publication:' .. id .. ':state') == 'published' then
+            if redis.call('GET', 'publication:' .. id .. ':state') == 'published'
+                and redis.call('EXISTS', 'moderation:' .. id .. ':hidden') == 0 then
                 table.insert(visible, id)
                 if #visible >= tonumber(ARGV[1]) then break end
             end

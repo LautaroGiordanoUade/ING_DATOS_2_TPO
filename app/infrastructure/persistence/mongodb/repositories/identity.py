@@ -1,41 +1,53 @@
+from dataclasses import asdict
+from typing import Any
 from uuid import UUID
 
 from pymongo.asynchronous.database import AsyncDatabase
+from pymongo.errors import DuplicateKeyError
 
-from app.core.exceptions import FeatureNotImplementedError
-from app.domain.entities import ModerationReport, User
+from app.core.exceptions import ConflictError
+from app.domain.entities import User
+from app.domain.entities.models import AccountStatus, AccountType
+from app.infrastructure.persistence.mongodb.repositories.moderation import (
+    MongoModerationRepository as MongoModerationRepository,
+)
 
 
 class MongoUserRepository:
     def __init__(self, database: AsyncDatabase[dict[str, object]]) -> None:
-        self._database = database
+        self._collection = database["users"]
+
+    async def ensure_indexes(self) -> None:
+        for field in ("username", "email"):
+            await self._collection.create_index(field, unique=True)
+
+    @staticmethod
+    def _user(document: dict[str, Any]) -> User:
+        data = dict(document)
+        data["id"] = UUID(data.pop("_id"))
+        data["account_type"] = AccountType(data.get("account_type", "public"))
+        data["account_status"] = AccountStatus(data.get("account_status", "active"))
+        return User(**data)
 
     async def get(self, user_id: UUID) -> User | None:
-        # TODO(TP): Implementar consulta MongoDB de usuario y definir visibilidad de estados.
-        raise FeatureNotImplementedError("MongoUserRepository.get")
+        doc = await self._collection.find_one({"_id": str(user_id)})
+        return None if doc is None else self._user(doc)
+
+    async def by_username(self, username: str) -> User | None:
+        doc = await self._collection.find_one({"username": username})
+        return None if doc is None else self._user(doc)
 
     async def create(self, user: User) -> User:
-        # TODO(TP): Implementar alta en MongoDB y tratamiento de unicidad.
-        raise FeatureNotImplementedError("MongoUserRepository.create")
+        await self.ensure_indexes()
+        doc = asdict(user)
+        doc["_id"] = str(doc.pop("id"))
+        try:
+            await self._collection.insert_one(doc)
+        except DuplicateKeyError as exc:
+            raise ConflictError("Username or email already exists") from exc
+        return user
 
     async def update_account_status(self, user_id: UUID, status: str) -> None:
-        # TODO(TP): Implementar actualización en MongoDB del estado de cuenta.
-        raise FeatureNotImplementedError("MongoUserRepository.update_account_status")
-
-
-class MongoModerationRepository:
-    def __init__(self, database: AsyncDatabase[dict[str, object]]) -> None:
-        self._database = database
-
-    async def create_report(self, report: ModerationReport) -> ModerationReport:
-        # TODO(TP): Persistir el reporte con las reglas del workflow de moderación.
-        raise FeatureNotImplementedError("MongoModerationRepository.create_report")
-
-    async def resolve_report(self, report_id: UUID, moderator_id: UUID, status: str) -> None:
-        # TODO(TP): Resolver el reporte en MongoDB.
-        raise FeatureNotImplementedError("MongoModerationRepository.resolve_report")
-
-    async def reverse_resolution(self, report_id: UUID) -> None:
-        # TODO(TP): Definir e implementar la reversión del workflow.
-        raise FeatureNotImplementedError("MongoModerationRepository.reverse_resolution")
-
+        await self._collection.update_one(
+            {"_id": str(user_id)}, {"$set": {"account_status": AccountStatus(status).value}}
+        )

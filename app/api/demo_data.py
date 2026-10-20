@@ -2,9 +2,7 @@ from datetime import UTC, datetime
 from uuid import UUID
 
 from app.schemas.models import (
-    FeedResponse,
     MessageResponse,
-    PostResponse,
     UserResponse,
     UserTraceResponse,
 )
@@ -16,19 +14,6 @@ DEMO_OPERATION_ID = UUID("90000000-0000-0000-0000-000000000001")
 DEMO_MESSAGE_ID = UUID("30000000-0000-0000-0000-000000000001")
 DEMO_CONVERSATION_ID = UUID("20000000-0000-0000-0000-000000000001")
 DEMO_TIME = datetime(2026, 1, 1, 12, 0, tzinfo=UTC)
-
-
-def demo_post(user_id: UUID = DEMO_USER_ID) -> PostResponse:
-    return PostResponse(
-        id=DEMO_POST_ID,
-        user_id=user_id,
-        text="Publicación de demostración: reemplazar mediante TODO(TP).",
-        media=[],
-        interests=["data-engineering", "fastapi"],
-        published_at=DEMO_TIME,
-        reaction_count=7,
-        comment_count=3,
-    )
 
 
 def demo_user(user_id: UUID = DEMO_USER_ID) -> UserResponse:
@@ -54,10 +39,6 @@ def demo_message(sender_id: UUID = DEMO_USER_ID) -> MessageResponse:
     )
 
 
-def demo_feed(user_id: UUID) -> FeedResponse:
-    return FeedResponse(items=[demo_post(user_id)], next_cursor=None)
-
-
 def demo_trace(user_id: UUID) -> UserTraceResponse:
     return UserTraceResponse(
         user_id=user_id,
@@ -67,7 +48,7 @@ def demo_trace(user_id: UUID) -> UserTraceResponse:
             "following": [],
             "source": "mock-development-only",
         },
-        recent_posts=[demo_post(user_id)],
+        recent_posts=[],
         active_conversations=[
             {
                 "conversation_id": str(DEMO_CONVERSATION_ID),

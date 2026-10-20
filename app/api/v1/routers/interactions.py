@@ -1,24 +1,30 @@
-from fastapi import APIRouter
+from typing import Annotated
 
-from app.api.dependencies.demo import DemoModeDep
-from app.core.exceptions import FeatureNotImplementedError
+from fastapi import APIRouter, Depends, Header
+
+from app.api.dependencies.use_cases import get_interaction_use_case
+from app.application.use_cases import InteractWithPostUseCase
+from app.domain.entities import Comment, Reaction
 from app.schemas.models import CommentCreate, ReactionCreate
 
 router = APIRouter()
+InteractionDep = Annotated[InteractWithPostUseCase, Depends(get_interaction_use_case)]
 
 
 @router.post("/reactions", status_code=204)
-async def create_reaction(payload: ReactionCreate, demo_mode: DemoModeDep) -> None:
-    if demo_mode:
-        return
-    del payload
-    raise FeatureNotImplementedError("Crear o cambiar reacción")
+async def create_reaction(payload: ReactionCreate, service: InteractionDep) -> None:
+    await service.react(
+        Reaction(post_id=payload.post_id, user_id=payload.user_id, kind=payload.kind)
+    )
 
 
 @router.post("/comments", status_code=204)
-async def create_comment(payload: CommentCreate, demo_mode: DemoModeDep) -> None:
-    if demo_mode:
-        return
-    del payload
-    raise FeatureNotImplementedError("Crear comentario")
-
+async def create_comment(
+    payload: CommentCreate,
+    service: InteractionDep,
+    idempotency_key: Annotated[str | None, Header(alias="Idempotency-Key")] = None,
+) -> None:
+    await service.comment(
+        Comment(post_id=payload.post_id, user_id=payload.user_id, text=payload.text),
+        idempotency_key,
+    )

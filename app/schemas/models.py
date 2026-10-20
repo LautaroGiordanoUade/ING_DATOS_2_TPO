@@ -28,6 +28,7 @@ class UserResponse(ApiModel):
     account_type: str
     account_status: str
     registered_at: datetime
+    role: str = "user"
 
 
 class PostCreate(ApiModel):

@@ -60,6 +60,23 @@ services:
       neo4j:
         condition: service_healthy
 
+  moderation-worker:
+    build: .
+    command: ["python", "-m", "app.workers.moderation"]
+    restart: unless-stopped
+    volumes:
+      - moderation_worker_lock:/home/appuser/moderation-worker
+    environment:
+      APP_ENV: development
+      MONGODB_URL: mongodb://mongo:27017
+      MONGODB_DATABASE: niche_social
+      REDIS_URL: redis://redis:6379/0
+    depends_on:
+      mongo:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
   redis:
     image: redis:7.4-alpine
     command: ["redis-server", "--appendonly", "yes", "--appendfsync", "everysec"]
@@ -94,3 +111,4 @@ volumes:
   redis_data:
   neo4j_data:
   publication_worker_lock:
+  moderation_worker_lock:

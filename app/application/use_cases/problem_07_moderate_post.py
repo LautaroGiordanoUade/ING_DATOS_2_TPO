@@ -1,37 +1,108 @@
-from uuid import UUID
+from uuid import UUID, uuid5
 
-from app.application.services import CompensationService
-from app.core.exceptions import FeatureNotImplementedError
-from app.domain.repositories import (
-    CounterRepository,
-    FeedRepository,
-    ModerationRepository,
-    PostRepository,
-)
+from app.application.ports.moderation import ModerationStore, ModerationViews
+from app.application.services.moderation_job import ModerationJob
+from app.core.exceptions import ConflictError, InvalidOperationError
+from app.domain.entities import ModerationReport
 
 
 class ModeratePostUseCase:
-    def __init__(
-        self,
-        moderation: ModerationRepository,
-        posts: PostRepository,
-        feeds: FeedRepository,
-        counters: CounterRepository,
-        compensation: CompensationService,
-    ) -> None:
+    def __init__(self, moderation: ModerationStore, views: ModerationViews) -> None:
         self._moderation = moderation
-        self._posts = posts
-        self._feeds = feeds
-        self._counters = counters
-        self._compensation = compensation
+        self._views = views
+
+    async def report(
+        self, post_id: UUID, reporter_id: UUID, reason: str, description: str | None = None
+    ) -> ModerationReport:
+        post = await self._moderation.post(post_id)
+        if post.moderation_status == "hidden":
+            raise ConflictError("Post is already hidden")
+        return await self._moderation.create_report(
+            ModerationReport(
+                post_id=post_id, reporter_id=reporter_id, reason=reason, description=description
+            )
+        )
 
     async def moderate_post(
-        self, report_id: UUID, post_id: UUID, moderator_id: UUID, decision: str
-    ) -> None:
-        # TODO(TP): Definir orden multi-motor, ocultamiento, contadores y compensaciones.
-        raise FeatureNotImplementedError("Problema 7: moderar publicación")
+        self,
+        report_id: UUID,
+        post_id: UUID,
+        moderator_id: UUID,
+        decision: str,
+        reason: str = "Moderation decision",
+        fail_at: str | None = None,
+    ) -> ModerationJob:
+        if decision not in ("hide", "reject", "revert"):
+            raise InvalidOperationError("Decision must be hide, reject or revert")
+        report = await self._moderation.report(report_id)
+        if str(report["post_id"]) != str(post_id):
+            raise ConflictError("Report belongs to a different post")
+        operation_id = uuid5(report_id, "revert" if decision == "revert" else "decision")
+        existing = await self._moderation.get_job(operation_id)
+        if existing is not None:
+            if (existing.action, existing.reason, existing.fail_at) != (decision, reason, fail_at):
+                raise ConflictError("A different decision/request already exists")
+            return existing
+        post = await self._moderation.post(post_id)
+        status = report["resolution_status"]
+        if decision == "revert":
+            if status != "approved":
+                raise ConflictError("Only an approved hide can be reverted")
+            hide = await self._moderation.get_job(uuid5(report_id, "decision"))
+            if hide is None or hide.status != "completed" or hide.snapshot is None:
+                raise ConflictError("Hide has not completed")
+            restore = hide.snapshot
+        else:
+            if status != "pending":
+                raise ConflictError("Report is closed")
+            if decision == "hide" and post.moderation_status == "hidden":
+                raise ConflictError("Post already hidden by another report")
+            restore = None
+        return await self._moderation.enqueue(
+            ModerationJob(
+                operation_id=operation_id,
+                report_id=report_id,
+                post_id=post_id,
+                moderator_id=moderator_id,
+                action=decision,
+                reason=reason,
+                fail_at=fail_at,
+                restore=restore,
+            )
+        )
 
-    async def reverse_moderation(self, report_id: UUID, post_id: UUID) -> None:
-        # TODO(TP): Reconstruir feed/contadores sin introducir duplicados.
-        raise FeatureNotImplementedError("Problema 7: revertir moderación")
+    async def reverse_moderation(
+        self,
+        report_id: UUID,
+        post_id: UUID,
+        moderator_id: UUID,
+        reason: str = "Revert moderation",
+        fail_at: str | None = None,
+    ) -> ModerationJob:
+        return await self.moderate_post(report_id, post_id, moderator_id, "revert", reason, fail_at)
 
+    async def get_report(self, report_id: UUID) -> dict[str, object]:
+        return await self._moderation.report(report_id)
+
+    async def list_reports(self, status: str | None = None) -> list[dict[str, object]]:
+        return await self._moderation.reports(status)
+
+    async def history(self, post_id: UUID) -> list[dict[str, object]]:
+        return await self._moderation.history(post_id)
+
+    async def job(self, operation_id: UUID) -> ModerationJob | None:
+        return await self._moderation.get_job(operation_id)
+
+    async def retry(self, operation_id: UUID) -> ModerationJob:
+        return await self._moderation.retry(operation_id)
+
+    async def inspect(self, post_id: UUID) -> dict[str, object]:
+        post = await self._moderation.snapshot(post_id)
+        views = await self._views.snapshot(post_id)
+        return {
+            "post_id": str(post_id),
+            "moderation_status": post.moderation_status,
+            "moderation_owner": post.owner,
+            "feeds": views.feeds,
+            "counters": views.counters,
+        }
