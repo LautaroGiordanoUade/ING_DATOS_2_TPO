@@ -14,6 +14,7 @@ class OperationStep:
     name: str
     execute: AsyncAction
     compensate: AsyncAction | None = None
+    compensate_on_failure: bool = False
 
 
 class CompensationService:
@@ -38,8 +39,11 @@ class CompensationService:
                 operation.touch()
                 await self._operation_log.save(operation)
                 await self._failure_injector.checkpoint(step.name)
+                if step.compensate_on_failure:
+                    completed.append(step)
                 await step.execute()
-                completed.append(step)
+                if not step.compensate_on_failure:
+                    completed.append(step)
                 operation.completed_steps.append(step.name)
                 operation.touch()
                 await self._operation_log.save(operation)
