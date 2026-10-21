@@ -5,6 +5,7 @@ from fastapi import APIRouter
 from app.api.dependencies.use_cases import RepositoriesDep
 from app.application.services.identity import IdentityService
 from app.core.exceptions import ResourceNotFoundError
+from app.domain.entities.models import AccountType
 from app.schemas.models import UserCreate, UserResponse
 from app.schemas.moderation import LoginRequest, TokenResponse
 
@@ -14,7 +15,11 @@ router = APIRouter()
 @router.post("", response_model=UserResponse, status_code=201)
 async def create_user(payload: UserCreate, repositories: RepositoriesDep) -> object:
     return await IdentityService(repositories.users).register(
-        payload.username, payload.full_name, payload.email, payload.password
+        payload.username,
+        payload.full_name,
+        payload.email,
+        payload.password,
+        AccountType(payload.account_type),
     )
 
 

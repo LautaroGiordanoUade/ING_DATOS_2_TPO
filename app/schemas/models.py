@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Literal
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -9,6 +10,7 @@ class ApiModel(BaseModel):
 
 
 class UserCreate(ApiModel):
+    account_type: Literal["public", "private"] = "public"
     username: str = Field(min_length=3, max_length=50)
     full_name: str = Field(min_length=1, max_length=150)
     email: str

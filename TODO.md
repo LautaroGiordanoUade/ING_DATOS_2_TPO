@@ -24,9 +24,17 @@ rutas en Swagger o respuestas en modo demo.
 ## Problema 2: seguir/dejar de seguir
 
 - [x] Usuarios MongoDB (get/create/update_account_status e índices únicos), completado para P7.
-- [ ] Follow/unfollow Neo4j; cuentas privadas y aprobación; evitar duplicados.
-- [ ] Coordinar snapshot del P1 con cambios de seguimiento.
-- [ ] Contadores, feed, compensaciones, idempotencia y concurrencia.
+- [x] Follow/unfollow Neo4j; cuentas privadas con solicitud y aprobación del titular.
+- [x] Autenticación, rechazo de auto-follow y duplicados; registro de cuentas privadas.
+- [x] Contadores Redis desde el grafo, incluidos datos anteriores sin contadores.
+- [x] Carga inicial de 20 publicaciones visibles; unfollow retira las del autor.
+- [x] Coordinación con P1 en vuelo y restauraciones P7/P8 mediante gates y entregas diferidas.
+- [x] Workflow durable con compensación, recuperación y retry en el worker existente P7/P8.
+- [x] Idempotency-Key, exclusión por participantes y pruebas de fallas/concurrencia/reinicio.
+- [x] Guía y smoke HTTP reproducible en docs/problems/problem_02.md.
+- Límites: un consumidor por host/volumen; una operación activa por participante (409 si está
+  ocupado), hasta 10000 publicaciones por autor y 100000 referencias en el feed inspeccionado.
+  El ranking y la paginación del feed completo pertenecen al P3.
 
 ## Problema 3: feed personalizado
 

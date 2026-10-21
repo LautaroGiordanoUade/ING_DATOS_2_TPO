@@ -6,6 +6,7 @@ from redis.asyncio import Redis
 
 from app.application.services.moderation_job import ModerationSnapshot
 from app.core.exceptions import ConflictError
+from app.infrastructure.persistence.redis.follow_gate import FOLLOW_GATE
 from app.infrastructure.persistence.redis.moderation import (
     _ADD_VISIBLE,
     _HIDE,
@@ -28,12 +29,15 @@ if redis.call('EXISTS', KEYS[1]) == 1 then return 0 end
 redis.call('SET', KEYS[2], 'online', 'EX', 120)
 return 1
 """
-_UNBLOCK = """
+_UNBLOCK = (
+    FOLLOW_GATE
+    + """
 redis.call('DEL', KEYS[1])
 local function deliver(post, recipient, score)
     if redis.call('EXISTS', 'moderation:' .. post .. ':hidden') == 1
        or redis.call('EXISTS', 'suspension:' .. post .. ':hidden') == 1 then return end
     local author = redis.call('GET', 'publication:' .. post .. ':author') or ''
+    if not follow_allows(recipient, author, post, score) then return end
     if redis.call('EXISTS', 'account:' .. author .. ':suspended') == 1 then return end
     if redis.call('EXISTS', 'account:' .. recipient .. ':suspended') == 1 then
         redis.call('HSET', 'account:' .. recipient .. ':deferred_in', post, score)
@@ -55,6 +59,7 @@ if ARGV[1] ~= '' and tonumber(ARGV[2]) > tonumber(ARGV[3]) then
 end
 return 1
 """
+)
 
 
 class RedisAccountViews:
@@ -165,9 +170,15 @@ class RedisAccountViews:
         return bool(result)
 
 
-_RESTORE_FEED = """
+_RESTORE_FEED = (
+    FOLLOW_GATE
+    + """
 if redis.call('EXISTS', KEYS[2]) == 0 and redis.call('EXISTS', KEYS[3]) == 0 then
+    local recipient = string.sub(KEYS[1], 6)
+    local author = redis.call('GET', 'publication:' .. ARGV[2] .. ':author') or ''
+    if not follow_allows(recipient, author, ARGV[2], ARGV[1]) then return 1 end
     redis.call('ZADD', KEYS[1], ARGV[1], ARGV[2])
 end
 return 1
 """
+)

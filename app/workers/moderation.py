@@ -2,15 +2,18 @@ import asyncio
 import logging
 
 from app.application.services.account_processor import AccountProcessor
+from app.application.services.follow_processor import FollowProcessor
 from app.application.services.moderation_processor import ModerationProcessor
 from app.core.config import get_settings
 from app.infrastructure.persistence.mongodb.client import create_mongo_client
 from app.infrastructure.persistence.mongodb.repositories.accounts import MongoAccountStore
+from app.infrastructure.persistence.mongodb.repositories.follows import MongoFollowStore
 from app.infrastructure.persistence.mongodb.repositories.moderation import MongoModerationRepository
 from app.infrastructure.persistence.neo4j.client import create_neo4j_driver
 from app.infrastructure.persistence.neo4j.repositories import Neo4jSocialGraphRepository
 from app.infrastructure.persistence.redis.accounts import RedisAccountViews
 from app.infrastructure.persistence.redis.client import create_redis_client
+from app.infrastructure.persistence.redis.follows import RedisFollowViews
 from app.infrastructure.persistence.redis.moderation import RedisModerationViews
 
 logger = logging.getLogger(__name__)
@@ -29,11 +32,19 @@ async def main() -> None:
     account_processor = AccountProcessor(
         accounts, Neo4jSocialGraphRepository(neo4j), RedisAccountViews(redis)
     )
+    follows = MongoFollowStore(mongo[settings.mongodb_database])
+    follow_processor = FollowProcessor(
+        follows, Neo4jSocialGraphRepository(neo4j), RedisFollowViews(redis)
+    )
     try:
+        await follows.ensure_indexes()
         await store.ensure_indexes()
         await accounts.ensure_indexes()
         while True:
             try:
+                # Resume interrupted P2 before applying other users' new transitions.
+                for follow_job in await follows.pending():
+                    await follow_processor.process(follow_job)
                 for job in await store.pending():
                     await processor.process(job)
                 for account_job in await accounts.pending():

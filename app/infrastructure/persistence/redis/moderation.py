@@ -7,6 +7,7 @@ from redis.asyncio import Redis
 from app.application.services.moderation_job import ModerationSnapshot
 from app.core.exceptions import InvalidOperationError
 from app.domain.counter_names import POST_COMMENTS, POST_REACTIONS
+from app.infrastructure.persistence.redis.follow_gate import FOLLOW_GATE
 from app.infrastructure.persistence.redis.keys import RedisKeys
 
 # Atomic per-post transitions, including uncertain acknowledgements. The saved
@@ -35,10 +36,13 @@ if redis.call('EXISTS', KEYS[1]) == 1 then
 end
 return 1
 """
-_ADD_VISIBLE = """
+_ADD_VISIBLE = (
+    FOLLOW_GATE
+    + """
 if redis.call('EXISTS', KEYS[2]) == 0 then
     local recipient = string.sub(KEYS[1], 6)
     local author = redis.call('GET', 'publication:' .. ARGV[2] .. ':author') or ''
+    if not follow_allows(recipient, author, ARGV[2], ARGV[1]) then return 1 end
     if redis.call('EXISTS', 'account:' .. author .. ':suspended') == 1 then
         redis.call('HSET', 'account:' .. author .. ':deferred_out',
                    ARGV[2] .. '|' .. recipient, ARGV[1])
@@ -51,6 +55,7 @@ if redis.call('EXISTS', KEYS[2]) == 0 then
 end
 return 1
 """
+)
 
 
 class RedisModerationViews:
