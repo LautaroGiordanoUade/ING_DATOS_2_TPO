@@ -184,3 +184,5 @@ frontend/dist/
 frontend/test-results/
 frontend/playwright-report/
 frontend/coverage/
+!frontend/src/lib/
+!frontend/src/lib/**
