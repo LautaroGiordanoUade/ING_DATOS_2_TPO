@@ -22,7 +22,7 @@ async function loginUi(page: Page, values: { username: string; password: string 
   await page.getByLabel('Nombre de usuario', { exact: true }).fill(values.username)
   await page.getByLabel('Contraseña', { exact: true }).fill(values.password)
   await page.getByRole('button', { name: 'Ingresar', exact: true }).click()
-  await expect(page.getByRole('heading', { name: 'Mis publicaciones', exact: true })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Tu feed', exact: true })).toBeVisible()
 }
 
 test('P1 registro, sesión, publicación, distribución real, recarga y logout', async ({ page, request }, info) => {
@@ -42,6 +42,8 @@ test('P1 registro, sesión, publicación, distribución real, recarga y logout',
   await page.screenshot({ path: info.outputPath('p1-login.png'), fullPage: true })
   await page.getByLabel('Contraseña', { exact: true }).fill(values.password)
   await page.getByRole('button', { name: 'Ingresar', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'Tu feed', exact: true })).toBeVisible()
+  await page.getByRole('navigation', { name: 'Navegación principal' }).getByRole('link', { name: 'Mis publicaciones', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Mis publicaciones', exact: true })).toBeVisible()
   await expect(page.getByText('Todavía no publicaste.')).toBeVisible()
   await page.screenshot({ path: info.outputPath('p1-empty.png'), fullPage: true })
@@ -90,10 +92,11 @@ test('P1 registro, sesión, publicación, distribución real, recarga y logout',
   await page.screenshot({ path: info.outputPath('p1-published.png'), fullPage: true })
   await page.reload()
   await expect(page.getByText(text, { exact: true })).toBeVisible()
-  await page.getByRole('link', { name: /Mis publicaciones/ }).click()
+  await page.getByRole('link', { name: '← Mis publicaciones', exact: true }).click()
   await expect(page.getByText(text, { exact: true })).toBeVisible()
   await page.getByRole('button', { name: 'Cerrar sesión', exact: true }).click()
-  await expect(page.getByRole('heading', { level: 1 })).toContainText('Lo que te interesa')
+  await expect(page.getByRole('heading', { name: 'Iniciá sesión', exact: true })).toBeVisible()
+  await expect(page).toHaveURL(/\/login$/)
   expect(await page.evaluate(() => sessionStorage.getItem('niche.session.token'))).toBeNull()
   await page.goto('/publicar')
   await expect(page).toHaveURL(/\/login$/)

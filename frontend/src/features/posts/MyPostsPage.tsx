@@ -23,6 +23,6 @@ export function MyPostsPage() {
     {posts.isError && <ErrorMessage message={posts.error.message} />}
     {!posts.isError && posts.data?.length === 0 && <section className="card empty-state"><span aria-hidden="true">✳</span><h2>Todavía no publicaste.</h2><p>Una idea puede ser el comienzo de una conversación.</p><Link className="button-primary" to="/publicar">Crear mi primera publicación</Link></section>}
     {!posts.isError && posts.data?.map((post) => <PostCard key={post.id} post={post} author={user!.full_name} />)}
-    <p className="preparation-note">Acá ves tus publicaciones. El feed personalizado se incorporará en P3.</p>
+    <p className="preparation-note">Acá ves tus publicaciones. En Inicio encontrás las de las cuentas que seguís.</p>
   </div>
 }

@@ -1,0 +1,15 @@
+.feed-pagination { display: flex; justify-content: center; padding: 15px 0; }
+.feed-pagination .button-secondary { min-height: 44px; padding-inline: 22px; font-size: 13px; }
+.feed-progress { font-size: 13px; color: #62785c; text-align: center; margin: 20px; }
+.feed-own-link { text-align: center; font-size: 12px; color: #747e70; line-height: 1.8; margin: 28px 0 10px; }
+.feed-own-link a { color: #42664e; text-decoration: underline; text-underline-offset: 3px; }
+.feed-error { margin: 20px 0; }.feed-error .error-message { font-size: 13px; }
+.profile-error, .unavailable-post { font-size: 12px; color: #747e70; line-height: 1.7; }
+.profile-error { margin: -8px 0 22px; }.unavailable-post { padding: 20px; margin-block: 20px; }
+.nav-plus { width: 20px; text-align: center; font-size: 19px; line-height: 20px; }
+@media (max-width: 700px) {
+  .sidebar .nav-label { display: none; }
+  .sidebar .nav-item { min-width: 44px; min-height: 44px; justify-content: center; padding: 10px; }
+  .sidebar .nav-item svg { width: 20px; height: 20px; }
+  .feed-page .list-heading { align-items: center; }.feed-page .list-heading h2 { font-size: 14px; }
+}

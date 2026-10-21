@@ -44,7 +44,7 @@ export function ComposerPage() {
   }, [user.id, values.text, values.interests, values.media, attempt, mutation.isSuccess])
   const locked = attempt !== null
   return <div className="page-content publication-page">
-    <Link to="/" className="back-link">← Mis publicaciones</Link>
+    <Link to="/mis-publicaciones" className="back-link">← Mis publicaciones</Link>
     <div className="page-title"><p className="eyebrow">COMPARTÍ UNA IDEA</p><h1>Algo para tu comunidad.</h1><p className="muted">Publicá sobre lo que te interesa. Nosotros lo acercamos a tus seguidores.</p></div>
     <section className="card composer-card">
       <div className="author-line"><span className="avatar" aria-hidden="true">{user.full_name.slice(0, 1).toUpperCase()}</span><div><strong>{user.full_name}</strong><span>@{user.username} · Publicación pública</span></div></div>

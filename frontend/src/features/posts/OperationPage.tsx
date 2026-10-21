@@ -36,9 +36,9 @@ export function OperationPage() {
       void client.invalidateQueries({ queryKey: ['publication-preview'] })
     }
   }, [completed, client, user])
-  if (!valid) return <div className="page-content"><ErrorMessage message="El identificador de operación no es válido." /><Link to="/">Volver a mis publicaciones</Link></div>
+  if (!valid) return <div className="page-content"><ErrorMessage message="El identificador de operación no es válido." /><Link to="/mis-publicaciones">Volver a mis publicaciones</Link></div>
   return <div className="page-content publication-page">
-    <Link to="/" className="back-link">← Mis publicaciones</Link>
+    <Link to="/mis-publicaciones" className="back-link">← Mis publicaciones</Link>
     <div className="page-title"><p className="eyebrow">DEL ENVÍO A TU COMUNIDAD</p><h1>Estado de publicación</h1></div>
     <section className="card operation-card" aria-live="polite">
       {operation.isPending && <p role="status">Consultando operación…</p>}
