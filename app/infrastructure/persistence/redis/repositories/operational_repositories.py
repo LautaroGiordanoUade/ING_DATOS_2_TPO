@@ -66,6 +66,13 @@ class RedisCounterRepository:
             _INCREMENT_NOT_NEGATIVE, 1, key, str(amount), gate, f"suspension:{entity_id}:hidden"
         )
         return int(result)
+    
+    async def set_value(self, namespace: str, entity_id: UUID, value: int) -> int:
+        key = RedisKeys.counter(namespace, entity_id)
+        client = cast(Any, self._client)
+        clamped = max(0, int(value))
+        await client.set(key, str(clamped))
+        return clamped
 
     async def get_many(self, namespace: str, entity_ids: tuple[UUID, ...]) -> dict[UUID, int]:
         if not entity_ids:
@@ -119,3 +126,9 @@ class RedisIdempotencyRepository:
 
     async def release(self, key: str) -> None:
         await self._client.delete(RedisKeys.idempotency(key))
+        
+    async def get_reservation(self, key: str) -> str | None:
+        value = await self._client.get(RedisKeys.idempotency(key))
+        if value is None:
+            return None
+        return value.decode() if isinstance(value, bytes) else str(value)
