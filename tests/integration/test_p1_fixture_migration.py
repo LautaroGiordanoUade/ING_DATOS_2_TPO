@@ -5,11 +5,11 @@ from uuid import uuid4
 
 import pytest
 
+from app.core.bootstrap import initialize_database
 from app.core.config import get_settings
 from app.infrastructure.persistence.mongodb.client import create_mongo_client
 from app.infrastructure.persistence.mongodb.p1_fixtures import migrate_p1_fixtures
 from app.infrastructure.persistence.mongodb.repositories.identity import MongoUserRepository
-from app.workers.initialize_data import initialize_database
 
 pytestmark = pytest.mark.skipif(
     os.getenv("RUN_INTEGRATION_TESTS") != "1", reason="Requires real MongoDB"
@@ -62,7 +62,7 @@ async def test_additive_migration_backup_dry_run_and_replay_on_real_mongo() -> N
 
 
 @pytest.mark.parametrize("mode", ["empty", "legacy", "production", "duplicate"])
-async def test_compose_initializer_on_real_mongo(mode: str) -> None:
+async def test_api_initializer_on_real_mongo(mode: str) -> None:
     from pymongo.errors import DuplicateKeyError
 
     client = create_mongo_client(get_settings().mongodb_url)

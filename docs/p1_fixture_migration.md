@@ -13,12 +13,15 @@ Con esta versión alcanza con ejecutar:
 docker compose up -d --build
 ```
 
-Compose espera a MongoDB y ejecuta init-data. En development completa los fixtures
-antiguos, conserva respaldos y verifica los índices. API, publication-worker y
-moderation-worker esperan a que termine correctamente. Fuera de development no se
-migran fixtures automáticamente; se verifican los índices igualmente.
-Si la inicialización falla, Compose no inicia los servicios dependientes nuevos.
-Revisar con docker compose logs init-data. Exited (0) es el resultado esperado.
+Compose espera a MongoDB e inicia la API. Al comienzo de su lifespan, en development,
+la API completa los fixtures antiguos, conserva respaldos y verifica los índices.
+Solo después acepta solicitudes. Los dos workers esperan a que la API esté saludable.
+Fuera de development no se migran fixtures automáticamente; se verifican los índices.
+Si la inicialización falla, la API no arranca y los workers nuevos quedan bloqueados.
+Los clientes se cierran incluso si falla el inicio. Revisar con docker compose logs api.
+No se necesita un contenedor de inicialización ni otro worker para esta tarea.
+Si una instalación anterior conserva el contenedor detenido init-data, se puede retirar
+con docker compose up -d --build --remove-orphans, sin eliminar volúmenes.
 Una base vacía queda con sus índices, sin usuarios inventados. Los seeds P7/P8
 siguen siendo comandos explícitos: arrancar Compose no reinicia sus pruebas ni estados.
 
@@ -75,7 +78,9 @@ no se deben usar los usuarios técnicos qa-p1-* para el login de moderación.
 - Suite completa con integraciones habilitadas: 166 aprobadas, sin fallos.
 - Mypy de aplicación y tests: sin errores en 168 archivos; Ruff de los archivos del cambio correcto.
 - Smoke HTTP P7/P8 y regresiones reales P1/P5 aprobados.
-- Inicialización automática: 9 pruebas de fixtures/migración/arranque aprobadas;
-  mypy actualizado sin errores en 169 archivos.
-- Compose real: reparó un fixture incompleto antes de iniciar API/workers. Una segunda
-  ejecución no modificó usuarios; init-data terminó con código 0 y readiness fue ready.
+- Inicialización automática: pruebas de fixtures/migración, base vacía, idempotencia,
+  error de índices, guard de entorno y cierre de recursos ante fallas de arranque.
+- El arranque se integra en la API; el antiguo servicio init-data fue retirado.
+- Versión integrada en la API: 14 pruebas dirigidas aprobadas, más tipado y estilo.
+  Compose real comprobado: la API reparó un fixture y guardó su respaldo antes de
+  aceptar solicitudes; los workers iniciaron después del healthcheck exitoso.

@@ -13,8 +13,6 @@ services:
       NEO4J_USER: neo4j
       NEO4J_PASSWORD: ${NEO4J_PASSWORD:-local_dev_password}
     depends_on:
-      init-data:
-        condition: service_completed_successfully
       mongo:
         condition: service_healthy
       redis:
@@ -27,17 +25,6 @@ services:
       timeout: 10s
       retries: 5
       start_period: 20s
-
-  init-data:
-    build: .
-    command: ["python", "-m", "app.workers.initialize_data"]
-    environment:
-      APP_ENV: development
-      MONGODB_URL: mongodb://mongo:27017
-      MONGODB_DATABASE: niche_social
-    depends_on:
-      mongo:
-        condition: service_healthy
 
   mongo:
     image: mongo:8.0
@@ -66,8 +53,8 @@ services:
       NEO4J_USER: neo4j
       NEO4J_PASSWORD: ${NEO4J_PASSWORD:-local_dev_password}
     depends_on:
-      init-data:
-        condition: service_completed_successfully
+      api:
+        condition: service_healthy
       mongo:
         condition: service_healthy
       redis:
@@ -90,8 +77,8 @@ services:
       NEO4J_USER: neo4j
       NEO4J_PASSWORD: ${NEO4J_PASSWORD:-local_dev_password}
     depends_on:
-      init-data:
-        condition: service_completed_successfully
+      api:
+        condition: service_healthy
       mongo:
         condition: service_healthy
       redis:
