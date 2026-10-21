@@ -65,6 +65,7 @@ async def get_operation(operation_id: UUID, resources: ResourcesDep) -> Operatio
     if operation is None:
         raise ResourceNotFoundError("Operación no encontrada")
     return OperationDetailResponse(
+        post_id=publication.post.id if publication else None,
         operation_id=operation.operation_id,
         operation_type=operation.operation_type,
         status=operation.status.value,

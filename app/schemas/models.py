@@ -137,6 +137,7 @@ class PublicationResponse(OperationResponse):
 
 
 class OperationDetailResponse(OperationResponse):
+    post_id: UUID | None = None
     operation_type: str
     current_step: str | None
     completed_steps: list[str]

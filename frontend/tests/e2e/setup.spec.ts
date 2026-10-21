@@ -1,0 +1,58 @@
+import { test, expect } from '@playwright/test'
+
+// No interceptors: these smoke tests require the actual FastAPI + MongoDB/Redis/Neo4j.
+test('arranque, conexión real, recarga y layout sin desbordamiento', async ({ page, request }, testInfo) => {
+  const consoleErrors: string[] = []
+  page.on('pageerror', (error) => consoleErrors.push(error.message))
+  page.on('console', (message) => { if (message.type() === 'error') consoleErrors.push(message.text()) })
+  const live = await request.get('/backend/health/ready')
+  expect(live.ok(), 'Levantar Compose real antes de correr E2E').toBeTruthy()
+  expect(await live.json()).toEqual({ status: 'ready', services: { mongodb: 'ok', redis: 'ok', neo4j: 'ok' } })
+
+  const responsePromise = page.waitForResponse((response) => response.url().endsWith('/backend/health/ready'))
+  await page.goto('/')
+  expect((await responsePromise).ok()).toBeTruthy()
+  await expect(page.getByRole('heading', { level: 1 })).toContainText('Lo que te interesa')
+  await expect(page.getByRole('status')).toHaveText('Conectado')
+  await expect(page.getByText('Disponible', { exact: true })).toHaveCount(3)
+  await expect(page.getByRole('navigation', { name: 'Navegación principal' })).toBeVisible()
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBeTruthy()
+  const refresh = page.waitForResponse((response) => response.url().endsWith('/backend/health/ready'))
+  await page.getByRole('button', { name: 'Volver a comprobar' }).click()
+  expect((await refresh).ok()).toBeTruthy()
+  await expect(page.getByRole('status')).toHaveText('Conectado')
+  await page.evaluate(() => window.scrollTo(0, 0))
+  await page.screenshot({ path: testInfo.outputPath('setup.png'), fullPage: true })
+  await page.reload()
+  await expect(page.getByRole('status')).toHaveText('Conectado')
+  expect(consoleErrors).toEqual([])
+})
+
+test('ruta desconocida y regreso accesible al inicio', async ({ page }) => {
+  await page.goto('/no-existe')
+  await expect(page.getByRole('heading', { name: 'Página no encontrada' })).toBeVisible()
+  await page.getByRole('link', { name: 'Volver al inicio' }).click()
+  await expect(page.getByRole('heading', { level: 1 })).toContainText('Lo que te interesa')
+  await expect(page.getByRole('status')).toHaveText('Conectado')
+  await page.reload()
+  await page.keyboard.press('Tab')
+  await expect(page.getByRole('link', { name: 'Saltar al contenido' })).toBeFocused()
+  await page.keyboard.press('Enter')
+  await expect(page.getByRole('main')).toBeFocused()
+})
+
+test('muestra pérdida de conexión y recupera el servicio real al reintentar', async ({ page, context }, testInfo) => {
+  await page.goto('/')
+  await expect(page.getByRole('status')).toHaveText('Conectado')
+  await context.setOffline(true)
+  await page.getByRole('button', { name: 'Volver a comprobar' }).click()
+  await expect(page.getByRole('alert')).toContainText('No pudimos conectar')
+  await expect(page.getByRole('status')).toHaveText('Sin conexión')
+  await expect(page.getByText('Disponible', { exact: true })).toHaveCount(0)
+  await page.evaluate(() => window.scrollTo(0, 0))
+  await page.screenshot({ path: testInfo.outputPath('offline.png'), fullPage: true })
+  await context.setOffline(false)
+  await page.getByRole('button', { name: 'Volver a comprobar' }).click()
+  await expect(page.getByRole('status')).toHaveText('Conectado')
+  await expect(page.getByRole('alert')).toHaveCount(0)
+})

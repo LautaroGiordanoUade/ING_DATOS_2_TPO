@@ -1,0 +1,5023 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "niche-social-network",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/health": {
+      "get": {
+        "summary": "Health",
+        "operationId": "health_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health/ready": {
+      "get": {
+        "summary": "Readiness",
+        "operationId": "readiness_health_ready_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReadinessResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/problems/operations/{operation_id}": {
+      "get": {
+        "tags": [
+          "problems"
+        ],
+        "summary": "Get Operation",
+        "operationId": "get_operation_api_v1_problems_operations__operation_id__get",
+        "parameters": [
+          {
+            "name": "operation_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Operation Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperationDetailResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/problems/1/publish": {
+      "post": {
+        "tags": [
+          "problems"
+        ],
+        "summary": "Publish",
+        "operationId": "publish_api_v1_problems_1_publish_post",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
+            }
+          },
+          {
+            "name": "X-Fail-At-Step",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Fail-At-Step"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PostCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicationResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/problems/1/feed-preview/{user_id}": {
+      "get": {
+        "tags": [
+          "problems"
+        ],
+        "summary": "Publication Feed Preview",
+        "description": "Visible P1 publication IDs only. Personalized feed belongs to problem 3.",
+        "operationId": "publication_feed_preview_api_v1_problems_1_feed_preview__user_id__get",
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "User Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Publication Feed Preview Api V1 Problems 1 Feed Preview  User Id  Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/problems/2/follow": {
+      "post": {
+        "tags": [
+          "problems"
+        ],
+        "summary": "Create Follow",
+        "operationId": "create_follow_api_v1_problems_2_follow_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
+            }
+          },
+          {
+            "name": "x-fail-at-step",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Fail-At-Step"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FollowRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FollowJob"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "problems"
+        ],
+        "summary": "Delete Follow",
+        "operationId": "delete_follow_api_v1_problems_2_follow_delete",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
+            }
+          },
+          {
+            "name": "x-fail-at-step",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Fail-At-Step"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FollowRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FollowJob"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/problems/2/approve": {
+      "post": {
+        "tags": [
+          "problems"
+        ],
+        "summary": "Approve Follow",
+        "operationId": "approve_follow_api_v1_problems_2_approve_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
+            }
+          },
+          {
+            "name": "x-fail-at-step",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Fail-At-Step"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FollowRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FollowJob"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/problems/2/operations/{operation_id}": {
+      "get": {
+        "tags": [
+          "problems"
+        ],
+        "summary": "Follow Operation",
+        "operationId": "follow_operation_api_v1_problems_2_operations__operation_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "operation_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Operation Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FollowJob"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/problems/3/feed/{user_id}": {
+      "get": {
+        "tags": [
+          "problems"
+        ],
+        "summary": "Get User Feed",
+        "description": "20 posts, recency/relevance in 200-candidate windows; navigation expires in 15 min.",
+        "operationId": "get_user_feed_api_v1_problems_3_feed__user_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "User Id"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 2048
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FeedResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/problems/4/recommendations/{user_id}": {
+      "get": {
+        "tags": [
+          "problems"
+        ],
+        "summary": "Recommendations",
+        "operationId": "recommendations_api_v1_problems_4_recommendations__user_id__get",
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "User Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "title": "Response Recommendations Api V1 Problems 4 Recommendations  User Id  Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/problems/4/mutual-friends": {
+      "get": {
+        "tags": [
+          "problems"
+        ],
+        "summary": "Mutual Friends",
+        "operationId": "mutual_friends_api_v1_problems_4_mutual_friends_get",
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "User Id"
+            }
+          },
+          {
+            "name": "other_user_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Other User Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "title": "Response Mutual Friends Api V1 Problems 4 Mutual Friends Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/problems/5/reaction": {
+      "post": {
+        "tags": [
+          "problems"
+        ],
+        "summary": "React",
+        "operationId": "react_api_v1_problems_5_reaction_post",
+        "parameters": [
+          {
+            "name": "x-fail-at-step",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Fail-At-Step"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReactionCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperationResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "problems"
+        ],
+        "summary": "Remove Reaction",
+        "operationId": "remove_reaction_api_v1_problems_5_reaction_delete",
+        "parameters": [
+          {
+            "name": "x-fail-at-step",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Fail-At-Step"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReactionRemove"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperationResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/problems/5/comment": {
+      "post": {
+        "tags": [
+          "problems"
+        ],
+        "summary": "Comment",
+        "operationId": "comment_api_v1_problems_5_comment_post",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
+            }
+          },
+          {
+            "name": "x-fail-at-step",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Fail-At-Step"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CommentCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperationResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/problems/6/message": {
+      "post": {
+        "tags": [
+          "problems"
+        ],
+        "summary": "Send Message",
+        "operationId": "send_message_api_v1_problems_6_message_post",
+        "parameters": [
+          {
+            "name": "x-fail-at-step",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Fail-At-Step"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MessageCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/problems/7/moderate": {
+      "post": {
+        "tags": [
+          "problems"
+        ],
+        "summary": "Moderate",
+        "operationId": "moderate_api_v1_problems_7_moderate_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "x-fail-at-step",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Fail-At-Step"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ModerationRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/problems/8/suspend": {
+      "post": {
+        "tags": [
+          "problems"
+        ],
+        "summary": "Suspend",
+        "description": "Compatibility route: queues work; inspect /accounts/{user_id}/history/operations.",
+        "operationId": "suspend_api_v1_problems_8_suspend_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "x-fail-at-step",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Fail-At-Step"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SuspensionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/problems/8/trace/{user_id}": {
+      "get": {
+        "tags": [
+          "problems"
+        ],
+        "summary": "Trace",
+        "operationId": "trace_api_v1_problems_8_trace__user_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "User Id"
+            }
+          },
+          {
+            "name": "x-fail-at-step",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Fail-At-Step"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserTraceResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/users": {
+      "post": {
+        "tags": [
+          "users"
+        ],
+        "summary": "Create User",
+        "operationId": "create_user_api_v1_users_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/users/login": {
+      "post": {
+        "tags": [
+          "users"
+        ],
+        "summary": "Login",
+        "operationId": "login_api_v1_users_login_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokenResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid credentials"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/users/me": {
+      "get": {
+        "tags": [
+          "users"
+        ],
+        "summary": "Get Current User",
+        "description": "Validate the bearer against current account state and return its public profile.",
+        "operationId": "get_current_user_api_v1_users_me_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/users/{user_id}": {
+      "get": {
+        "tags": [
+          "users"
+        ],
+        "summary": "Get User",
+        "operationId": "get_user_api_v1_users__user_id__get",
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "User Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/posts": {
+      "post": {
+        "tags": [
+          "posts"
+        ],
+        "summary": "Create Post",
+        "operationId": "create_post_api_v1_posts_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PostCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicationResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Login required"
+          },
+          "403": {
+            "description": "Author must match bearer"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/posts/by-user/{user_id}": {
+      "get": {
+        "tags": [
+          "posts"
+        ],
+        "summary": "By Author",
+        "operationId": "by_author_api_v1_posts_by_user__user_id__get",
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "User Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PostResponse"
+                  },
+                  "title": "Response By Author Api V1 Posts By User  User Id  Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/posts/{post_id}": {
+      "get": {
+        "tags": [
+          "posts"
+        ],
+        "summary": "Detail",
+        "operationId": "detail_api_v1_posts__post_id__get",
+        "parameters": [
+          {
+            "name": "post_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Post Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PostResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/social/follows": {
+      "post": {
+        "tags": [
+          "social"
+        ],
+        "summary": "Create Follow",
+        "operationId": "create_follow_api_v1_social_follows_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
+            }
+          },
+          {
+            "name": "x-fail-at-step",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Fail-At-Step"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FollowRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FollowJob"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Login requerido"
+          },
+          "403": {
+            "description": "Identidad no autorizada"
+          },
+          "404": {
+            "description": "Usuario u operacion inexistente"
+          },
+          "409": {
+            "description": "Conflicto de estado o solicitud concurrente"
+          },
+          "422": {
+            "description": "Seguimiento invalido"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "social"
+        ],
+        "summary": "Delete Follow",
+        "operationId": "delete_follow_api_v1_social_follows_delete",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
+            }
+          },
+          {
+            "name": "x-fail-at-step",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Fail-At-Step"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FollowRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FollowJob"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Login requerido"
+          },
+          "403": {
+            "description": "Identidad no autorizada"
+          },
+          "404": {
+            "description": "Usuario u operacion inexistente"
+          },
+          "409": {
+            "description": "Conflicto de estado o solicitud concurrente"
+          },
+          "422": {
+            "description": "Seguimiento invalido"
+          }
+        }
+      }
+    },
+    "/api/v1/social/follows/approve": {
+      "post": {
+        "tags": [
+          "social"
+        ],
+        "summary": "Approve Follow",
+        "operationId": "approve_follow_api_v1_social_follows_approve_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
+            }
+          },
+          {
+            "name": "x-fail-at-step",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Fail-At-Step"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FollowRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FollowJob"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Login requerido"
+          },
+          "403": {
+            "description": "Identidad no autorizada"
+          },
+          "404": {
+            "description": "Usuario u operacion inexistente"
+          },
+          "409": {
+            "description": "Conflicto de estado o solicitud concurrente"
+          },
+          "422": {
+            "description": "Seguimiento invalido"
+          }
+        }
+      }
+    },
+    "/api/v1/social/requests": {
+      "get": {
+        "tags": [
+          "social"
+        ],
+        "summary": "Incoming Requests",
+        "operationId": "incoming_requests_api_v1_social_requests_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "type": "array",
+                  "title": "Response Incoming Requests Api V1 Social Requests Get"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Login requerido"
+          },
+          "403": {
+            "description": "Identidad no autorizada"
+          },
+          "404": {
+            "description": "Usuario u operacion inexistente"
+          },
+          "409": {
+            "description": "Conflicto de estado o solicitud concurrente"
+          },
+          "422": {
+            "description": "Seguimiento invalido"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/social/operations/{operation_id}": {
+      "get": {
+        "tags": [
+          "social"
+        ],
+        "summary": "Follow Operation",
+        "operationId": "follow_operation_api_v1_social_operations__operation_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "operation_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Operation Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FollowJob"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Login requerido"
+          },
+          "403": {
+            "description": "Identidad no autorizada"
+          },
+          "404": {
+            "description": "Usuario u operacion inexistente"
+          },
+          "409": {
+            "description": "Conflicto de estado o solicitud concurrente"
+          },
+          "422": {
+            "description": "Seguimiento invalido"
+          }
+        }
+      }
+    },
+    "/api/v1/social/operations/{operation_id}/retry": {
+      "post": {
+        "tags": [
+          "social"
+        ],
+        "summary": "Retry Follow",
+        "operationId": "retry_follow_api_v1_social_operations__operation_id__retry_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "operation_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Operation Id"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FollowJob"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Login requerido"
+          },
+          "403": {
+            "description": "Identidad no autorizada"
+          },
+          "404": {
+            "description": "Usuario u operacion inexistente"
+          },
+          "409": {
+            "description": "Conflicto de estado o solicitud concurrente"
+          },
+          "422": {
+            "description": "Seguimiento invalido"
+          }
+        }
+      }
+    },
+    "/api/v1/social/relations/{followed_id}": {
+      "get": {
+        "tags": [
+          "social"
+        ],
+        "summary": "Relationship",
+        "operationId": "relationship_api_v1_social_relations__followed_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "followed_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Followed Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Relationship Api V1 Social Relations  Followed Id  Get"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Login requerido"
+          },
+          "403": {
+            "description": "Identidad no autorizada"
+          },
+          "404": {
+            "description": "Usuario u operacion inexistente"
+          },
+          "409": {
+            "description": "Conflicto de estado o solicitud concurrente"
+          },
+          "422": {
+            "description": "Seguimiento invalido"
+          }
+        }
+      }
+    },
+    "/api/v1/social/counts/{user_id}": {
+      "get": {
+        "tags": [
+          "social"
+        ],
+        "summary": "Follow Counts",
+        "operationId": "follow_counts_api_v1_social_counts__user_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "User Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "integer"
+                  },
+                  "title": "Response Follow Counts Api V1 Social Counts  User Id  Get"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Login requerido"
+          },
+          "403": {
+            "description": "Identidad no autorizada"
+          },
+          "404": {
+            "description": "Usuario u operacion inexistente"
+          },
+          "409": {
+            "description": "Conflicto de estado o solicitud concurrente"
+          },
+          "422": {
+            "description": "Seguimiento invalido"
+          }
+        }
+      }
+    },
+    "/api/v1/feeds/{user_id}": {
+      "get": {
+        "tags": [
+          "feeds"
+        ],
+        "summary": "Get User Feed",
+        "description": "20 posts, recency/relevance in 200-candidate windows; navigation expires in 15 min.",
+        "operationId": "get_user_feed_api_v1_feeds__user_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "User Id"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 2048
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FeedResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Login requerido"
+          },
+          "403": {
+            "description": "Feed de otro usuario"
+          },
+          "410": {
+            "description": "Cursor vencido; refresque el feed"
+          },
+          "422": {
+            "description": "Cursor invalido"
+          },
+          "503": {
+            "description": "Motor no disponible"
+          }
+        }
+      }
+    },
+    "/api/v1/interactions/reactions": {
+      "post": {
+        "tags": [
+          "interactions"
+        ],
+        "summary": "Create Reaction",
+        "operationId": "create_reaction_api_v1_interactions_reactions_post",
+        "parameters": [
+          {
+            "name": "x-fail-at-step",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Fail-At-Step"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReactionCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/interactions/comments": {
+      "post": {
+        "tags": [
+          "interactions"
+        ],
+        "summary": "Create Comment",
+        "operationId": "create_comment_api_v1_interactions_comments_post",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
+            }
+          },
+          {
+            "name": "x-fail-at-step",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Fail-At-Step"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CommentCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/messages": {
+      "post": {
+        "tags": [
+          "messages"
+        ],
+        "summary": "Create Message",
+        "operationId": "create_message_api_v1_messages_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MessageCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessageResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/moderation/reports": {
+      "post": {
+        "tags": [
+          "moderation"
+        ],
+        "summary": "Create Report",
+        "description": "Report a published post. One report per user/post; identity comes from the bearer.",
+        "operationId": "create_report_api_v1_moderation_reports_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "x-fail-at-step",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Fail-At-Step"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReportCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReportResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, invalid or expired bearer"
+          },
+          "403": {
+            "description": "Moderator/admin role required"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "409": {
+            "description": "Closed report, conflicting decision or concurrent operation"
+          },
+          "422": {
+            "description": "Invalid request"
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "moderation"
+        ],
+        "summary": "List Reports",
+        "description": "Moderator queue, newest first, up to 100 reports.",
+        "operationId": "list_reports_api_v1_moderation_reports_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^(pending|approved|rejected|reverted)$"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "name": "x-fail-at-step",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Fail-At-Step"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ReportResponse"
+                  },
+                  "title": "Response List Reports Api V1 Moderation Reports Get"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, invalid or expired bearer"
+          },
+          "403": {
+            "description": "Moderator/admin role required"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "409": {
+            "description": "Closed report, conflicting decision or concurrent operation"
+          },
+          "422": {
+            "description": "Invalid request"
+          }
+        }
+      }
+    },
+    "/api/v1/moderation/reports/{report_id}": {
+      "get": {
+        "tags": [
+          "moderation"
+        ],
+        "summary": "Get Report",
+        "operationId": "get_report_api_v1_moderation_reports__report_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "report_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Report Id"
+            }
+          },
+          {
+            "name": "x-fail-at-step",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Fail-At-Step"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReportResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, invalid or expired bearer"
+          },
+          "403": {
+            "description": "Moderator/admin role required"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "409": {
+            "description": "Closed report, conflicting decision or concurrent operation"
+          },
+          "422": {
+            "description": "Invalid request"
+          }
+        }
+      }
+    },
+    "/api/v1/moderation/reports/{report_id}/decision": {
+      "post": {
+        "tags": [
+          "moderation"
+        ],
+        "summary": "Decide",
+        "description": "Enqueue durable hide/reject; poll the operation until a terminal status.",
+        "operationId": "decide_api_v1_moderation_reports__report_id__decision_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "report_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Report Id"
+            }
+          },
+          {
+            "name": "x-fail-at-step",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Fail-At-Step"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DecisionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModerationJob"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, invalid or expired bearer"
+          },
+          "403": {
+            "description": "Moderator/admin role required"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "409": {
+            "description": "Closed report, conflicting decision or concurrent operation"
+          },
+          "422": {
+            "description": "Invalid request"
+          }
+        }
+      }
+    },
+    "/api/v1/moderation/reports/{report_id}/revert": {
+      "post": {
+        "tags": [
+          "moderation"
+        ],
+        "summary": "Revert",
+        "description": "Restore the exact previous moderation status and feed scores, plus current saved counts.",
+        "operationId": "revert_api_v1_moderation_reports__report_id__revert_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "report_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Report Id"
+            }
+          },
+          {
+            "name": "x-fail-at-step",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Fail-At-Step"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RevertRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModerationJob"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, invalid or expired bearer"
+          },
+          "403": {
+            "description": "Moderator/admin role required"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "409": {
+            "description": "Closed report, conflicting decision or concurrent operation"
+          },
+          "422": {
+            "description": "Invalid request"
+          }
+        }
+      }
+    },
+    "/api/v1/moderation/operations/{operation_id}": {
+      "get": {
+        "tags": [
+          "moderation"
+        ],
+        "summary": "Operation",
+        "operationId": "operation_api_v1_moderation_operations__operation_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "operation_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Operation Id"
+            }
+          },
+          {
+            "name": "x-fail-at-step",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Fail-At-Step"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModerationJob"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, invalid or expired bearer"
+          },
+          "403": {
+            "description": "Moderator/admin role required"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "409": {
+            "description": "Closed report, conflicting decision or concurrent operation"
+          },
+          "422": {
+            "description": "Invalid request"
+          }
+        }
+      }
+    },
+    "/api/v1/moderation/operations/{operation_id}/retry": {
+      "post": {
+        "tags": [
+          "moderation"
+        ],
+        "summary": "Retry",
+        "description": "Resume bounded recovery after a dependency outage; competing requests get 409.",
+        "operationId": "retry_api_v1_moderation_operations__operation_id__retry_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "operation_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Operation Id"
+            }
+          },
+          {
+            "name": "x-fail-at-step",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Fail-At-Step"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModerationJob"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, invalid or expired bearer"
+          },
+          "403": {
+            "description": "Moderator/admin role required"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "409": {
+            "description": "Closed report, conflicting decision or concurrent operation"
+          },
+          "422": {
+            "description": "Invalid request"
+          }
+        }
+      }
+    },
+    "/api/v1/moderation/history/{post_id}": {
+      "get": {
+        "tags": [
+          "moderation"
+        ],
+        "summary": "History",
+        "operationId": "history_api_v1_moderation_history__post_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "post_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Post Id"
+            }
+          },
+          {
+            "name": "x-fail-at-step",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Fail-At-Step"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": true
+                  },
+                  "title": "Response History Api V1 Moderation History  Post Id  Get"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, invalid or expired bearer"
+          },
+          "403": {
+            "description": "Moderator/admin role required"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "409": {
+            "description": "Closed report, conflicting decision or concurrent operation"
+          },
+          "422": {
+            "description": "Invalid request"
+          }
+        }
+      }
+    },
+    "/api/v1/moderation/decisions": {
+      "post": {
+        "tags": [
+          "moderation"
+        ],
+        "summary": "Create Moderation Decision",
+        "description": "Compatibility route. Enqueues work; inspect report/operations to verify completion.",
+        "operationId": "create_moderation_decision_api_v1_moderation_decisions_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "x-fail-at-step",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Fail-At-Step"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ModerationRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "Missing, invalid or expired bearer"
+          },
+          "403": {
+            "description": "Moderator/admin role required"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "409": {
+            "description": "Closed report, conflicting decision or concurrent operation"
+          },
+          "422": {
+            "description": "Invalid request"
+          }
+        }
+      }
+    },
+    "/api/v1/moderation/posts/{post_id}/state": {
+      "get": {
+        "tags": [
+          "moderation"
+        ],
+        "summary": "Inspect",
+        "description": "Inspect persisted visibility, real feed membership and the two existing P5 counters.",
+        "operationId": "inspect_api_v1_moderation_posts__post_id__state_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "post_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Post Id"
+            }
+          },
+          {
+            "name": "x-fail-at-step",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Fail-At-Step"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Inspect Api V1 Moderation Posts  Post Id  State Get"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, invalid or expired bearer"
+          },
+          "403": {
+            "description": "Moderator/admin role required"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "409": {
+            "description": "Closed report, conflicting decision or concurrent operation"
+          },
+          "422": {
+            "description": "Invalid request"
+          }
+        }
+      }
+    },
+    "/api/v1/accounts/{user_id}/suspend": {
+      "post": {
+        "tags": [
+          "accounts"
+        ],
+        "summary": "Suspend",
+        "description": "Durable suspension. Poll the operation until completed, compensated or failed.",
+        "operationId": "suspend_api_v1_accounts__user_id__suspend_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "User Id"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
+            }
+          },
+          {
+            "name": "x-fail-at-step",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Fail-At-Step"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AccountDecision"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountJob"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid, expired or revoked bearer"
+          },
+          "403": {
+            "description": "Moderator/admin required or private trace"
+          },
+          "404": {
+            "description": "Account/operation not found"
+          },
+          "409": {
+            "description": "Concurrent or invalid account transition"
+          },
+          "422": {
+            "description": "Invalid payload or key"
+          },
+          "503": {
+            "description": "A required storage is temporarily unavailable"
+          }
+        }
+      }
+    },
+    "/api/v1/accounts/{user_id}/reactivate": {
+      "post": {
+        "tags": [
+          "accounts"
+        ],
+        "summary": "Reactivate",
+        "description": "Restore suspension effects; preserve P7 moderation and require a fresh login/heartbeat.",
+        "operationId": "reactivate_api_v1_accounts__user_id__reactivate_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "User Id"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
+            }
+          },
+          {
+            "name": "x-fail-at-step",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Fail-At-Step"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AccountDecision"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountJob"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid, expired or revoked bearer"
+          },
+          "403": {
+            "description": "Moderator/admin required or private trace"
+          },
+          "404": {
+            "description": "Account/operation not found"
+          },
+          "409": {
+            "description": "Concurrent or invalid account transition"
+          },
+          "422": {
+            "description": "Invalid payload or key"
+          },
+          "503": {
+            "description": "A required storage is temporarily unavailable"
+          }
+        }
+      }
+    },
+    "/api/v1/accounts/operations/{operation_id}": {
+      "get": {
+        "tags": [
+          "accounts"
+        ],
+        "summary": "Operation",
+        "operationId": "operation_api_v1_accounts_operations__operation_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "operation_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Operation Id"
+            }
+          },
+          {
+            "name": "x-fail-at-step",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Fail-At-Step"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountJob"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid, expired or revoked bearer"
+          },
+          "403": {
+            "description": "Moderator/admin required or private trace"
+          },
+          "404": {
+            "description": "Account/operation not found"
+          },
+          "409": {
+            "description": "Concurrent or invalid account transition"
+          },
+          "422": {
+            "description": "Invalid payload or key"
+          },
+          "503": {
+            "description": "A required storage is temporarily unavailable"
+          }
+        }
+      }
+    },
+    "/api/v1/accounts/operations/{operation_id}/retry": {
+      "post": {
+        "tags": [
+          "accounts"
+        ],
+        "summary": "Retry",
+        "description": "Resume failed compensation/commit. A compensated command needs a fresh request key.",
+        "operationId": "retry_api_v1_accounts_operations__operation_id__retry_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "operation_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Operation Id"
+            }
+          },
+          {
+            "name": "x-fail-at-step",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Fail-At-Step"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountJob"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid, expired or revoked bearer"
+          },
+          "403": {
+            "description": "Moderator/admin required or private trace"
+          },
+          "404": {
+            "description": "Account/operation not found"
+          },
+          "409": {
+            "description": "Concurrent or invalid account transition"
+          },
+          "422": {
+            "description": "Invalid payload or key"
+          },
+          "503": {
+            "description": "A required storage is temporarily unavailable"
+          }
+        }
+      }
+    },
+    "/api/v1/accounts/{user_id}/history": {
+      "get": {
+        "tags": [
+          "accounts"
+        ],
+        "summary": "History",
+        "operationId": "history_api_v1_accounts__user_id__history_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "User Id"
+            }
+          },
+          {
+            "name": "x-fail-at-step",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Fail-At-Step"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": true
+                  },
+                  "title": "Response History Api V1 Accounts  User Id  History Get"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid, expired or revoked bearer"
+          },
+          "403": {
+            "description": "Moderator/admin required or private trace"
+          },
+          "404": {
+            "description": "Account/operation not found"
+          },
+          "409": {
+            "description": "Concurrent or invalid account transition"
+          },
+          "422": {
+            "description": "Invalid payload or key"
+          },
+          "503": {
+            "description": "A required storage is temporarily unavailable"
+          }
+        }
+      }
+    },
+    "/api/v1/accounts/{user_id}/trace": {
+      "get": {
+        "tags": [
+          "accounts"
+        ],
+        "summary": "Trace",
+        "operationId": "trace_api_v1_accounts__user_id__trace_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "User Id"
+            }
+          },
+          {
+            "name": "x-fail-at-step",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Fail-At-Step"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserTraceResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid, expired or revoked bearer"
+          },
+          "403": {
+            "description": "Moderator/admin required or private trace"
+          },
+          "404": {
+            "description": "Account/operation not found"
+          },
+          "409": {
+            "description": "Concurrent or invalid account transition"
+          },
+          "422": {
+            "description": "Invalid payload or key"
+          },
+          "503": {
+            "description": "A required storage is temporarily unavailable"
+          }
+        }
+      }
+    },
+    "/api/v1/accounts/me/presence": {
+      "put": {
+        "tags": [
+          "accounts"
+        ],
+        "summary": "Heartbeat",
+        "description": "Renew real Redis presence for 120 seconds. Suspension atomically prevents late heartbeats.",
+        "operationId": "heartbeat_api_v1_accounts_me_presence_put",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "x-fail-at-step",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Fail-At-Step"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "Invalid, expired or revoked bearer"
+          },
+          "403": {
+            "description": "Moderator/admin required or private trace"
+          },
+          "404": {
+            "description": "Account/operation not found"
+          },
+          "409": {
+            "description": "Concurrent or invalid account transition"
+          },
+          "422": {
+            "description": "Invalid payload or key"
+          },
+          "503": {
+            "description": "A required storage is temporarily unavailable"
+          }
+        }
+      }
+    },
+    "/api/v1/accounts/{user_id}/presence": {
+      "get": {
+        "tags": [
+          "accounts"
+        ],
+        "summary": "Presence",
+        "operationId": "presence_api_v1_accounts__user_id__presence_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "User Id"
+            }
+          },
+          {
+            "name": "x-fail-at-step",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Fail-At-Step"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "boolean"
+                  },
+                  "title": "Response Presence Api V1 Accounts  User Id  Presence Get"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid, expired or revoked bearer"
+          },
+          "403": {
+            "description": "Moderator/admin required or private trace"
+          },
+          "404": {
+            "description": "Account/operation not found"
+          },
+          "409": {
+            "description": "Concurrent or invalid account transition"
+          },
+          "422": {
+            "description": "Invalid payload or key"
+          },
+          "503": {
+            "description": "A required storage is temporarily unavailable"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AccountDecision": {
+        "properties": {
+          "reason": {
+            "type": "string",
+            "maxLength": 1000,
+            "minLength": 1,
+            "title": "Reason"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "reason"
+        ],
+        "title": "AccountDecision",
+        "examples": [
+          {
+            "reason": "Incumplimiento confirmado de las reglas"
+          }
+        ]
+      },
+      "AccountJob": {
+        "properties": {
+          "operation_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Operation Id"
+          },
+          "user_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "User Id"
+          },
+          "actor_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Actor Id"
+          },
+          "action": {
+            "type": "string",
+            "enum": [
+              "suspend",
+              "reactivate"
+            ],
+            "title": "Action"
+          },
+          "reason": {
+            "type": "string",
+            "title": "Reason"
+          },
+          "attempt": {
+            "type": "integer",
+            "title": "Attempt",
+            "default": 1
+          },
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "default": "pending"
+          },
+          "active": {
+            "type": "boolean",
+            "title": "Active",
+            "default": true
+          },
+          "previous_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Previous Status"
+          },
+          "restore_from": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Restore From"
+          },
+          "post_ids": {
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type": "array",
+            "title": "Post Ids"
+          },
+          "graph_snapshot": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Graph Snapshot"
+          },
+          "completed_steps": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Completed Steps"
+          },
+          "failures": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Failures"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "resume_phase": {
+            "type": "string",
+            "title": "Resume Phase",
+            "default": "pending"
+          },
+          "fail_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fail At"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "operation_id",
+          "user_id",
+          "actor_id",
+          "action",
+          "reason"
+        ],
+        "title": "AccountJob"
+      },
+      "CommentCreate": {
+        "properties": {
+          "post_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Post Id"
+          },
+          "user_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "User Id"
+          },
+          "text": {
+            "type": "string",
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Text"
+          }
+        },
+        "type": "object",
+        "required": [
+          "post_id",
+          "user_id",
+          "text"
+        ],
+        "title": "CommentCreate"
+      },
+      "DecisionRequest": {
+        "properties": {
+          "decision": {
+            "type": "string",
+            "enum": [
+              "hide",
+              "reject"
+            ],
+            "title": "Decision"
+          },
+          "reason": {
+            "type": "string",
+            "maxLength": 1000,
+            "minLength": 1,
+            "title": "Reason"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "decision",
+          "reason"
+        ],
+        "title": "DecisionRequest",
+        "examples": [
+          {
+            "decision": "hide",
+            "reason": "Spam confirmado"
+          }
+        ]
+      },
+      "FeedResponse": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/PostResponse"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items"
+        ],
+        "title": "FeedResponse"
+      },
+      "FollowJob": {
+        "properties": {
+          "operation_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Operation Id"
+          },
+          "follower_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Follower Id"
+          },
+          "followed_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Followed Id"
+          },
+          "actor_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Actor Id"
+          },
+          "action": {
+            "type": "string",
+            "enum": [
+              "follow",
+              "unfollow",
+              "approve"
+            ],
+            "title": "Action"
+          },
+          "participant_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Participant Ids"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "default": "pending"
+          },
+          "active": {
+            "type": "boolean",
+            "title": "Active",
+            "default": true
+          },
+          "desired": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Desired"
+          },
+          "graph_snapshot": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Graph Snapshot"
+          },
+          "snapshot": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FollowSnapshot"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "catalog": {
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type": "array",
+            "title": "Catalog"
+          },
+          "candidates": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "number"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Candidates"
+          },
+          "completed_steps": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Completed Steps"
+          },
+          "failures": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Failures"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "resume_phase": {
+            "type": "string",
+            "title": "Resume Phase",
+            "default": "pending"
+          },
+          "fail_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fail At"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "operation_id",
+          "follower_id",
+          "followed_id",
+          "actor_id",
+          "action"
+        ],
+        "title": "FollowJob"
+      },
+      "FollowRequest": {
+        "properties": {
+          "user_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "User Id"
+          },
+          "followed_user_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Followed User Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "user_id",
+          "followed_user_id"
+        ],
+        "title": "FollowRequest"
+      },
+      "FollowSnapshot": {
+        "properties": {
+          "gate": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gate"
+          },
+          "feeds": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "type": "object",
+            "title": "Feeds"
+          }
+        },
+        "type": "object",
+        "title": "FollowSnapshot"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "HealthResponse": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "title": "HealthResponse"
+      },
+      "LoginRequest": {
+        "properties": {
+          "username": {
+            "type": "string",
+            "maxLength": 50,
+            "minLength": 3,
+            "title": "Username"
+          },
+          "password": {
+            "type": "string",
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Password"
+          }
+        },
+        "type": "object",
+        "required": [
+          "username",
+          "password"
+        ],
+        "title": "LoginRequest"
+      },
+      "MessageCreate": {
+        "properties": {
+          "conversation_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Conversation Id"
+          },
+          "sender_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Sender Id"
+          },
+          "text": {
+            "type": "string",
+            "maxLength": 10000,
+            "minLength": 1,
+            "title": "Text"
+          }
+        },
+        "type": "object",
+        "required": [
+          "conversation_id",
+          "sender_id",
+          "text"
+        ],
+        "title": "MessageCreate"
+      },
+      "MessageResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "conversation_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Conversation Id"
+          },
+          "sender_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Sender Id"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text"
+          },
+          "read_by": {
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type": "array",
+            "uniqueItems": true,
+            "title": "Read By"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "conversation_id",
+          "sender_id",
+          "text",
+          "read_by",
+          "created_at"
+        ],
+        "title": "MessageResponse"
+      },
+      "ModerationJob": {
+        "properties": {
+          "operation_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Operation Id"
+          },
+          "report_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Report Id"
+          },
+          "post_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Post Id"
+          },
+          "moderator_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Moderator Id"
+          },
+          "action": {
+            "type": "string",
+            "enum": [
+              "hide",
+              "reject",
+              "revert"
+            ],
+            "title": "Action"
+          },
+          "reason": {
+            "type": "string",
+            "title": "Reason"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "default": "pending"
+          },
+          "active": {
+            "type": "boolean",
+            "title": "Active",
+            "default": true
+          },
+          "snapshot": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ModerationSnapshot"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "restore": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ModerationSnapshot"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "completed_steps": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Completed Steps"
+          },
+          "failures": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Failures"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "resume_phase": {
+            "type": "string",
+            "title": "Resume Phase",
+            "default": "pending"
+          },
+          "fail_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fail At"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "operation_id",
+          "report_id",
+          "post_id",
+          "moderator_id",
+          "action",
+          "reason"
+        ],
+        "title": "ModerationJob"
+      },
+      "ModerationRequest": {
+        "properties": {
+          "report_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Report Id"
+          },
+          "post_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Post Id"
+          },
+          "moderator_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Moderator Id"
+          },
+          "decision": {
+            "type": "string",
+            "title": "Decision"
+          }
+        },
+        "type": "object",
+        "required": [
+          "report_id",
+          "post_id",
+          "moderator_id",
+          "decision"
+        ],
+        "title": "ModerationRequest"
+      },
+      "ModerationSnapshot": {
+        "properties": {
+          "moderation_status": {
+            "type": "string",
+            "title": "Moderation Status"
+          },
+          "owner": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Owner"
+          },
+          "feeds": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "type": "object",
+            "title": "Feeds"
+          },
+          "counters": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Counters"
+          }
+        },
+        "type": "object",
+        "required": [
+          "moderation_status"
+        ],
+        "title": "ModerationSnapshot"
+      },
+      "OperationDetailResponse": {
+        "properties": {
+          "operation_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Operation Id"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "post_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Post Id"
+          },
+          "operation_type": {
+            "type": "string",
+            "title": "Operation Type"
+          },
+          "current_step": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current Step"
+          },
+          "completed_steps": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Completed Steps"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "operation_id",
+          "status",
+          "operation_type",
+          "current_step",
+          "completed_steps",
+          "error",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "OperationDetailResponse"
+      },
+      "OperationResponse": {
+        "properties": {
+          "operation_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Operation Id"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          }
+        },
+        "type": "object",
+        "required": [
+          "operation_id",
+          "status"
+        ],
+        "title": "OperationResponse"
+      },
+      "PostCreate": {
+        "properties": {
+          "user_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "User Id"
+          },
+          "text": {
+            "type": "string",
+            "maxLength": 10000,
+            "minLength": 1,
+            "title": "Text"
+          },
+          "media": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Media"
+          },
+          "interests": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Interests"
+          },
+          "visibility": {
+            "type": "string",
+            "title": "Visibility",
+            "default": "public"
+          }
+        },
+        "type": "object",
+        "required": [
+          "user_id",
+          "text"
+        ],
+        "title": "PostCreate"
+      },
+      "PostResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "user_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "User Id"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text"
+          },
+          "media": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Media"
+          },
+          "interests": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Interests"
+          },
+          "published_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Published At"
+          },
+          "reaction_count": {
+            "type": "integer",
+            "title": "Reaction Count",
+            "default": 0
+          },
+          "comment_count": {
+            "type": "integer",
+            "title": "Comment Count",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "user_id",
+          "text",
+          "media",
+          "interests",
+          "published_at"
+        ],
+        "title": "PostResponse"
+      },
+      "PublicationResponse": {
+        "properties": {
+          "operation_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Operation Id"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "post_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Post Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "operation_id",
+          "status",
+          "post_id"
+        ],
+        "title": "PublicationResponse"
+      },
+      "ReactionCreate": {
+        "properties": {
+          "post_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Post Id"
+          },
+          "user_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "User Id"
+          },
+          "kind": {
+            "type": "string",
+            "maxLength": 30,
+            "minLength": 1,
+            "title": "Kind"
+          }
+        },
+        "type": "object",
+        "required": [
+          "post_id",
+          "user_id",
+          "kind"
+        ],
+        "title": "ReactionCreate"
+      },
+      "ReactionRemove": {
+        "properties": {
+          "post_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Post Id"
+          },
+          "user_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "User Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "post_id",
+          "user_id"
+        ],
+        "title": "ReactionRemove"
+      },
+      "ReadinessResponse": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "services": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Services"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "services"
+        ],
+        "title": "ReadinessResponse"
+      },
+      "ReportCreate": {
+        "properties": {
+          "post_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Post Id"
+          },
+          "reason": {
+            "type": "string",
+            "enum": [
+              "spam",
+              "abuse",
+              "hate",
+              "violence",
+              "other"
+            ],
+            "title": "Reason"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 2000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "post_id",
+          "reason"
+        ],
+        "title": "ReportCreate",
+        "examples": [
+          {
+            "description": "Contenido de prueba para problema 7",
+            "post_id": "71000000-0000-0000-0000-000000000001",
+            "reason": "spam"
+          }
+        ]
+      },
+      "ReportResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "post_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Post Id"
+          },
+          "reporter_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Reporter Id"
+          },
+          "reason": {
+            "type": "string",
+            "title": "Reason"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "resolution_status": {
+            "type": "string",
+            "title": "Resolution Status"
+          },
+          "target_type": {
+            "type": "string",
+            "const": "post",
+            "title": "Target Type",
+            "default": "post"
+          },
+          "reported_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Reported At"
+          },
+          "moderator_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Moderator Id"
+          },
+          "resolved_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolved At"
+          },
+          "decision": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decision"
+          },
+          "decision_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decision Reason"
+          },
+          "operation_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Operation Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "post_id",
+          "reporter_id",
+          "reason",
+          "resolution_status",
+          "reported_at"
+        ],
+        "title": "ReportResponse"
+      },
+      "RevertRequest": {
+        "properties": {
+          "reason": {
+            "type": "string",
+            "maxLength": 1000,
+            "minLength": 1,
+            "title": "Reason"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "reason"
+        ],
+        "title": "RevertRequest",
+        "examples": [
+          {
+            "reason": "Revision: contenido permitido"
+          }
+        ]
+      },
+      "SuspensionRequest": {
+        "properties": {
+          "user_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "User Id"
+          },
+          "reason": {
+            "type": "string",
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Reason"
+          }
+        },
+        "type": "object",
+        "required": [
+          "user_id",
+          "reason"
+        ],
+        "title": "SuspensionRequest"
+      },
+      "TokenResponse": {
+        "properties": {
+          "access_token": {
+            "type": "string",
+            "title": "Access Token"
+          },
+          "token_type": {
+            "type": "string",
+            "title": "Token Type",
+            "default": "bearer"
+          }
+        },
+        "type": "object",
+        "required": [
+          "access_token"
+        ],
+        "title": "TokenResponse"
+      },
+      "UserCreate": {
+        "properties": {
+          "account_type": {
+            "type": "string",
+            "enum": [
+              "public",
+              "private"
+            ],
+            "title": "Account Type",
+            "default": "public"
+          },
+          "username": {
+            "type": "string",
+            "maxLength": 50,
+            "minLength": 3,
+            "title": "Username"
+          },
+          "full_name": {
+            "type": "string",
+            "maxLength": 150,
+            "minLength": 1,
+            "title": "Full Name"
+          },
+          "email": {
+            "type": "string",
+            "title": "Email"
+          },
+          "password": {
+            "type": "string",
+            "maxLength": 128,
+            "minLength": 8,
+            "title": "Password"
+          }
+        },
+        "type": "object",
+        "required": [
+          "username",
+          "full_name",
+          "email",
+          "password"
+        ],
+        "title": "UserCreate"
+      },
+      "UserResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "username": {
+            "type": "string",
+            "title": "Username"
+          },
+          "full_name": {
+            "type": "string",
+            "title": "Full Name"
+          },
+          "biography": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Biography"
+          },
+          "account_type": {
+            "type": "string",
+            "title": "Account Type"
+          },
+          "account_status": {
+            "type": "string",
+            "title": "Account Status"
+          },
+          "registered_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Registered At"
+          },
+          "role": {
+            "type": "string",
+            "title": "Role",
+            "default": "user"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "username",
+          "full_name",
+          "biography",
+          "account_type",
+          "account_status",
+          "registered_at"
+        ],
+        "title": "UserResponse"
+      },
+      "UserTraceResponse": {
+        "properties": {
+          "user_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "User Id"
+          },
+          "profile": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/UserResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "relationships": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Relationships"
+          },
+          "recent_posts": {
+            "items": {
+              "$ref": "#/components/schemas/PostResponse"
+            },
+            "type": "array",
+            "title": "Recent Posts"
+          },
+          "active_conversations": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Active Conversations"
+          },
+          "post_states": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Post States"
+          },
+          "presence": {
+            "type": "boolean",
+            "title": "Presence",
+            "default": false
+          },
+          "account_history": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Account History"
+          }
+        },
+        "type": "object",
+        "required": [
+          "user_id",
+          "profile",
+          "relationships",
+          "recent_posts",
+          "active_conversations"
+        ],
+        "title": "UserTraceResponse"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    },
+    "securitySchemes": {
+      "HTTPBearer": {
+        "type": "http",
+        "description": "Obtain a token from POST /api/v1/users/login",
+        "scheme": "bearer"
+      }
+    }
+  }
+}
