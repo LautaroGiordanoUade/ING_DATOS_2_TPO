@@ -8,9 +8,9 @@ from neo4j import AsyncDriver
 from pymongo import AsyncMongoClient
 from redis.asyncio import Redis
 
+from app.core.bootstrap import initialize_database
 from app.core.config import Settings
 from app.infrastructure.persistence.mongodb.client import create_mongo_client
-from app.infrastructure.persistence.mongodb.indexes import ensure_mongo_indexes
 from app.infrastructure.persistence.mongodb.repositories.operation_log import (
     MongoOperationLogRepository,
 )
@@ -47,11 +47,10 @@ def build_lifespan(
             operation_log=MongoOperationLogRepository(mongo[settings.mongodb_database]),
         )
         try:
-            await ensure_mongo_indexes(mongo[settings.mongodb_database])
-        except Exception:
-            logger.exception("No se pudieron crear los índices de MongoDB")
-        logger.info("Application resources initialized lazily")        
-        try:
+            result = await initialize_database(
+                mongo[settings.mongodb_database], development=settings.app_env == "development"
+            )
+            logger.info("Database initialization completed: %s", result)
             yield
         finally:
             await mongo.close()
@@ -60,4 +59,3 @@ def build_lifespan(
             logger.info("Application resources closed")
 
     return lifespan
-

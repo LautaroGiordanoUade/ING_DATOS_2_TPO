@@ -108,8 +108,9 @@ Copy-Item .env.example .env
 ```
 
 Configure en `.env` las URLs/credenciales de MongoDB, Redis y Neo4j. Los clientes son
-compartidos durante el lifespan y se cierran al apagar la aplicación. El proceso puede arrancar sin
-los motores; `/health/ready` indicará cuáles no están disponibles.
+compartidos durante el lifespan y se cierran al apagar la aplicación. El arranque requiere MongoDB
+para adaptar los fixtures de desarrollo y verificar índices. Un error bloquea el inicio;
+`/health/ready` comprueba la conectividad de los tres motores una vez iniciada la API.
 
 ## Ejecución
 
@@ -189,6 +190,12 @@ scripts/validar_*.py. El formatter global tiene deuda previa; los archivos cambi
 están formateados. Mypy comprueba el destino Linux utilizado por los workers de Compose.
 
 ## Datos reproducibles
+
+`docker compose up -d --build` inicia la API, que completa automáticamente los usuarios
+antiguos de prueba P1 y verifica los índices antes de aceptar solicitudes. Los workers
+esperan a que la API esté saludable; no hay un contenedor adicional de inicialización.
+No borra datos ni carga o restablece los ejemplos P7/P8. Detalles y ejecución manual opcional:
+[migración de fixtures P1](docs/p1_fixture_migration.md).
 
 ```powershell
 python scripts/seed_data.py --users 100 --posts 1000 --messages 1000 --seed 42
