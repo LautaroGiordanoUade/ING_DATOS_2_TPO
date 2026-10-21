@@ -1175,6 +1175,33 @@
         }
       }
     },
+    "/api/v1/users/me": {
+      "get": {
+        "tags": [
+          "users"
+        ],
+        "summary": "Get Current User",
+        "description": "Validate the bearer against current account state and return its public profile.",
+        "operationId": "get_current_user_api_v1_users_me_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
     "/api/v1/users/{user_id}": {
       "get": {
         "tags": [
@@ -1225,6 +1252,11 @@
         ],
         "summary": "Create Post",
         "operationId": "create_post_api_v1_posts_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "parameters": [
           {
             "name": "Idempotency-Key",
@@ -1263,6 +1295,12 @@
                 }
               }
             }
+          },
+          "401": {
+            "description": "Login required"
+          },
+          "403": {
+            "description": "Author must match bearer"
           },
           "422": {
             "description": "Validation Error",
@@ -4262,6 +4300,18 @@
           "status": {
             "type": "string",
             "title": "Status"
+          },
+          "post_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Post Id"
           },
           "operation_type": {
             "type": "string",

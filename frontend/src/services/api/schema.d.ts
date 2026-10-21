@@ -338,6 +338,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/users/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Current User
+         * @description Validate the bearer against current account state and return its public profile.
+         */
+        get: operations["get_current_user_api_v1_users_me_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/users/{user_id}": {
         parameters: {
             query?: never;
@@ -1311,6 +1331,8 @@ export interface components {
             operation_id: string;
             /** Status */
             status: string;
+            /** Post Id */
+            post_id?: string | null;
             /** Operation Type */
             operation_type: string;
             /** Current Step */
@@ -2329,6 +2351,26 @@ export interface operations {
             };
         };
     };
+    get_current_user_api_v1_users_me_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserResponse"];
+                };
+            };
+        };
+    };
     get_user_api_v1_users__user_id__get: {
         parameters: {
             query?: never;
@@ -2383,6 +2425,20 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["PublicationResponse"];
                 };
+            };
+            /** @description Login required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Author must match bearer */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {

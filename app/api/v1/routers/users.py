@@ -2,6 +2,7 @@ from uuid import UUID
 
 from fastapi import APIRouter
 
+from app.api.dependencies.auth import CurrentUserDep
 from app.api.dependencies.use_cases import RepositoriesDep
 from app.application.services.identity import IdentityService
 from app.core.exceptions import ResourceNotFoundError
@@ -29,6 +30,12 @@ async def create_user(payload: UserCreate, repositories: RepositoriesDep) -> obj
 async def login(payload: LoginRequest, repositories: RepositoriesDep) -> TokenResponse:
     token = await IdentityService(repositories.users).login(payload.username, payload.password)
     return TokenResponse(access_token=token)
+
+
+@router.get("/me", response_model=UserResponse)
+async def get_current_user(actor: CurrentUserDep) -> object:
+    """Validate the bearer against current account state and return its public profile."""
+    return actor
 
 
 @router.get("/{user_id}", response_model=UserResponse)
