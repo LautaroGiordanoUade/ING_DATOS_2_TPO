@@ -1,5 +1,12 @@
 # Niche Social Network — esqueleto del TPI Etapa 2
 
+## Frontend React
+
+La iteración 0 prepara una SPA React + TypeScript + Vite en `frontend/`, con layout
+responsive y consulta real al estado de la API. No implementa todavía los problemas
+funcionales. Instrucciones: [frontend/README.md](frontend/README.md).
+Inventario, dependencias y próximas iteraciones: [plan del frontend](docs/frontend/IMPLEMENTATION_PLAN.md).
+
 API FastAPI educativa para explorar persistencia poliglota. El proyecto contiene arquitectura,
 contratos y puntos de extensión; las decisiones que constituyen la resolución del TP están marcadas
 como `TODO(TP)`. Sin modo demo, los endpoints pendientes responden `501`.

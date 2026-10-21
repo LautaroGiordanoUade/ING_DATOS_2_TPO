@@ -177,3 +177,10 @@ logs/
 .DS_Store
 Thumbs.db
 Desktop.ini
+
+# React frontend
+node_modules/
+frontend/dist/
+frontend/test-results/
+frontend/playwright-report/
+frontend/coverage/
