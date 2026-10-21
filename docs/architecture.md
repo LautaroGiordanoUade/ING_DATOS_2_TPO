@@ -58,7 +58,14 @@ P5 usa compensaciones en request y un bloqueo Redis sin vencimiento por publicac
 Su recuperación tras caída de proceso todavía requiere reconciliación manual.
 
 Detalles: docs/problems/problem_01.md y docs/problem_05_consistency.md.
-El feed completo P3, la carga de 50000 registros y el informe final siguen pendientes.
+La carga de 50000 registros y el informe final siguen pendientes.
+
+P3 consulta el feed materializado sin recorrer todos los seguidos. Lee bloques cronológicos
+de 200 candidatos y congela un ranking por actividad/recencia dentro de cada bloque. Redis
+conserva una navegación temporal con TTL fijo de 15 minutos; el cursor firmado liga usuario,
+navegación y posición. MongoDB y los contadores se consultan por lote; Neo4j valida juntos
+los autores candidatos. Cada página vuelve a comprobar permisos y visibilidad actuales.
+No agrega procesos ni modifica los scores originales P1/P2. Ver docs/problems/problem_03.md.
 
 P2 comparte el proceso moderation-worker con P7/P8, sin añadir contenedores. follow_jobs
 reserva ambos participantes con un índice único parcial, guarda snapshots y checkpoints y

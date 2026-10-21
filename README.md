@@ -45,6 +45,13 @@ Swagger, recuperación y límites: [Problema 2](docs/problems/problem_02.md). Pr
 Get-Content -Raw scripts/validar_problema2.py | docker compose exec -T api python -
 ```
 
+P3 agrega el feed autenticado con ranking por bloques recientes y cursor de 15 minutos.
+Ver [Problema 3](docs/problems/problem_03.md). Prueba HTTP con datos QA nuevos:
+
+```powershell
+Get-Content -Raw scripts/validar_problema3.py | docker compose exec -T api python -
+```
+
 ```powershell
 # Ver errores de arranque
 docker compose logs --tail 100 api neo4j

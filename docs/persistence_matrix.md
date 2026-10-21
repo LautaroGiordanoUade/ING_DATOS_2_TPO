@@ -8,7 +8,7 @@ ni mediciones de rendimiento. El generador general aún no implementa ese volume
 | Usuario/cuenta | UUID, username, email; cambios de estado | 1000+ | lectura alta, escritura baja | unicidad y estado de cuenta | MongoDB; identidad implementada para P7 |
 | Publicación | UUID, lotes de feed, autor/fecha | 50000+ | lectura muy alta, escritura alta | durable, distribución recuperable | MongoDB contenido y jobs; P1 implementado |
 | Audiencia de publicación | seguidores por autor; snapshot por operación | miles por creador, límite 100000 | lectura por publicación, snapshot por pedido | snapshot fijo para completar/revertir | Neo4j origen, MongoDB snapshot; P1 implementado |
-| Feed | usuario y orden temporal; fan-out | posts x seguidores | lectura/escritura muy altas | candidatos invisibles hasta commit | Redis sorted sets; P1 escribe, P3 pendiente |
+| Feed | usuario, bloques recientes, ranking y cursor | posts x seguidores | lectura/escritura muy altas | candidatos invisibles hasta commit; filtros actuales por página | Redis sorted sets y navegación con TTL, MongoDB contenido, Neo4j elegibilidad; P1/P2/P3 implementados |
 | Reacción | usuario/post; alta/cambio/baja | proporcional a publicaciones | alta/alta | única por par y coordinación del contador | MongoDB + Redis; P5 implementado con límites documentados |
 | Comentario | post/fecha, append | 50000+ candidato a mayor volumen | alta/alta | durable e idempotencia por clave | MongoDB + Redis; P5 implementado |
 | Notificación | destinatario/evento; entrega live | proporcional a interacciones | lectura alta, escritura alta | evento persistido y Pub/Sub; no exactly-once | Redis; P5 implementado |

@@ -93,7 +93,7 @@ def main() -> None:
     assert trace["profile"]["account_status"] == "suspended" and not trace["presence"]
     assert trace["recent_posts"] == [] and len(trace["post_states"]) == 2
     assert TARGET not in request("GET", f"/api/v1/problems/4/recommendations/{MOD}")[1]
-    assert request("GET", f"/api/v1/feeds/{MOD}")[1]["items"] == []
+    assert request("GET", f"/api/v1/feeds/{MOD}", token=mod)[1]["items"] == []
     code, job = request(
         "POST", f"/api/v1/accounts/{TARGET}/reactivate", payload, mod, "p8-smoke-restore"
     )

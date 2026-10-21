@@ -59,6 +59,27 @@ def wait(job: dict[str, Any], token: str) -> dict[str, Any]:
 
 def main() -> None:
     user, moderator, admin = (login("p7_" + role) for role in ("user", "moderator", "admin"))
+    # P3 requires an accepted relationship, not only a legacy Redis reference.
+    code, follow = request(
+        "POST",
+        "/api/v1/social/follows",
+        {
+            "user_id": "70000000-0000-0000-0000-000000000001",
+            "followed_user_id": "70000000-0000-0000-0000-000000000004",
+        },
+        token=user,
+    )
+    assert code == 202, follow
+    for _ in range(150):
+        code, result = request(
+            "GET", f"/api/v1/social/operations/{follow['operation_id']}", token=user
+        )
+        assert code == 200, result
+        if result["status"] == "completed":
+            break
+        time.sleep(0.2)
+    else:
+        raise AssertionError("P2 fixture follow did not complete")
     assert request("GET", "/health/ready")[0] == 200
     with urllib.request.urlopen(BASE + "/docs", timeout=10) as response:
         assert response.status == 200 and b"swagger" in response.read().lower()
@@ -104,7 +125,7 @@ def main() -> None:
             "post_reactions": 0 if hidden else 2,
             "post_comments": 0 if hidden else 1,
         }, state
-        feed = request("GET", "/api/v1/feeds/70000000-0000-0000-0000-000000000001")[1]
+        feed = request("GET", "/api/v1/feeds/70000000-0000-0000-0000-000000000001", token=user)[1]
         assert (post_id in [post["id"] for post in feed["items"]]) == (not hidden)
         if number == 1:
             for _ in range(2):
