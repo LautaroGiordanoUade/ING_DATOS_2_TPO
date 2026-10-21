@@ -12,7 +12,6 @@ from app.api.dependencies.demo import DemoModeDep
 from app.api.dependencies.use_cases import (
     RepositoriesDep,
     get_feed_use_case,
-    get_follow_use_case,
     get_interaction_use_case,
     get_message_use_case,
     get_moderation_use_case,
@@ -20,8 +19,9 @@ from app.api.dependencies.use_cases import (
     get_recommendations_use_case,
     get_suspend_trace_use_case,
 )
+from app.api.v1.routers.social import approve_follow, create_follow, delete_follow, follow_operation
+from app.application.services.follow_job import FollowJob
 from app.application.use_cases import (
-    FollowUserUseCase,
     GetFeedUseCase,
     InteractWithPostUseCase,
     ModeratePostUseCase,
@@ -40,7 +40,6 @@ from app.infrastructure.persistence.redis.publication_feeds import RedisPublicat
 from app.schemas.models import (
     CommentCreate,
     FeedResponse,
-    FollowRequest,
     MessageCreate,
     ModerationRequest,
     MutualFriendsRequest,
@@ -116,26 +115,18 @@ async def publication_feed_preview(
     return {"user_id": str(user_id), "post_ids": [str(post.id) for post in posts]}
 
 
-@router.post("/2/follow", status_code=status.HTTP_204_NO_CONTENT)
-async def follow(
-    payload: FollowRequest,
-    use_case: Annotated[FollowUserUseCase, Depends(get_follow_use_case)],
-    demo_mode: DemoModeDep,
-) -> None:
-    if demo_mode:
-        return
-    await use_case.follow(payload.user_id, payload.followed_user_id)
-
-
-@router.delete("/2/follow", status_code=status.HTTP_204_NO_CONTENT)
-async def unfollow(
-    payload: FollowRequest,
-    use_case: Annotated[FollowUserUseCase, Depends(get_follow_use_case)],
-    demo_mode: DemoModeDep,
-) -> None:
-    if demo_mode:
-        return
-    await use_case.unfollow(payload.user_id, payload.followed_user_id)
+router.add_api_route(
+    "/2/follow", create_follow, methods=["POST"], response_model=FollowJob, status_code=202
+)
+router.add_api_route(
+    "/2/follow", delete_follow, methods=["DELETE"], response_model=FollowJob, status_code=202
+)
+router.add_api_route(
+    "/2/approve", approve_follow, methods=["POST"], response_model=FollowJob, status_code=202
+)
+router.add_api_route(
+    "/2/operations/{operation_id}", follow_operation, methods=["GET"], response_model=FollowJob
+)
 
 
 @router.get("/3/feed/{user_id}", response_model=FeedResponse)

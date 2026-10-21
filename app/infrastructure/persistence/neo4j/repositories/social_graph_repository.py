@@ -1,8 +1,10 @@
+from typing import Any
 from uuid import UUID
 
 from neo4j import AsyncDriver
 
-from app.core.exceptions import FeatureNotImplementedError
+from app.application.services.follow_job import FollowJob
+from app.core.exceptions import ConflictError, FeatureNotImplementedError
 
 
 class Neo4jSocialGraphRepository:
@@ -10,12 +12,115 @@ class Neo4jSocialGraphRepository:
         self._driver = driver
 
     async def follow(self, user_id: UUID, followed_user_id: UUID) -> None:
-        # TODO(TP): Implementar Cypher idempotente para follow/pending follow.
-        raise FeatureNotImplementedError("Neo4jSocialGraphRepository.follow")
+        from uuid import uuid4
+
+        await self.set_follow_state(
+            FollowJob(
+                operation_id=uuid4(),
+                follower_id=user_id,
+                followed_id=followed_user_id,
+                actor_id=user_id,
+                action="follow",
+                desired="accepted",
+            )
+        )
 
     async def unfollow(self, user_id: UUID, followed_user_id: UUID) -> None:
-        # TODO(TP): Implementar consulta Cypher de unfollow.
-        raise FeatureNotImplementedError("Neo4jSocialGraphRepository.unfollow")
+        from uuid import uuid4
+
+        await self.set_follow_state(
+            FollowJob(
+                operation_id=uuid4(),
+                follower_id=user_id,
+                followed_id=followed_user_id,
+                actor_id=user_id,
+                action="unfollow",
+                desired="none",
+            )
+        )
+
+    async def follow_snapshot(self, follower_id: UUID, followed_id: UUID) -> dict[str, Any]:
+        async with self._driver.session() as session:
+            result = await session.run(
+                """OPTIONAL MATCH (f:User {id:$f})-[r:FOLLOWS]->(a:User {id:$a})
+                RETURN collect(properties(r)) AS relationships,
+                EXISTS { MATCH (:User {id:$f})-[:BLOCKS]-(:User {id:$a}) } AS blocked""",
+                f=str(follower_id),
+                a=str(followed_id),
+            )
+            record = await result.single(strict=True)
+            assert record is not None
+            rows = record["relationships"]
+            if len(rows) > 1:
+                raise ConflictError("Relaciones legacy duplicadas; requiere reconciliacion")
+            return {"relationship": dict(rows[0]) if rows else None, "blocked": record["blocked"]}
+
+    async def set_follow_state(self, job: FollowJob) -> None:
+        async with self._driver.session() as session:
+            if job.desired == "none":
+                result = await session.run(
+                    "MATCH (:User {id:$f})-[r:FOLLOWS]->(:User {id:$a}) DELETE r",
+                    f=str(job.follower_id),
+                    a=str(job.followed_id),
+                )
+            else:
+                result = await session.run(
+                    """MERGE (f:User {id:$f}) ON CREATE SET f.account_status='active'
+                    MERGE (a:User {id:$a}) ON CREATE SET a.account_status='active'
+                    MERGE (f)-[r:FOLLOWS]->(a)
+                    SET r.status=$status, r.operation_id=$op,
+                        r.created_at=coalesce(r.created_at,$created)""",
+                    f=str(job.follower_id),
+                    a=str(job.followed_id),
+                    status=job.desired,
+                    op=str(job.operation_id),
+                    created=job.created_at.isoformat(),
+                )
+            await result.consume()
+
+    async def restore_follow(self, job: FollowJob) -> None:
+        assert job.graph_snapshot is not None
+        previous = job.graph_snapshot["relationship"]
+        async with self._driver.session() as session:
+            if previous is None:
+                query = "MATCH (:User {id:$f})-[r:FOLLOWS]->(:User {id:$a}) DELETE r"
+            else:
+                query = (
+                    "MATCH (f:User {id:$f}),(a:User {id:$a}) "
+                    "MERGE (f)-[r:FOLLOWS]->(a) SET r=$props"
+                )
+            result = await session.run(
+                query,
+                f=str(job.follower_id),
+                a=str(job.followed_id),
+                props=previous or {},
+            )
+            await result.consume()
+
+    async def follow_counts(self, user_id: UUID) -> dict[str, int]:
+        async with self._driver.session() as session:
+            result = await session.run(
+                """OPTIONAL MATCH (f:User)-[r:FOLLOWS]->(u:User {id:$id})
+                WHERE coalesce(r.status,'accepted')='accepted'
+                WITH count(DISTINCT f) AS followers
+                OPTIONAL MATCH (:User {id:$id})-[s:FOLLOWS]->(a:User)
+                WHERE coalesce(s.status,'accepted')='accepted'
+                RETURN followers, count(DISTINCT a) AS following""",
+                id=str(user_id),
+            )
+            record = await result.single(strict=True)
+            assert record is not None
+            return {"followers": int(record["followers"]), "following": int(record["following"])}
+
+    async def incoming_requests(self, user_id: UUID) -> tuple[UUID, ...]:
+        async with self._driver.session() as session:
+            result = await session.run(
+                """MATCH (f:User)-[:FOLLOWS {status:'pending'}]->(:User {id:$id})
+                WHERE coalesce(f.account_status,'active')='active'
+                RETURN DISTINCT f.id AS id ORDER BY id""",
+                id=str(user_id),
+            )
+            return tuple([UUID(row["id"]) async for row in result])
 
     async def follower_ids(self, user_id: UUID) -> tuple[UUID, ...]:
         async with self._driver.session() as session:

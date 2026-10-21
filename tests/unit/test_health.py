@@ -14,8 +14,8 @@ def test_liveness_does_not_require_databases(client: TestClient) -> None:
 
 def test_pending_endpoint_returns_controlled_501(client: TestClient) -> None:
     response = client.post(
-        "/api/v1/problems/2/follow",
-        json={"user_id": str(uuid4()), "followed_user_id": str(uuid4())},
+        "/api/v1/problems/6/message",
+        json={"conversation_id": str(uuid4()), "sender_id": str(uuid4()), "text": "pending"},
     )
     assert response.status_code == 501
     assert response.json()["code"] == "todo_tp"

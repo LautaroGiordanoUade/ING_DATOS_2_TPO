@@ -26,7 +26,7 @@ docker compose ps
 Invoke-RestMethod http://localhost:8000/health/ready
 ```
 
-Levanta la API, los workers de publicaciones/moderación (P7/P8) y tres motores: MongoDB, Redis y Neo4j. Swagger está en
+Levanta la API, los workers de publicaciones/moderación (P2/P7/P8) y tres motores: MongoDB, Redis y Neo4j. Swagger está en
 http://localhost:8000/docs y Neo4j Browser en http://localhost:7474.
 El usuario Neo4j es `neo4j`; la contraseña local predeterminada es `local_dev_password`.
 Puede cambiarse con `NEO4J_PASSWORD` en `.env` antes del primer inicio.
@@ -37,6 +37,13 @@ Dentro de Docker, la API conecta por nombres de servicio (`mongo`, `redis`, `neo
 fuera de Docker, `.env.example` usa localhost. No hace falta copiar `.env` para usar Compose.
 El modo demo está desactivado: los casos pendientes responden 501, no datos simulados.
 El readiness comprueba los tres motores y devuelve 503 si alguno no responde.
+
+P2 (seguimientos públicos/privados, aprobación y rollback) ya está implementado. Guía de
+Swagger, recuperación y límites: [Problema 2](docs/problems/problem_02.md). Prueba HTTP local:
+
+```powershell
+Get-Content -Raw scripts/validar_problema2.py | docker compose exec -T api python -
+```
 
 ```powershell
 # Ver errores de arranque

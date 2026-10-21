@@ -3,7 +3,6 @@ from uuid import uuid4
 
 import pytest
 
-from app.application.services import CompensationService
 from app.application.use_cases import FollowUserUseCase
 from app.core.exceptions import InvalidOperationError
 
@@ -16,7 +15,6 @@ async def test_user_cannot_follow_itself() -> None:
         dependency,
         dependency,
         dependency,
-        cast(CompensationService, dependency),
     )
     user_id = uuid4()
     with pytest.raises(InvalidOperationError):

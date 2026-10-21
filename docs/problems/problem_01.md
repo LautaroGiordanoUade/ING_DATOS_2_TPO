@@ -46,8 +46,11 @@ No se debe leer ZRANGE crudo como si ya fuera un feed público: incluye referenc
 El futuro P3 debe reutilizar esta regla, además de resolver ranking, paginación y contadores.
 El endpoint /1/feed-preview/{user_id} solo demuestra los IDs visibles del P1; no resuelve P3.
 
-La audiencia es un snapshot durable, no una consulta nueva en cada lote. Los cambios de
-seguimiento durante la distribución pertenecen al P2 y deberán coordinarse con esa política.
+La audiencia es un snapshot durable, no una consulta nueva en cada lote. P2 agrega al nuevo
+seguidor las publicaciones en vuelo aunque no estuviera en ese snapshot. El gate del par
+seguidor/autor evita que un lote antiguo reponga publicaciones después de un unfollow;
+durante P2, las entregas se difieren hasta commit o compensación. Un registro Redis de
+destinatarios adicionales permite que el aborto P1 también retire esas referencias.
 Los nodos son User {id: UUID, account_status: active|suspended}, las aristas
 FOLLOWS {status: accepted|pending} y BLOCKS. Ausencia de status equivale a accepted
 y ausencia de account_status a active para compatibilidad con cargas pequeñas.

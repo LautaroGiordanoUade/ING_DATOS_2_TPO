@@ -2,6 +2,7 @@ import asyncio
 
 from app.core.exceptions import AuthenticationError
 from app.domain.entities import User
+from app.domain.entities.models import AccountType
 from app.domain.repositories import UserRepository
 from app.infrastructure.security.password import PasswordHasher
 from app.infrastructure.security.tokens import TokenService
@@ -11,10 +12,23 @@ class IdentityService:
     def __init__(self, users: UserRepository) -> None:
         self._users = users
 
-    async def register(self, username: str, full_name: str, email: str, password: str) -> User:
+    async def register(
+        self,
+        username: str,
+        full_name: str,
+        email: str,
+        password: str,
+        account_type: AccountType = AccountType.PUBLIC,
+    ) -> User:
         digest = await asyncio.to_thread(PasswordHasher().hash, password)
         return await self._users.create(
-            User(username=username, full_name=full_name, email=email, password_hash=digest)
+            User(
+                username=username,
+                full_name=full_name,
+                email=email,
+                password_hash=digest,
+                account_type=account_type,
+            )
         )
 
     async def login(self, username: str, password: str) -> str:

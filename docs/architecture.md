@@ -19,8 +19,9 @@ P1: payload, snapshot de audiencia, cursor y decisión de commit/rollback. No se
 transacción global. El trabajo es autoritativo para la consulta de operaciones del P1.
 
 Neo4j es fuente de verdad del grafo FOLLOWS y BLOCKS; se prevén intereses para P4.
-P1 ya ejecuta Cypher real para resolver audiencia. Follow/unfollow, intereses, sugerencias
-y trazabilidad siguen pendientes. La clave User.id tiene constraint único.
+P1 ejecuta Cypher real para resolver audiencia. P2 implementa follow/unfollow y solicitudes
+privadas; P8 implementa trazabilidad. Intereses y sugerencias completas siguen pendientes
+para P4. La clave User.id tiene constraint único.
 
 Redis mantiene sorted sets de feed, contadores y notificaciones operativas. P5 almacena
 notificaciones y publica eventos Pub/Sub; P1 usa un marcador común de visibilidad, además
@@ -58,6 +59,12 @@ Su recuperación tras caída de proceso todavía requiere reconciliación manual
 
 Detalles: docs/problems/problem_01.md y docs/problem_05_consistency.md.
 El feed completo P3, la carga de 50000 registros y el informe final siguen pendientes.
+
+P2 comparte el proceso moderation-worker con P7/P8, sin añadir contenedores. follow_jobs
+reserva ambos participantes con un índice único parcial, guarda snapshots y checkpoints y
+conserva la reserva si falla la recuperación. Neo4j mantiene el vínculo; Redis materializa
+contadores y referencias. Un gate por par coordina entregas P1 y restauraciones P7/P8.
+Ver docs/problems/problem_02.md para la secuencia y los límites.
 
 ## Moderación P7
 

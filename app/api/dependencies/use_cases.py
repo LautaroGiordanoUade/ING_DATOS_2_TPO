@@ -22,10 +22,12 @@ from app.application.use_cases import (
 )
 from app.core.config import get_settings
 from app.infrastructure.persistence.mongodb.repositories.accounts import MongoAccountStore
+from app.infrastructure.persistence.mongodb.repositories.follows import MongoFollowStore
 from app.infrastructure.persistence.mongodb.repositories.publication_jobs import (
     MongoPublicationJobs,
 )
 from app.infrastructure.persistence.redis.accounts import RedisAccountViews
+from app.infrastructure.persistence.redis.follows import RedisFollowViews
 from app.infrastructure.persistence.redis.moderation import RedisModerationViews
 from app.infrastructure.persistence.redis.reaction_lock import RedisReactionLock
 from app.infrastructure.persistence.redis.repositories.operational_repositories import (
@@ -57,14 +59,13 @@ def get_publish_use_case(resources: ResourcesDep) -> PublishContentUseCase:
 def get_follow_use_case(
     repositories: RepositoriesDep,
     resources: ResourcesDep,
-    failure_injector: FailureInjectorDep,
 ) -> FollowUserUseCase:
+    database = resources.mongo_client[get_settings().mongodb_database]
     return FollowUserUseCase(
         repositories.users,
         repositories.graph,
-        repositories.counters,
-        repositories.feeds,
-        CompensationService(resources.operation_log, failure_injector),
+        MongoFollowStore(database),
+        RedisFollowViews(resources.redis),
     )
 
 
