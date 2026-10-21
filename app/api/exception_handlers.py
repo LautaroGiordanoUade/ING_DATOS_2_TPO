@@ -2,6 +2,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
 from app.application.ports import InjectedFailureError
+from app.application.services.workflow import _TRANSIENT
 from app.core.exceptions import (
     AuthenticationError,
     ConflictError,
@@ -48,3 +49,12 @@ def install_exception_handlers(app: FastAPI) -> None:
         return JSONResponse(
             status_code=401, content={"detail": str(exc)}, headers={"WWW-Authenticate": "Bearer"}
         )
+
+    async def storage_unavailable(request: Request, exc: Exception) -> JSONResponse:
+        del request, exc
+        return JSONResponse(
+            status_code=503, content={"detail": "Required storage temporarily unavailable"}
+        )
+
+    for error_type in _TRANSIENT:
+        app.add_exception_handler(error_type, storage_unavailable)

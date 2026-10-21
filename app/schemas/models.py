@@ -120,6 +120,9 @@ class UserTraceResponse(ApiModel):
     relationships: dict[str, object]
     recent_posts: list[PostResponse]
     active_conversations: list[dict[str, object]]
+    post_states: list[dict[str, object]] = Field(default_factory=list)
+    presence: bool = False
+    account_history: list[dict[str, object]] = Field(default_factory=list)
 
 
 class OperationResponse(ApiModel):

@@ -21,9 +21,11 @@ from app.application.use_cases import (
     SuspendAndTraceUserUseCase,
 )
 from app.core.config import get_settings
+from app.infrastructure.persistence.mongodb.repositories.accounts import MongoAccountStore
 from app.infrastructure.persistence.mongodb.repositories.publication_jobs import (
     MongoPublicationJobs,
 )
+from app.infrastructure.persistence.redis.accounts import RedisAccountViews
 from app.infrastructure.persistence.redis.moderation import RedisModerationViews
 from app.infrastructure.persistence.redis.reaction_lock import RedisReactionLock
 from app.infrastructure.persistence.redis.repositories.operational_repositories import (
@@ -90,6 +92,7 @@ def get_interaction_use_case(
         CompensationService(resources.operation_log, failure_injector),
         idempotency=IdempotencyService(RedisIdempotencyRepository(resources.redis)),
         reaction_lock=RedisReactionLock(resources.redis),
+        users=repositories.users,
     )
 
 
@@ -120,11 +123,11 @@ def get_suspend_trace_use_case(
     resources: ResourcesDep,
     failure_injector: FailureInjectorDep,
 ) -> SuspendAndTraceUserUseCase:
+    database = resources.mongo_client[get_settings().mongodb_database]
     return SuspendAndTraceUserUseCase(
-        repositories.users,
-        repositories.posts,
+        MongoAccountStore(database),
         repositories.graph,
-        repositories.feeds,
+        RedisAccountViews(resources.redis),
+        repositories.posts,
         repositories.conversations,
-        CompensationService(resources.operation_log, failure_injector),
     )

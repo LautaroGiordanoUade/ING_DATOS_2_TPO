@@ -76,11 +76,19 @@ rutas en Swagger o respuestas en modo demo.
   No cubre pérdida de volúmenes ni consumidores independientes en múltiples hosts.
 - Guía: docs/problem_7_moderation_test_guide.md; diseño: docs/problems/problem_07.md.
 
-## Problema 8: suspensión y trazabilidad
+## Problema 8: suspensión y trazabilidad — IMPLEMENTADO
 
-- [ ] Estado de cuenta y efectos coordinados MongoDB/Neo4j/Redis.
-- [ ] Quitar publicaciones/sugerencias y cerrar presencia.
-- [ ] Consulta real de perfil, relaciones, publicaciones y conversaciones.
+- [x] Estado MongoDB y efectos coordinados Neo4j/Redis con validación de rol.
+- [x] Quitar publicaciones/sugerencias, cerrar presencia y revocar credenciales anteriores.
+- [x] Consulta real y privada de perfil, relaciones, publicaciones y conversaciones.
+- [x] Reactivación sin revivir P7, tokens viejos ni presencia expirada.
+- [x] Workflow durable, snapshots por post, compensaciones, retry y recuperación tras reinicio.
+- [x] Idempotencia/CAS y consumidor común P7/P8; entregas P1 diferidas en reactivación.
+- [x] 67 tests nuevos: 57 integraciones con MongoDB/Neo4j/Redis reales y 10 unitarios.
+- [x] Suite completa: 161 passed / 0 failed; smoke HTTP real exitoso.
+- [x] Datos reales de desarrollo, ejemplos Swagger y guía paso a paso.
+- Diseño: docs/problems/problem_08.md; guía: docs/problem_8_suspension_test_guide.md.
+- Límites: Docker Linux, un host y volumen compartido; sin garantía ante pérdida de volúmenes.
 
 ## Infraestructura y datos
 

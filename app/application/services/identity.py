@@ -26,4 +26,4 @@ class IdentityService:
         valid = await asyncio.to_thread(PasswordHasher().verify, password, digest)
         if not valid or user is None or user.account_status != "active":
             raise AuthenticationError("Invalid credentials")
-        return TokenService().create_access_token(user.id)
+        return TokenService().create_access_token(user.id, user.auth_version)

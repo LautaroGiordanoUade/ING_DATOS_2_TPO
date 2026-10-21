@@ -1,6 +1,5 @@
 from uuid import UUID
 
-from app.core.exceptions import FeatureNotImplementedError
 from app.domain.repositories import SocialGraphRepository, UserRepository
 
 
@@ -13,7 +12,7 @@ class SocialRecommendationsUseCase:
         return await self._graph.get_mutual_friends(user_id, other_user_id)
 
     async def recommendations(self, user_id: UUID) -> tuple[UUID, ...]:
-        # TODO(TP): Filtrar suspendidos desde MongoDB sin degradar a N+1.
-        # TODO(TP): Justificar score de segundo grado/intereses y máximo 10.
-        raise FeatureNotImplementedError("Problema 4: recomendaciones")
-
+        if await self._users.is_suspended(user_id):
+            return ()
+        candidates = await self._graph.get_suggested_accounts(user_id, 10)
+        return await self._users.active_ids(candidates)

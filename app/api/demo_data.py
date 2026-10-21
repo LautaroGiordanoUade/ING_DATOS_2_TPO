@@ -4,7 +4,6 @@ from uuid import UUID
 from app.schemas.models import (
     MessageResponse,
     UserResponse,
-    UserTraceResponse,
 )
 
 DEMO_USER_ID = UUID("00000000-0000-0000-0000-000000000001")
@@ -36,23 +35,4 @@ def demo_message(sender_id: UUID = DEMO_USER_ID) -> MessageResponse:
         text="Mensaje de demostración.",
         read_by={sender_id},
         created_at=DEMO_TIME,
-    )
-
-
-def demo_trace(user_id: UUID) -> UserTraceResponse:
-    return UserTraceResponse(
-        user_id=user_id,
-        profile=demo_user(user_id),
-        relationships={
-            "followers": [str(DEMO_OTHER_USER_ID)],
-            "following": [],
-            "source": "mock-development-only",
-        },
-        recent_posts=[],
-        active_conversations=[
-            {
-                "conversation_id": str(DEMO_CONVERSATION_ID),
-                "participant_ids": [str(user_id), str(DEMO_OTHER_USER_ID)],
-            }
-        ],
     )

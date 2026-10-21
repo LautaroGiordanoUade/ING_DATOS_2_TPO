@@ -18,6 +18,7 @@ async def current_user(
         if credentials is None:
             raise ValueError("Missing bearer")
         user_id = TokenService().verify_access_token(credentials.credentials)
+        version = TokenService().token_version(credentials.credentials)
     except ValueError as exc:
         raise HTTPException(
             status_code=401,
@@ -25,7 +26,7 @@ async def current_user(
             headers={"WWW-Authenticate": "Bearer"},
         ) from exc
     user = await repositories.users.get(user_id)
-    if user is None or user.account_status != "active":
+    if user is None or user.account_status != "active" or user.auth_version != version:
         raise HTTPException(
             status_code=401, detail="Account unavailable", headers={"WWW-Authenticate": "Bearer"}
         )

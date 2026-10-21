@@ -1,59 +1,20 @@
-import asyncio
 import logging
-from collections.abc import Awaitable, Callable
 from uuid import uuid5
-
-from pymongo.errors import ConnectionFailure, ExecutionTimeout
-from redis.exceptions import ConnectionError as RedisConnectionError
-from redis.exceptions import TimeoutError as RedisTimeoutError
 
 from app.application.ports.moderation import ModerationStore, ModerationViews
 from app.application.services.moderation_job import ModerationJob
+from app.application.services.workflow import WorkflowSteps
 from app.core.exceptions import ConflictError
 
 logger = logging.getLogger(__name__)
-_TRANSIENT = (
-    ConnectionFailure,
-    ExecutionTimeout,
-    RedisConnectionError,
-    RedisTimeoutError,
-    ConnectionError,
-    TimeoutError,
-)
 
 
-class ModerationProcessor:
+class ModerationProcessor(WorkflowSteps[ModerationJob]):
     """One OS-locked consumer, persistent snapshots, idempotent effects and recovery."""
 
     def __init__(self, store: ModerationStore, views: ModerationViews) -> None:
+        super().__init__(store)
         self._store, self._views = store, views
-
-    async def _retry[T](
-        self, job: ModerationJob, name: str, action: Callable[[], Awaitable[T]]
-    ) -> T:
-        for attempt in range(3):
-            try:
-                return await action()
-            except _TRANSIENT as exc:
-                message = f"{name} attempt {attempt + 1}: {exc}"
-                logger.warning("Moderation %s %s", job.operation_id, message)
-                job.failures.append(message)
-                await self._store.save(job)
-                if attempt == 2:
-                    raise
-                await asyncio.sleep(0.05 * 2**attempt)
-        raise AssertionError("Retry loop exhausted")
-
-    async def _step(
-        self, job: ModerationJob, name: str, action: Callable[[], Awaitable[None]]
-    ) -> None:
-        if name in job.completed_steps:
-            return
-        await self._retry(job, name, action)
-        if job.fail_at == name:
-            raise RuntimeError(f"Injected failure after {name}")
-        job.completed_steps.append(name)
-        await self._store.save(job)
 
     async def process(self, job: ModerationJob) -> None:
         if job.status in ("completed", "compensated", "failed"):

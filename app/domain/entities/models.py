@@ -42,6 +42,7 @@ class User:
     account_status: AccountStatus = AccountStatus.ACTIVE
     registered_at: datetime = field(default_factory=utc_now)
     role: str = "user"
+    auth_version: int = 0
 
 
 @dataclass(slots=True)

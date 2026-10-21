@@ -30,6 +30,11 @@ class MongoPublicationJobs:
         )
 
     async def enqueue(self, post: Post, key: str | None, fail_at: str | None) -> PublicationJob:
+        author = await self._database["users"].find_one(
+            {"_id": str(post.user_id), "account_status": "suspended"}
+        )
+        if author:
+            raise ConflictError("Suspended accounts cannot publish")
         payload = post_to_document(post)
         for name in ("_id", "published_at", "moderation_status"):
             payload.pop(name)

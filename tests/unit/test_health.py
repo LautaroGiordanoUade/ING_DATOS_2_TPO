@@ -21,13 +21,15 @@ def test_pending_endpoint_returns_controlled_501(client: TestClient) -> None:
     assert response.json()["code"] == "todo_tp"
 
 
-def test_unrelated_demo_recommendations_remain_available(
+def test_unrelated_demo_messages_remain_available(
     client: TestClient,
 ) -> None:
     app.dependency_overrides[demo_mode_enabled] = lambda: True
     try:
-        response = client.get(f"/api/v1/problems/4/recommendations/{uuid4()}")
-        assert response.status_code == 200
-        assert len(response.json()) == 1
+        response = client.post(
+            "/api/v1/problems/6/message",
+            json={"conversation_id": str(uuid4()), "sender_id": str(uuid4()), "text": "demo"},
+        )
+        assert response.status_code == 202
     finally:
         app.dependency_overrides.pop(demo_mode_enabled, None)

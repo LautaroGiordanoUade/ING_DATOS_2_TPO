@@ -35,7 +35,12 @@ class MongoPostRepository:
                 "moderation_status": {"$ne": "hidden"},
             }
         )
-        return None if document is None else document_to_post(document)
+        if document is None:
+            return None
+        author = await self._database["users"].find_one(
+            {"_id": document["user_id"], "account_status": "suspended"}
+        )
+        return None if author else document_to_post(document)
 
     async def get_many(self, post_ids: tuple[UUID, ...]) -> tuple[Post, ...]:
         docs = await self._collection.find(
@@ -46,10 +51,28 @@ class MongoPostRepository:
                 "visibility": "public",
             }
         ).to_list()
-        by_id = {str(doc["_id"]): document_to_post(doc) for doc in docs}
+        blocked = {
+            str(row["_id"])
+            async for row in self._database["users"].find(
+                {
+                    "_id": {"$in": list({str(doc["user_id"]) for doc in docs})},
+                    "account_status": "suspended",
+                },
+                {"_id": 1},
+            )
+        }
+        by_id = {
+            str(doc["_id"]): document_to_post(doc)
+            for doc in docs
+            if str(doc["user_id"]) not in blocked
+        }
         return tuple(by_id[str(i)] for i in post_ids if str(i) in by_id)
 
     async def list_recent_by_user(self, user_id: UUID, limit: int) -> tuple[Post, ...]:
+        if await self._database["users"].find_one(
+            {"_id": str(user_id), "account_status": "suspended"}
+        ):
+            return ()
         docs = (
             await self._collection.find(
                 {

@@ -98,7 +98,7 @@ class ModeratePostUseCase:
 
     async def inspect(self, post_id: UUID) -> dict[str, object]:
         post = await self._moderation.snapshot(post_id)
-        views = await self._views.snapshot(post_id)
+        views = await self._views.live_snapshot(post_id)
         return {
             "post_id": str(post_id),
             "moderation_status": post.moderation_status,
