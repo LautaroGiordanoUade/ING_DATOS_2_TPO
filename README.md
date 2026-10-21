@@ -190,9 +190,11 @@ están formateados. Mypy comprueba el destino Linux utilizado por los workers de
 
 ## Datos reproducibles
 
-Si se ejecutó el generador P1 anterior a P7/P8, completar primero los usuarios de prueba
-siguiendo [la migración de fixtures P1](docs/p1_fixture_migration.md). Corrige el error de
-índice único `email_1` sin borrar usuarios, relaciones ni publicaciones.
+`docker compose up -d --build` ejecuta primero `init-data`, que completa automáticamente
+los usuarios antiguos de prueba P1 y verifica los índices antes de iniciar API/workers.
+Es normal que ese contenedor termine en `Exited (0)`: es una tarea de inicialización.
+No borra datos ni carga o restablece los ejemplos P7/P8. Detalles y ejecución manual opcional:
+[migración de fixtures P1](docs/p1_fixture_migration.md).
 
 ```powershell
 python scripts/seed_data.py --users 100 --posts 1000 --messages 1000 --seed 42

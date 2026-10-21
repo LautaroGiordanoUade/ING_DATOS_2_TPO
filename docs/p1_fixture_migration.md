@@ -7,18 +7,31 @@ Un healthcheck exitoso comprueba conectividad; no confirma que esos índices se 
 
 ## Adaptación de datos existentes
 
-Usar esta versión del código y reconstruir primero la API. En Git Bash:
+Con esta versión alcanza con ejecutar:
 
 ```bash
 docker compose up -d --build
+```
+
+Compose espera a MongoDB y ejecuta init-data. En development completa los fixtures
+antiguos, conserva respaldos y verifica los índices. API, publication-worker y
+moderation-worker esperan a que termine correctamente. Fuera de development no se
+migran fixtures automáticamente; se verifican los índices igualmente.
+Si la inicialización falla, Compose no inicia los servicios dependientes nuevos.
+Revisar con docker compose logs init-data. Exited (0) es el resultado esperado.
+Una base vacía queda con sus índices, sin usuarios inventados. Los seeds P7/P8
+siguen siendo comandos explícitos: arrancar Compose no reinicia sus pruebas ni estados.
+
+Para diagnóstico o ejecución manual opcional, en Git Bash:
+
+```bash
 # Solo informa; no modifica usuarios ni crea respaldos.
 docker compose exec -T api python < scripts/migrar_usuarios_p1.py
 # Completa los fixtures y verifica los índices.
 docker compose exec -T api python - --apply < scripts/migrar_usuarios_p1.py
-docker compose restart api
 ```
 
-En PowerShell, la aplicación equivale a:
+En PowerShell, la aplicación manual equivale a:
 
 ```powershell
 Get-Content -Raw scripts/migrar_usuarios_p1.py | docker compose exec -T api python - --apply
@@ -62,3 +75,7 @@ no se deben usar los usuarios técnicos qa-p1-* para el login de moderación.
 - Suite completa con integraciones habilitadas: 166 aprobadas, sin fallos.
 - Mypy de aplicación y tests: sin errores en 168 archivos; Ruff de los archivos del cambio correcto.
 - Smoke HTTP P7/P8 y regresiones reales P1/P5 aprobados.
+- Inicialización automática: 9 pruebas de fixtures/migración/arranque aprobadas;
+  mypy actualizado sin errores en 169 archivos.
+- Compose real: reparó un fixture incompleto antes de iniciar API/workers. Una segunda
+  ejecución no modificó usuarios; init-data terminó con código 0 y readiness fue ready.
