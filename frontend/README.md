@@ -2,6 +2,7 @@
 
 React + TypeScript estricto + Vite. P1 incluye registro/login/logout, validación de sesión,
 publicación real, borrador recuperable, seguimiento de operación y preview de distribución.
+P3 agrega el feed real de cuentas seguidas en Inicio, con paginación y refresco.
 
 ## Iniciar
 
@@ -17,8 +18,9 @@ npm run dev
 
 Abrir http://127.0.0.1:5173. La bienvenida no requiere usuario ni seed: consulta
 `GET /health/ready` a través del proxy `/backend`. Crear cuenta en `/registro`, iniciar
-sesión en `/login` y publicar en `/publicar`. Inicio con sesión muestra publicaciones
-propias; `/operaciones/{id}` sigue el trabajo durable y confirma el resultado real.
+sesión en `/login` y publicar en `/publicar`. Inicio con sesión muestra el feed de cuentas
+seguidas; las propias están en `/mis-publicaciones`. `/operaciones/{id}` sigue el trabajo
+durable y confirma el resultado real.
 Sin sesión, Inicio muestra la bienvenida y el estado de los tres motores.
 
 `VITE_API_BASE_URL` es la raíz de la API **sin** `/api/v1`: el cliente recibe paths
@@ -78,6 +80,7 @@ Los tipos estáticos no validan respuestas en ejecución: readiness se valida co
 - `src/features/system`: consulta y bienvenida.
 - `src/features/auth`: formularios RHF/Zod y sesión validada por `/users/me`.
 - `src/features/posts`: borradores, envío idempotente, operación, contenido y distribución P1.
+- `src/features/feed`: feed autenticado, cursor opaco, refresco y perfiles de autores con caché.
 - `src/services/http`: fetch centralizado, cancelación, timeout y errores.
 - `src/services/api`: contrato generado.
 - `src/components/common`: mensajes comunes.
@@ -96,5 +99,6 @@ No se guardan contraseñas.
 Ese alias y las consultas de operación/preview continúan siendo públicas: el conjunto
 de la API no se presenta como cerrado para producción.
 
-Ver [plan](../docs/frontend/IMPLEMENTATION_PLAN.md), [P1](../docs/frontend/problem_1.md)
+Ver [plan](../docs/frontend/IMPLEMENTATION_PLAN.md), [P1](../docs/frontend/problem_1.md),
+[P3](../docs/frontend/problem_3.md)
 y [evidencia de preparación](../docs/frontend/iteration_0.md).

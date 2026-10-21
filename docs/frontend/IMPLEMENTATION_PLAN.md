@@ -1,4 +1,4 @@
-# Plan del frontend — estado después de P1
+# Plan del frontend — estado después de P1 y P3
 
 Inspección del 21/10/2026 sobre `main` actualizado, commit `0d0f734`.
 Rama de trabajo: `feature/frontend-react-ui`. No existía frontend ni AGENTS.md aplicable.
@@ -11,14 +11,14 @@ enunciado original habrá que contrastarlo antes de ampliar el alcance.
 
 Los ocho números son los ocho casos de uso existentes. Autenticación es infraestructura
 compartida, no un noveno problema. El estado del backend distingue código/documentación
-de verificación ejecutada durante esta entrega. P1 UI está terminado y documentado;
+de verificación ejecutada durante esta entrega. P1 y P3 UI están terminados y documentados;
 los restantes problemas de UI siguen pendientes.
 
 | Problema | Funcionalidad | UI mínima necesaria | Backend en main | Frontend |
 |---|---|---|---|---|
 | 1 — Publicación y distribución recuperable | Publicar con intereses y distribuir por lotes | Crear publicación, estado de operación y preview de IDs visibles | Implementado; worker P1 | Completado y validado — ver problem_1.md |
 | 2 — Seguir/dejar de seguir | Follow público, solicitud privada, aprobación y contadores | Perfil por UUID, seguir/cancelar/dejar de seguir y solicitudes recibidas | Implementado; worker compartido P2/P7/P8 | Pendiente |
-| 3 — Feed personalizado | Hasta 20 posts, ranking por bloques y cursor opaco | Inicio con tarjetas, siguiente página y refrescar | Implementado; navegación de 15 min | Pendiente |
+| 3 — Feed personalizado | Hasta 20 posts, ranking por bloques y cursor opaco | Inicio con tarjetas, siguiente página y refrescar | Implementado; navegación de 15 min | Completado y validado — ver problem_3.md |
 | 4 — Amigos en común y sugerencias | Segundo grado/intereses, hasta 10 sugerencias | Sugerencias y consulta de amigos en común | Parcial: segundo grado real; mutual friends lanza 501 y faltan intereses | Bloqueado por backend incompleto |
 | 5 — Reacciones y comentarios | Reacción única, cambio/baja, comentarios y contadores | Controles en tarjeta y formulario de comentario | Implementado con límites de recuperación durable documentados | Pendiente |
 | 6 — Mensajería grupal | Historial, entrega, unread y lectura por participante | Conversación grupal, historial y envío, solo cuando existan contratos reales | Pendiente; envío lanza 501, faltan lecturas públicas completas | Bloqueado por backend incompleto |
@@ -38,7 +38,9 @@ los restantes problemas de UI siguen pendientes.
    /problems/1/publish conserva su contrato público para scripts, como límite documentado.
    Este paso está completo: 69 tests frontend, 14 E2E reales y 32 regresiones Python focalizadas.
 2. P2: depende de identidad/P1 para probar entrega y retiro. Solicitudes privadas incluidas.
-3. P3: depende de P1/P2; permite verificar visibilidad y contadores con un feed real.
+3. P3: completo por pedido explícito de priorizar el feed antes de la UI P2. Reutiliza
+   el backend P2 ya implementado y los seguidores sembrados; no requiere construir su UI.
+   Inicio muestra seguidos y /mis-publicaciones conserva el contenido propio. Ver problem_3.md.
 4. P5: depende de posts/P3 e identidad. Refrescar datos del servidor después de mutaciones.
 5. P7: depende de identidad por rol y posts/P3/P5 para comprobar hide/revert y contadores.
 6. P8: depende de identidad/P2/P3/P7 para verificar suspensión sin revivir contenido moderado.
@@ -180,14 +182,16 @@ Vitest + Testing Library y Playwright desde la base. Sin Redux, SSR ni carpetas 
 
 `app/` contiene providers/router/layout; `features/system/` comprueba conexión real;
 `features/auth/` contiene identidad y sesión; `features/posts/` publicación, operaciones,
-contenido propio y preview de distribución P1;
+contenido propio y preview de distribución P1; `features/feed/` contiene API, paginación
+y tarjetas con autor para P3;
 `components/common/` mensajes reutilizables; `services/http/` cliente, errores y timeout;
 `services/api/` tipos OpenAPI; `styles/` diseño responsive; `tests/e2e/` arranque real.
 Cada funcionalidad futura tendrá su carpeta cuando se implemente.
 
 Layout claro con sidebar escritorio, navegación compacta móvil, tarjetas blancas, tipografía
 del sistema, foco visible y enlaces accesibles. P1 agrega registro/login, publicaciones propias,
-composer y operación a la bienvenida/fallback 404. No se añaden botones de módulos pendientes.
+composer y operación a la bienvenida/fallback 404. P3 convierte Inicio en feed y mueve
+las publicaciones propias a /mis-publicaciones. No se añaden botones de módulos pendientes.
 La bienvenida consume GET `/health/ready`, muestra servicios reales y permite reintentar.
 Readiness 503 se muestra como degradado. Las capturas de iteración 0 quedan como evidencia histórica.
 
@@ -214,4 +218,7 @@ del TP; no implican nuevas pantallas. No se expondrán controles técnicos de re
 Preparación: `iteration_0.md`. P1: `problem_1.md`, 69 tests frontend (38 unitarios y
 31 componentes), 14 E2E sobre build/preview y 32 pruebas Python focalizadas. Capturas
 desktop/móvil en `screenshots/p1/`. Los escenarios de P1 usan API, workers y motores reales.
-No se reclama una ejecución completa de la suite Python. Parada obligatoria antes de P2.
+P3: `problem_3.md`, 81 tests frontend (41 unitarios y 40 componentes), 18 E2E sobre
+build/preview y comprobación real de lautaro1/lautaro1000 viendo el post de Lautaro.
+Sin cambios de backend. Capturas en `screenshots/p3/`. No se reclama una ejecución completa
+de la suite Python. Siguiente pendiente: P2; requiere autorización antes de comenzar.

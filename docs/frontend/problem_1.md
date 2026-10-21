@@ -3,12 +3,16 @@
 Fecha: 21/10/2026. Rama `feature/frontend-react-ui`, continuación de la iteración 0.
 Alcance: P1 e identidad mínima compartida. P2–P8 no se implementan en esta entrega UI.
 
+Actualización posterior P3: Inicio ahora muestra el feed de seguidos; las publicaciones
+propias de P1 están en `/mis-publicaciones`. Las cifras y capturas de esta guía corresponden
+a la validación original de P1; la suite ampliada se documenta en `problem_3.md`.
+
 ## Funcionalidades y pantallas
 
 - `/registro`: nombre, username, email, contraseña y cuenta public/private. Registro
   siempre crea rol user; no hay selector de roles. Al terminar lleva al login.
 - `/login`: credenciales reales, error accesible y regreso a ruta protegida local.
-- `/`: bienvenida sin sesión; con sesión muestra hasta las 100 publicaciones propias
+- `/mis-publicaciones`: ruta protegida con hasta las 100 publicaciones propias
   que devuelve el contrato actual, con carga/vacío/error/actualizar y envíos recientes.
   No pretende ser el feed personalizado de P3.
 - `/publicar`: texto de 1–10000 caracteres, al menos un interés separado por comas,
@@ -93,7 +97,7 @@ npm run dev
 
 1. Abrir http://127.0.0.1:5173/registro y crear una cuenta propia con email/username únicos.
    No se necesita un usuario fijo ni seed. Usar una contraseña de al menos 8 caracteres.
-2. Iniciar sesión; Inicio debe mostrar la lista vacía de esa cuenta.
+2. Iniciar sesión y abrir Mis publicaciones: debe mostrar la lista vacía de esa cuenta.
 3. Publicar un texto con intereses `datos, python`, sin imágenes para una prueba sin
    dependencias externas. Recargar antes del envío comprueba la recuperación del borrador.
 4. Enviar: se abre la operación. Esperar Publicada, contenido e IDs reales; recargar

@@ -4,6 +4,8 @@
 
 La SPA React + TypeScript + Vite en `frontend/` implementa P1: registro/login, sesión,
 publicación real, consulta de operación y preview de distribución, con layout responsive.
+P3 muestra el feed real de cuentas seguidas en Inicio, con paginación y refresco; las
+publicaciones propias se consultan en `/mis-publicaciones`. Guía: [P3 UI](docs/frontend/problem_3.md).
 Instrucciones: [frontend/README.md](frontend/README.md) y [guía P1 UI](docs/frontend/problem_1.md).
 Inventario, dependencias y próximas iteraciones: [plan del frontend](docs/frontend/IMPLEMENTATION_PLAN.md).
 
