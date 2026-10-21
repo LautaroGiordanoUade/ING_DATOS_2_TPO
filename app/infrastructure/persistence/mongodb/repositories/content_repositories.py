@@ -125,6 +125,7 @@ class MongoCommentRepository:
     async def count_for_post(self, post_id: UUID) -> int:
         return int(await self._collection.count_documents({"post_id": str(post_id)}))
 
+
 class MongoReactionRepository:
     def __init__(self, database: AsyncDatabase[dict[str, object]]) -> None:
         self._database = database
@@ -156,11 +157,20 @@ class MongoReactionRepository:
             )
         return None if anterior is None else document_to_reaction(anterior)
 
+    async def get_for_user(self, post_id: UUID, user_id: UUID) -> Reaction | None:
+        document = await self._collection.find_one(
+            {
+                "post_id": str(post_id),
+                "user_id": str(user_id),
+            }
+        )
+        return None if document is None else document_to_reaction(document)
+
     async def delete_for_user(self, post_id: UUID, user_id: UUID) -> Reaction | None:
         borrada = await self._collection.find_one_and_delete(
             {"post_id": str(post_id), "user_id": str(user_id)}
         )
         return None if borrada is None else document_to_reaction(borrada)
-    
+
     async def count_for_post(self, post_id: UUID) -> int:
         return int(await self._collection.count_documents({"post_id": str(post_id)}))
