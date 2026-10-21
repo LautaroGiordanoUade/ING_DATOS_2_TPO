@@ -1,5 +1,9 @@
 # Problema 8: suspension y trazabilidad — guia Swagger
 
+Desde P3, consultar cada feed requiere la credencial de su titular: `p8_moderator` para
+el feed terminado en `0002`, y `p8_target` para el terminado en `0001`. El rol elevado no
+permite leer feeds ajenos. La traza P8 conserva sus permisos anteriores.
+
 ## Arranque y datos
 
 Desde la raiz del repositorio, PowerShell, con Docker Desktop Linux activo:

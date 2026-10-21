@@ -1,5 +1,12 @@
 # Problema 7 — guía reproducible de moderación
 
+Desde P3, las rutas de feed requieren el token del dueño del feed. Para estos ejemplos,
+iniciar sesión como `p7_user` y crear con P2 el seguimiento desde
+`70000000-0000-0000-0000-000000000001` hacia el autor
+`70000000-0000-0000-0000-000000000004`; esperar su operación `completed`.
+Cambiar a la credencial moderator para decidir y volver a la del usuario para leer su feed.
+El script `verify_problem_07.py` ya prepara ese seguimiento. Detalles: [P3](problems/problem_03.md).
+
 ## Arranque
 
 Requiere Docker Desktop con contenedores Linux. Desde la raíz del proyecto, PowerShell:

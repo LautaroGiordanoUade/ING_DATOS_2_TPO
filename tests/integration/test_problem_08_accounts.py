@@ -131,7 +131,9 @@ async def test_suspend_all_three_engines_and_private_trace(account: Harness) -> 
     for path in (f"/api/v1/posts/{h.post.id}", f"/api/v1/users/{h.user.id}"):
         assert (await h.client.get(path)).status_code == 404
     assert (await h.client.get(f"/api/v1/posts/by-user/{h.user.id}")).json() == []
-    assert (await h.client.get(f"/api/v1/feeds/{h.moderator.id}")).json()["items"] == []
+    assert (
+        await h.client.get(f"/api/v1/feeds/{h.moderator.id}", headers=h.headers(h.moderator))
+    ).json()["items"] == []
     assert (await h.client.get(f"/api/v1/problems/4/recommendations/{h.moderator.id}")).json() == []
     assert (
         await h.client.put("/api/v1/accounts/me/presence", headers=h.headers())

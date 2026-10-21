@@ -29,6 +29,7 @@ from app.infrastructure.persistence.mongodb.repositories.publication_jobs import
 from app.infrastructure.persistence.redis.accounts import RedisAccountViews
 from app.infrastructure.persistence.redis.follows import RedisFollowViews
 from app.infrastructure.persistence.redis.moderation import RedisModerationViews
+from app.infrastructure.persistence.redis.personalized_feed import RedisPersonalizedFeed
 from app.infrastructure.persistence.redis.reaction_lock import RedisReactionLock
 from app.infrastructure.persistence.redis.repositories.operational_repositories import (
     RedisIdempotencyRepository,
@@ -69,8 +70,13 @@ def get_follow_use_case(
     )
 
 
-def get_feed_use_case(repositories: RepositoriesDep) -> GetFeedUseCase:
-    return GetFeedUseCase(repositories.feeds, repositories.posts, repositories.counters)
+def get_feed_use_case(repositories: RepositoriesDep, resources: ResourcesDep) -> GetFeedUseCase:
+    return GetFeedUseCase(
+        RedisPersonalizedFeed(resources.redis),
+        repositories.posts,
+        repositories.counters,
+        repositories.graph,
+    )
 
 
 def get_recommendations_use_case(

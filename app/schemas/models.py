@@ -64,7 +64,7 @@ class FeedCursorSchema(ApiModel):
 
 class FeedResponse(ApiModel):
     items: list[PostResponse]
-    next_cursor: FeedCursorSchema | None = None
+    next_cursor: str | None = None
 
 
 class MutualFriendsRequest(ApiModel):

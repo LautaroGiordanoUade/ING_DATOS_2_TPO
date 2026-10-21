@@ -138,7 +138,7 @@ async def test_hide_all_reads_counts_audit_snapshot_and_revert(harness: Harness)
     assert report["resolution_status"] == "approved"
     assert report["moderator_id"] == str(h.moderator.id)
     for path in (f"/api/v1/feeds/{h.user.id}", f"/api/v1/problems/3/feed/{h.user.id}"):
-        response = await h.client.get(path)
+        response = await h.client.get(path, headers=h.headers())
         assert response.status_code == 200
         assert response.json()["items"] == []
     response = await h.client.get(f"/api/v1/posts/{h.post.id}")
@@ -605,8 +605,12 @@ async def test_demo_mode_cannot_bypass_real_moderation(harness: Harness) -> None
     )
     assert response.status_code == 403
     await h.run(await h.decision(report_id))
-    assert (await h.client.get(f"/api/v1/feeds/{h.user.id}")).json()["items"] == []
-    assert (await h.client.get(f"/api/v1/problems/3/feed/{h.user.id}")).json()["items"] == []
+    assert (await h.client.get(f"/api/v1/feeds/{h.user.id}", headers=h.headers())).json()[
+        "items"
+    ] == []
+    assert (await h.client.get(f"/api/v1/problems/3/feed/{h.user.id}", headers=h.headers())).json()[
+        "items"
+    ] == []
 
     after = await h.client.get(
         f"/api/v1/problems/8/trace/{h.admin.id}", headers=h.headers(h.moderator)
@@ -644,7 +648,7 @@ async def test_mongo_gate_prevents_feed_leak_before_redis_update(
     async def check(post_id: UUID) -> None:
         assert await h.resources.redis.get(f"moderation:{post_id}:hidden") is None
         for path in (f"/api/v1/feeds/{h.user.id}", f"/api/v1/problems/1/feed-preview/{h.user.id}"):
-            response = await h.client.get(path)
+            response = await h.client.get(path, headers=h.headers())
             assert response.json().get("items", response.json().get("post_ids")) == []
         await original(post_id)
 

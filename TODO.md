@@ -38,11 +38,18 @@ rutas en Swagger o respuestas en modo demo.
 
 ## Problema 3: feed personalizado
 
-- [ ] Ranking de relevancia/recencia y 20 publicaciones por página.
-- [ ] Cursor validado y paginación hacia atrás.
-- [ ] Lectura por lote de contenido y contadores sin N+1.
+- [x] Ranking por recencia y actividad en bloques de 200 candidatos; páginas de hasta 20 posts.
+- [x] Cursor firmado, propio del usuario y con vencimiento de 15 minutos; orden estable por bloque.
+- [x] Paginación por fecha/UUID, incluidos empates, eliminaciones y publicaciones nuevas.
+- [x] Lectura por lote de contenido/contadores y validación conjunta de autores, sin N+1.
+- [x] Feed autenticado; filtros actuales de seguimiento aceptado, bloqueos, moderación y suspensión.
+- [x] Pruebas de concurrencia, ranking, límites de escaneo y fallas de los tres motores.
+- [x] Smoke HTTP y guía en docs/problems/problem_03.md.
 - [x] Filtro de publicación committed y moderación en lecturas implementadas (P7).
 - El preview del P1 muestra IDs visibles; no reemplaza este problema.
+- Ranking local al bloque, sin snapshot transaccional de todo el historial. Se inspeccionan
+  hasta 10 bloques por request; si se agota el presupuesto se devuelve continuación, incluso
+  con menos de 20 elementos. Refrescar sin cursor inicia otra navegación.
 
 ## Problema 4: amigos en común y sugerencias
 

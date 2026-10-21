@@ -141,6 +141,23 @@ class Neo4jSocialGraphRepository:
         # TODO(TP): Implementar consulta Cypher para amigos en común.
         raise FeatureNotImplementedError("Neo4jSocialGraphRepository.get_mutual_friends")
 
+    async def eligible_authors(self, user_id: UUID, authors: tuple[UUID, ...]) -> set[UUID]:
+        if not authors:
+            return set()
+        async with self._driver.session() as session:
+            result = await session.run(
+                """UNWIND $authors AS id
+                MATCH (reader:User {id:$reader})-[r:FOLLOWS]->(a:User {id:id})
+                WHERE coalesce(r.status,'accepted')='accepted'
+                  AND coalesce(reader.account_status,'active')='active'
+                  AND coalesce(a.account_status,'active')='active'
+                  AND NOT (reader)-[:BLOCKS]-(a)
+                RETURN DISTINCT a.id AS id""",
+                reader=str(user_id),
+                authors=[str(author) for author in authors],
+            )
+            return {UUID(row["id"]) async for row in result}
+
     async def get_suggested_accounts(self, user_id: UUID, limit: int) -> tuple[UUID, ...]:
         async with self._driver.session() as session:
             result = await session.run(

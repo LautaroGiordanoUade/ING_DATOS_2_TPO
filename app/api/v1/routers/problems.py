@@ -11,7 +11,6 @@ from app.api.dependencies.databases import ResourcesDep
 from app.api.dependencies.demo import DemoModeDep
 from app.api.dependencies.use_cases import (
     RepositoriesDep,
-    get_feed_use_case,
     get_interaction_use_case,
     get_message_use_case,
     get_moderation_use_case,
@@ -19,10 +18,10 @@ from app.api.dependencies.use_cases import (
     get_recommendations_use_case,
     get_suspend_trace_use_case,
 )
+from app.api.v1.routers.feeds import get_user_feed
 from app.api.v1.routers.social import approve_follow, create_follow, delete_follow, follow_operation
 from app.application.services.follow_job import FollowJob
 from app.application.use_cases import (
-    GetFeedUseCase,
     InteractWithPostUseCase,
     ModeratePostUseCase,
     PublishContentUseCase,
@@ -129,18 +128,9 @@ router.add_api_route(
 )
 
 
-@router.get("/3/feed/{user_id}", response_model=FeedResponse)
-async def feed(
-    user_id: UUID,
-    use_case: Annotated[GetFeedUseCase, Depends(get_feed_use_case)],
-    demo_mode: DemoModeDep,
-    cursor: Annotated[str | None, Query()] = None,
-) -> object:
-    if cursor is not None:
-        from app.core.exceptions import InvalidOperationError
-
-        raise InvalidOperationError("Personalized cursors belong to pending P3")
-    return await use_case.execute(user_id)
+router.add_api_route(
+    "/3/feed/{user_id}", get_user_feed, methods=["GET"], response_model=FeedResponse
+)
 
 
 @router.get("/4/recommendations/{user_id}")
