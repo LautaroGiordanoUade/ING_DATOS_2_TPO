@@ -4,7 +4,26 @@ React + TypeScript estricto + Vite. P1 incluye registro/login/logout, validació
 publicación real, borrador recuperable, seguimiento de operación y preview de distribución.
 P3 agrega el feed real de cuentas seguidas en Inicio, con paginación y refresco.
 
-## Iniciar
+## Iniciar con Docker
+
+Desde la raíz, con Docker Desktop iniciado:
+
+```powershell
+docker compose up -d --build
+docker compose ps
+```
+
+Abrir http://127.0.0.1:8080. Compose construye el frontend en una etapa con Node y sirve
+el resultado estático con Nginx; no requiere Node/npm en el host. El contenedor espera
+a que la API esté saludable. Nginx envía `/backend/` a `api:8000`, elimina el prefijo y
+conserva los headers de autenticación. Las rutas React admiten navegación y recarga directa.
+`/healthz` comprueba Nginx; `/backend/health/ready` comprueba la API y sus motores.
+
+Después de cambiar el frontend, reconstruirlo con `docker compose up -d --build frontend`.
+La imagen utiliza `/backend` como raíz de API y no incorpora archivos `.env` locales.
+Los datos continúan en los volúmenes de los servicios existentes.
+
+## Desarrollo local
 
 Node.js 22.12+ y npm. Desde la raíz, con Docker Desktop iniciado:
 
@@ -28,8 +47,8 @@ completos, por ejemplo `/health/ready` o `/api/v1/posts`. El valor predeterminad
 `/backend`. `API_PROXY_TARGET` permite cambiar el destino del proxy de Vite.
 Nunca poner secretos en variables `VITE_`; se exponen en el navegador.
 
-Para servir el build fuera de Vite configurar un reverse proxy `/backend` hacia
-FastAPI (eliminando ese prefijo) y fallback de rutas SPA a `index.html`. Si se elige
+El servicio Docker ya configura el reverse proxy `/backend` hacia FastAPI y el fallback
+de rutas SPA a `index.html`. Para otro servidor se debe conservar esa configuración. Si se elige
 una API en otra origin, esa API deberá permitir CORS expresamente. El proxy dev no
 es una configuración de producción. `npm run preview` sirve el build en el puerto
 4173 e incluye el mismo proxy únicamente para revisión local.
@@ -61,6 +80,22 @@ P1 crea cuentas y publicaciones QA con UUIDs/credenciales aleatorios, conservado
 inspección; no modifica cuentas anteriores. Usa P2 solo para preparar un seguidor real.
 `test:e2e` construye el frontend y ejecuta preview en el puerto 4174, separado de Vite dev,
 con dos workers. Las páginas y requests del E2E usan ese build, sin HMR.
+
+Para ejecutar los mismos E2E contra el frontend de Docker ya iniciado, sin levantar Vite:
+
+```powershell
+$env:PLAYWRIGHT_BASE_URL = "http://127.0.0.1:8080"
+$env:PLAYWRIGHT_CHANNEL = "msedge" # Opcional si se usa Chromium instalado por Playwright
+npx playwright test
+Remove-Item Env:PLAYWRIGHT_BASE_URL
+Remove-Item Env:PLAYWRIGHT_CHANNEL
+```
+
+Validación del contenedor (21/10/2026): build multietapa, arranque completo con
+`docker compose up -d --build --wait`, healthcheck y `nginx -t` aprobados. Lint y
+TypeScript aprobados; los 18 E2E pasaron en escritorio y móvil contra el puerto 8080,
+sin iniciar Vite. Se comprobaron recargas de rutas React, assets compilados con caché,
+readiness real por proxy y respuestas 404 de API/assets sin fallback HTML incorrecto.
 
 ## Contrato y arquitectura
 

@@ -2,6 +2,9 @@
 
 ## Frontend React
 
+`docker compose up -d --build` también construye y levanta el frontend en
+http://127.0.0.1:8080, servido por Nginx con proxy a la API. No requiere Node/npm en el host.
+
 La SPA React + TypeScript + Vite en `frontend/` implementa P1: registro/login, sesión,
 publicación real, consulta de operación y preview de distribución, con layout responsive.
 P3 muestra el feed real de cuentas seguidas en Inicio, con paginación y refresco; las
