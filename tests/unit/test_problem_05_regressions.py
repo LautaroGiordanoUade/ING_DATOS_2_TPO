@@ -126,6 +126,7 @@ async def test_redis_lock_releases_after_exception() -> None:
             raise ValueError("failure")
     acquired.release.assert_awaited_once()
 
+
 async def test_comment_idempotency_rejects_different_content_fingerprint() -> None:
     from app.application.services.idempotency_service import IdempotencyService
     from app.core.exceptions import ConflictError
@@ -181,7 +182,7 @@ async def test_uncertain_step_failure_reconciles_counter_idempotently() -> None:
         await uc.react(Reaction(post_id=post.id, user_id=actor, kind="like"))
 
     reactions.delete_for_user.assert_awaited_once_with(post.id, actor)
-    counters.set_value.assert_awaited_once_with("post_reactions", post.id, 0)
+    assert counters.set_value.await_args_list[-1].args == ("post_reactions", post.id, 0)
 
 
 async def test_orphaned_lock_uses_bounded_lease_and_recovers() -> None:

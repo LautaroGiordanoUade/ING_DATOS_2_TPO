@@ -58,9 +58,12 @@ rutas en Swagger o respuestas en modo demo.
 - [x] Bloqueo Redis por publicación para cambios de reacción y sus compensaciones.
 - [x] Compensación de notificaciones parciales, sin borrar eventos de otras altas.
 - [x] Pruebas con motores reales y regresiones de concurrencia/falla parcial.
-- [x] Recuperación automática del bloqueo huérfano tras caída de API.
-- [x] Reconciliación e idempotencia de compensaciones ante resultados inciertos adicionales.
+- [x] Exclusión por post compartida por reacciones y comentarios, por host/volumen.
+- [x] Expiración del lease tras caída; reparación de contadores antes del siguiente escritor.
+- [x] Snapshot previo de reacción y reconciliación después de restaurar MongoDB.
+- [x] Recálculo absoluto atómico respetando gates P7/P8 y contadores preservados.
 - [x] Fingerprint del contenido para idempotencia de comentarios.
+- [ ] Recuperación durable de toda la operación tras caída, incluidas notificaciones e idempotencia pendiente.
 - Ver docs/problem_05_consistency.md para las garantías y límites actuales.
 
 ## Problema 6: mensajería grupal

@@ -1,6 +1,8 @@
 services:
   api:
     build: .
+    volumes:
+      - interaction_locks:/home/appuser/interaction-locks
     ports:
       - "127.0.0.1:8000:8000"
     environment:
@@ -116,6 +118,7 @@ services:
       start_period: 40s
 
 volumes:
+  interaction_locks:
   mongo_data:
   redis_data:
   neo4j_data:
