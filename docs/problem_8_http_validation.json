@@ -1,0 +1,28 @@
+{
+  "http_smoke": "passed",
+  "swagger": "http://127.0.0.1:8000/docs",
+  "suspension": "b2fadbe5-e912-5105-9382-33ee95d23de9",
+  "reactivation": "08c66e7b-06c8-56ff-b21f-eb8c232821da",
+  "compensated": "a010ecbc-72cc-51aa-bf09-3c3f30c814cc",
+  "account": "80000000-0000-0000-0000-000000000001",
+  "validation": {
+    "date": "2026-10-20",
+    "branch": "feature/problem-8-suspension-traceability",
+    "base": "fced264",
+    "pytest": {
+      "passed": 161,
+      "failed": 0,
+      "skipped": 0,
+      "warnings": 1,
+      "seconds": 64.48
+    },
+    "p8_new_tests": 67,
+    "p8_integration_tests": 57,
+    "p8_unit_tests": 10,
+    "baseline_tests": 94,
+    "ruff_check": "passed",
+    "mypy": "passed: 165 source files",
+    "changed_python_format": "passed: 46 files",
+    "global_format_existing_debt_files": 96
+  }
+}

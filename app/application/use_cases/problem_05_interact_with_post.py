@@ -20,6 +20,7 @@ from app.domain.repositories import (
     NotificationRepository,
     PostRepository,
     ReactionRepository,
+    UserRepository,
 )
 
 
@@ -47,6 +48,7 @@ class InteractWithPostUseCase:
         compensation: CompensationService,
         idempotency: IdempotencyService | None = None,
         reaction_lock: ReactionLock | None = None,
+        users: UserRepository | None = None,
     ) -> None:
         self._posts = posts
         self._reactions = reactions
@@ -56,6 +58,7 @@ class InteractWithPostUseCase:
         self._compensation = compensation
         self._idempotency = idempotency
         self._reaction_lock = reaction_lock
+        self._users = users
 
     async def _get_active_post(self, post_id: UUID) -> Post:
         post = await self._posts.get(post_id)
@@ -65,7 +68,12 @@ class InteractWithPostUseCase:
             raise InvalidOperationError("La publicación no está disponible")
         return post
 
+    async def _check_actor(self, user_id: UUID) -> None:
+        if self._users is not None and await self._users.is_suspended(user_id):
+            raise ConflictError("Suspended accounts cannot interact")
+
     async def react(self, reaction: Reaction) -> OperationContext:
+        await self._check_actor(reaction.user_id)
         if self._reaction_lock is None:
             raise RuntimeError("ReactionLock es obligatorio para modificar reacciones")
         async with self._reaction_lock.hold(reaction.post_id):
@@ -129,6 +137,7 @@ class InteractWithPostUseCase:
         )
 
     async def remove_reaction(self, post_id: UUID, user_id: UUID) -> OperationContext:
+        await self._check_actor(user_id)
         if self._reaction_lock is None:
             raise RuntimeError("ReactionLock es obligatorio para modificar reacciones")
         async with self._reaction_lock.hold(post_id):
@@ -168,6 +177,7 @@ class InteractWithPostUseCase:
     async def comment(
         self, comment: Comment, idempotency_key: str | None = None
     ) -> OperationContext:
+        await self._check_actor(comment.user_id)
         post = await self._get_active_post(comment.post_id)
 
         scoped_key: str | None = None

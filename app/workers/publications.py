@@ -38,6 +38,11 @@ async def main() -> None:
                 pending = await jobs.pending()
                 for job in pending:
                     try:
+                        processor = PublicationProcessor(
+                            jobs,
+                            Neo4jSocialGraphRepository(neo4j),
+                            RedisPublicationFeeds(redis, author_id=job.post.user_id),
+                        )
                         await processor.process(job)
                     except Exception:
                         logger.exception(

@@ -1,4 +1,4 @@
-from dataclasses import asdict
+from dataclasses import asdict, fields
 from typing import Any
 from uuid import UUID
 
@@ -27,7 +27,9 @@ class MongoUserRepository:
         data["id"] = UUID(data.pop("_id"))
         data["account_type"] = AccountType(data.get("account_type", "public"))
         data["account_status"] = AccountStatus(data.get("account_status", "active"))
-        return User(**data)
+        return User(
+            **{key: value for key, value in data.items() if key in {f.name for f in fields(User)}}
+        )
 
     async def get(self, user_id: UUID) -> User | None:
         doc = await self._collection.find_one({"_id": str(user_id)})
@@ -50,4 +52,20 @@ class MongoUserRepository:
     async def update_account_status(self, user_id: UUID, status: str) -> None:
         await self._collection.update_one(
             {"_id": str(user_id)}, {"$set": {"account_status": AccountStatus(status).value}}
+        )
+
+    async def active_ids(self, user_ids: tuple[UUID, ...]) -> tuple[UUID, ...]:
+        docs = await self._collection.find(
+            {"_id": {"$in": [str(i) for i in user_ids]}, "account_status": {"$ne": "suspended"}},
+            {"_id": 1},
+        ).to_list()
+        active = {str(doc["_id"]) for doc in docs}
+        return tuple(identifier for identifier in user_ids if str(identifier) in active)
+
+    async def is_suspended(self, user_id: UUID) -> bool:
+        return (
+            await self._collection.find_one(
+                {"_id": str(user_id), "account_status": "suspended"}, {"_id": 1}
+            )
+            is not None
         )

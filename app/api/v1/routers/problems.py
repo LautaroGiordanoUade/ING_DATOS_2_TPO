@@ -1,14 +1,12 @@
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Header, Query, status
+from fastapi import APIRouter, Depends, Header, Query, Response, status
 
 from app.api.demo_data import (
-    DEMO_OTHER_USER_ID,
     DEMO_USER_ID,
-    demo_trace,
 )
-from app.api.dependencies.auth import ModeratorDep
+from app.api.dependencies.auth import CurrentUserDep, ModeratorDep
 from app.api.dependencies.databases import ResourcesDep
 from app.api.dependencies.demo import DemoModeDep
 from app.api.dependencies.use_cases import (
@@ -22,7 +20,6 @@ from app.api.dependencies.use_cases import (
     get_recommendations_use_case,
     get_suspend_trace_use_case,
 )
-from app.application.services.content_queries import ContentQueries
 from app.application.use_cases import (
     FollowUserUseCase,
     GetFeedUseCase,
@@ -50,7 +47,6 @@ from app.schemas.models import (
     OperationDetailResponse,
     OperationResponse,
     PostCreate,
-    PostResponse,
     PublicationResponse,
     ReactionCreate,
     ReactionRemove,
@@ -162,8 +158,6 @@ async def recommendations(
     use_case: Annotated[SocialRecommendationsUseCase, Depends(get_recommendations_use_case)],
     demo_mode: DemoModeDep,
 ) -> tuple[UUID, ...]:
-    if demo_mode:
-        return (DEMO_OTHER_USER_ID,)
     return await use_case.recommendations(user_id)
 
 
@@ -248,28 +242,24 @@ async def moderate(
 @router.post("/8/suspend", status_code=status.HTTP_204_NO_CONTENT)
 async def suspend(
     payload: SuspensionRequest,
+    response: Response,
     use_case: Annotated[SuspendAndTraceUserUseCase, Depends(get_suspend_trace_use_case)],
-    demo_mode: DemoModeDep,
+    actor: ModeratorDep,
 ) -> None:
-    if demo_mode:
-        return
-    await use_case.suspend_user(payload.user_id, payload.reason)
+    """Compatibility route: queues work; inspect /accounts/{user_id}/history/operations."""
+    job = await use_case.suspend_user(payload.user_id, payload.reason, actor.id)
+    response.headers["Operation-Id"] = str(job.operation_id)
+    response.headers["Location"] = f"/api/v1/accounts/operations/{job.operation_id}"
 
 
 @router.get("/8/trace/{user_id}", response_model=UserTraceResponse)
 async def trace(
     user_id: UUID,
     use_case: Annotated[SuspendAndTraceUserUseCase, Depends(get_suspend_trace_use_case)],
-    demo_mode: DemoModeDep,
-    repositories: RepositoriesDep,
+    actor: CurrentUserDep,
 ) -> object:
-    if demo_mode:
-        result = demo_trace(user_id)
-        result.recent_posts = [
-            PostResponse.model_validate(post)
-            for post in await ContentQueries(repositories.posts, repositories.counters).by_author(
-                user_id
-            )
-        ]
-        return result
+    from fastapi import HTTPException
+
+    if actor.id != user_id and actor.role not in ("moderator", "admin"):
+        raise HTTPException(status_code=403, detail="Only owner or moderator may trace")
     return await use_case.trace_user(user_id)

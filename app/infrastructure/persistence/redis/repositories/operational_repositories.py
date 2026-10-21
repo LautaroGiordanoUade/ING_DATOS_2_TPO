@@ -37,7 +37,8 @@ class RedisFeedRepository:
 # Suma/resta de forma atómica (un solo comando en el servidor) y nunca baja de 0.
 _INCREMENT_NOT_NEGATIVE = """
 local key = KEYS[1]
-if ARGV[2] ~= '' and redis.call('EXISTS', ARGV[2]) == 1 then
+if ARGV[2] ~= '' and (redis.call('EXISTS', ARGV[2]) == 1
+    or redis.call('EXISTS', ARGV[3]) == 1) then
     key = key .. ':moderation_saved'
 end
 local value = redis.call('INCRBY', key, ARGV[1])
@@ -61,7 +62,9 @@ class RedisCounterRepository:
             if namespace in ("post_reactions", "post_comments")
             else ""
         )
-        result = await client.eval(_INCREMENT_NOT_NEGATIVE, 1, key, str(amount), gate)
+        result = await client.eval(
+            _INCREMENT_NOT_NEGATIVE, 1, key, str(amount), gate, f"suspension:{entity_id}:hidden"
+        )
         return int(result)
 
     async def get_many(self, namespace: str, entity_ids: tuple[UUID, ...]) -> dict[UUID, int]:

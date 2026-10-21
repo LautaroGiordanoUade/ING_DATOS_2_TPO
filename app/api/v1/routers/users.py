@@ -29,6 +29,6 @@ async def login(payload: LoginRequest, repositories: RepositoriesDep) -> TokenRe
 @router.get("/{user_id}", response_model=UserResponse)
 async def get_user(user_id: UUID, repositories: RepositoriesDep) -> object:
     user = await repositories.users.get(user_id)
-    if user is None:
+    if user is None or user.account_status != "active":
         raise ResourceNotFoundError("User not found")
     return user

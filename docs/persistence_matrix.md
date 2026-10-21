@@ -21,3 +21,7 @@ Redis conserva responsabilidad operativa de notificaciones, además de feed y co
 Neo4j resuelve relaciones, y MongoDB conserva datos/documentos de negocio y recuperación.
 SQL no forma parte del despliegue. La justificación final, escenarios contrafactuales y
 mediciones con el dataset completo deben incorporarse al informe.
+
+P8 implementa account_jobs, snapshots por post y account_history en MongoDB, estado derivado
+User.account_status en Neo4j y gates/backup de feed/presencia en Redis. La consulta de conversaciones
+por participante está implementada para trazabilidad; envío/unread sigue siendo P6 pendiente.

@@ -17,3 +17,7 @@ async def ensure_mongo_indexes(database: AsyncDatabase[dict[str, object]]) -> No
 
     await MongoUserRepository(database).ensure_indexes()
     await MongoModerationRepository(database).ensure_indexes()
+
+    from app.infrastructure.persistence.mongodb.repositories.accounts import MongoAccountStore
+
+    await MongoAccountStore(database).ensure_indexes()

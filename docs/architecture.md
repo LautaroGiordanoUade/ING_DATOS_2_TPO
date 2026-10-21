@@ -75,3 +75,18 @@ La fase committing completa reporte/auditoría sin compensar; fases anteriores c
 el snapshot. Los pasos son repetibles tras caídas, hay tres intentos transitorios y recuperación
 explícita de failed/compensated. No se añade un nodo Post a Neo4j: actualmente no existe.
 Ver docs/problems/problem_07.md y docs/problem_7_moderation_test_guide.md.
+
+## Suspensión y trazabilidad P8
+
+AccountProcessor comparte el consumidor y el mecanismo WorkflowSteps con P7. account_jobs
+reserva una cuenta por índice único parcial y conserva checkpoints; account_post_snapshots
+separa la audiencia por post para no superar el tamaño máximo de un documento de workflow.
+MongoDB cambia estado/auth_version atómicamente; Neo4j conserva las aristas y cambia el estado
+derivado. Redis usa gates independientes P7/P8, backup atómico del feed propio/presencia y
+contadores preservados hasta retirar el último motivo de ocultamiento.
+
+Las lecturas públicas filtran autores suspendidos en MongoDB incluso con derivados incompletos.
+El fan-out P1 conoce el autor y respeta su gate; el snapshot de audiencia permite restaurar
+referencias de publicaciones que ya estaban en vuelo. La consulta de traza requiere titular o
+rol autorizado y reúne datos reales de los tres motores, devolviendo 503 ante una dependencia caída.
+Reactivación no implica restaurar credenciales/presencia. Ver docs/problems/problem_08.md.

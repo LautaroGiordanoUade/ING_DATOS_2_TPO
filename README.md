@@ -26,7 +26,7 @@ docker compose ps
 Invoke-RestMethod http://localhost:8000/health/ready
 ```
 
-Levanta la API, los workers de publicaciones/moderación y tres motores: MongoDB, Redis y Neo4j. Swagger está en
+Levanta la API, los workers de publicaciones/moderación (P7/P8) y tres motores: MongoDB, Redis y Neo4j. Swagger está en
 http://localhost:8000/docs y Neo4j Browser en http://localhost:7474.
 El usuario Neo4j es `neo4j`; la contraseña local predeterminada es `local_dev_password`.
 Puede cambiarse con `NEO4J_PASSWORD` en `.env` antes del primer inicio.
@@ -64,6 +64,10 @@ Las carpetas PostgreSQL y Alembic quedan como legado; la API ya no las usa.
 
 P7 implementa reportes, autorización y moderación/revert durable con compensaciones, retries y
 concurrencia. Guía completa de Swagger y datos reales: [Problema 7](docs/problem_7_moderation_test_guide.md).
+
+P8 completa suspensión, reactivación y trazabilidad real en MongoDB/Neo4j/Redis, con revocación
+de credenciales, presencia, compensaciones y recuperación. Comparte el consumidor durable con P7.
+Guía: [Problema 8](docs/problem_8_suspension_test_guide.md).
 
 P1 publica mediante una cola durable y distribución en lotes. P5 implementa reacciones,
 comentarios, contadores y notificaciones, con los límites descritos en su guía.
@@ -145,7 +149,7 @@ uvicorn app.main:app --reload
 - Problemas: `/api/v1/problems/1/...` hasta `/api/v1/problems/8/...`
 - Registro de operación: `GET /api/v1/problems/operations/{operation_id}`
 
-El script establece `APP_DEMO_MODE=true`. P1, P5, identidad, moderación y las lecturas de posts/feed usan motores reales incluso en modo demo.
+El script establece `APP_DEMO_MODE=true`. P1, P5, P7/P8, identidad, sugerencias básicas y lecturas de posts/feed usan motores reales incluso en modo demo.
 Las respuestas mock de los problemas restantes están centralizadas en
 `app/api/demo_data.py`, usan UUID deterministas y permiten probar desde Swagger sin levantar bases.
 No contienen consultas, algoritmos ni decisiones académicas. La configuración impide habilitar este
@@ -202,3 +206,14 @@ parte del trabajo pendiente.
 Consulte [TODO.md](TODO.md) para completar el TP y [docs/architecture.md](docs/architecture.md)
 para las decisiones que sostienen esta separación.
 
+
+## Datos reproducibles P8
+
+```powershell
+Get-Content -Raw scripts/seed_problem_08.py | docker compose exec -T api python -
+```
+
+Crea cuentas, posts, grafo, conversación y presencia de desarrollo. Imprime los IDs y una
+contraseña aleatoria; requiere APP_ENV=development y rechaza resets con jobs activos.
+El endpoint /accounts/{user_id}/suspend responde 202: consultar la operación hasta completed.
+La reactivación exige un nuevo login y heartbeat; no revive tokens revocados ni posts ocultos por P7.

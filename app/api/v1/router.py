@@ -1,6 +1,7 @@
 from fastapi import APIRouter
 
 from app.api.v1.routers import (
+    accounts,
     feeds,
     interactions,
     messages,
@@ -22,3 +23,4 @@ api_router.include_router(messages.router, prefix="/messages", tags=["messages"]
 api_router.include_router(moderation.router, prefix="/moderation", tags=["moderation"])
 
 
+api_router.include_router(accounts.router, prefix="/accounts", tags=["accounts"])
