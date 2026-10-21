@@ -2,10 +2,15 @@
 
 ## Frontend React
 
-La iteración 0 prepara una SPA React + TypeScript + Vite en `frontend/`, con layout
-responsive y consulta real al estado de la API. No implementa todavía los problemas
-funcionales. Instrucciones: [frontend/README.md](frontend/README.md).
+La SPA React + TypeScript + Vite en `frontend/` implementa P1: registro/login, sesión,
+publicación real, consulta de operación y preview de distribución, con layout responsive.
+Instrucciones: [frontend/README.md](frontend/README.md) y [guía P1 UI](docs/frontend/problem_1.md).
 Inventario, dependencias y próximas iteraciones: [plan del frontend](docs/frontend/IMPLEMENTATION_PLAN.md).
+
+La UI valida la sesión mediante `GET /api/v1/users/me`. `POST /api/v1/posts` exige bearer
+y autor coincidente (401/403); el alias educativo `/api/v1/problems/1/publish` conserva
+el contrato de los scripts existentes. La consulta de operaciones agrega `post_id`
+para publicaciones; las demás operaciones devuelven null en ese campo.
 
 API FastAPI educativa para explorar persistencia poliglota. El proyecto contiene arquitectura,
 contratos y puntos de extensión; las decisiones que constituyen la resolución del TP están marcadas

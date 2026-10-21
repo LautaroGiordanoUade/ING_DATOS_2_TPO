@@ -1,7 +1,7 @@
 # Niche — frontend
 
-Base React + TypeScript estricto + Vite. Iteración 0: layout adaptable, conexión real a
-readiness, cliente HTTP y pruebas. Los problemas funcionales todavía no se implementan.
+React + TypeScript estricto + Vite. P1 incluye registro/login/logout, validación de sesión,
+publicación real, borrador recuperable, seguimiento de operación y preview de distribución.
 
 ## Iniciar
 
@@ -15,9 +15,11 @@ Copy-Item .env.example .env
 npm run dev
 ```
 
-Abrir http://127.0.0.1:5173. No requiere usuario ni seed: Inicio consulta
-`GET /health/ready` a través del proxy `/backend`. Muestra MongoDB/Redis/Neo4j según
-la respuesta real; con la API apagada muestra error y permite reintentar.
+Abrir http://127.0.0.1:5173. La bienvenida no requiere usuario ni seed: consulta
+`GET /health/ready` a través del proxy `/backend`. Crear cuenta en `/registro`, iniciar
+sesión en `/login` y publicar en `/publicar`. Inicio con sesión muestra publicaciones
+propias; `/operaciones/{id}` sigue el trabajo durable y confirma el resultado real.
+Sin sesión, Inicio muestra la bienvenida y el estado de los tres motores.
 
 `VITE_API_BASE_URL` es la raíz de la API **sin** `/api/v1`: el cliente recibe paths
 completos, por ejemplo `/health/ready` o `/api/v1/posts`. El valor predeterminado es
@@ -53,7 +55,10 @@ Vitest/Testing Library aíslan red con mocks solo en tests. Playwright requiere 
 saludable y prueba el backend real, sin interceptores. Ejecuta Chromium desktop y móvil,
 comprueba conexión, requests, navegación, teclado, consola y desbordamiento horizontal.
 Guarda capturas en `test-results/` y reporte en `playwright-report/` (ignorados por Git).
-No usa ni modifica datos de usuarios en esta iteración.
+P1 crea cuentas y publicaciones QA con UUIDs/credenciales aleatorios, conservados para
+inspección; no modifica cuentas anteriores. Usa P2 solo para preparar un seguidor real.
+`test:e2e` construye el frontend y ejecuta preview en el puerto 4174, separado de Vite dev,
+con dos workers. Las páginas y requests del E2E usan ese build, sin HMR.
 
 ## Contrato y arquitectura
 
@@ -70,14 +75,26 @@ El export importa `app.openapi()` sin arrancar los motores. `openapi.json` y
 Los tipos estáticos no validan respuestas en ejecución: readiness se valida con Zod.
 
 - `src/app`: router, providers y layout.
-- `src/features/system`: consulta y pantalla de preparación.
+- `src/features/system`: consulta y bienvenida.
+- `src/features/auth`: formularios RHF/Zod y sesión validada por `/users/me`.
+- `src/features/posts`: borradores, envío idempotente, operación, contenido y distribución P1.
 - `src/services/http`: fetch centralizado, cancelación, timeout y errores.
 - `src/services/api`: contrato generado.
 - `src/components/common`: mensajes comunes.
 - `src/styles`: Tailwind y estilos responsive.
 - `tests/e2e`: smoke real de inicio desktop/móvil.
 
-TanStack Query administra caché/carga/errores. React Hook Form se incorporará al
-implementar los primeros formularios de P1; no hay dependencias ni carpetas ficticias
-para pantallas futuras. Ver [plan](../docs/frontend/IMPLEMENTATION_PLAN.md) y
-[evidencia de preparación](../docs/frontend/iteration_0.md).
+TanStack Query administra caché/carga/errores; React Hook Form + Zod validan formularios.
+Las pantallas de formularios y operaciones se cargan por demanda. El token, borrador
+y hasta diez enlaces de operaciones se conservan en sessionStorage de esta pestaña.
+Logout elimina la credencial y caché; no existe logout remoto ni refresh token.
+Los borradores/intentos se aíslan por cuenta para poder recuperar un envío incierto.
+No se guardan contraseñas.
+
+`POST /api/v1/posts` ahora requiere bearer y autor coincidente; el alias educativo
+`/api/v1/problems/1/publish` conserva el contrato previo para los scripts del TP.
+Ese alias y las consultas de operación/preview continúan siendo públicas: el conjunto
+de la API no se presenta como cerrado para producción.
+
+Ver [plan](../docs/frontend/IMPLEMENTATION_PLAN.md), [P1](../docs/frontend/problem_1.md)
+y [evidencia de preparación](../docs/frontend/iteration_0.md).

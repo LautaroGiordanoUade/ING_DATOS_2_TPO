@@ -1,4 +1,4 @@
-# Plan del frontend — iteración 0
+# Plan del frontend — estado después de P1
 
 Inspección del 21/10/2026 sobre `main` actualizado, commit `0d0f734`.
 Rama de trabajo: `feature/frontend-react-ui`. No existía frontend ni AGENTS.md aplicable.
@@ -11,11 +11,12 @@ enunciado original habrá que contrastarlo antes de ampliar el alcance.
 
 Los ocho números son los ocho casos de uso existentes. Autenticación es infraestructura
 compartida, no un noveno problema. El estado del backend distingue código/documentación
-de verificación ejecutada durante esta entrega. Ningún problema de UI está terminado.
+de verificación ejecutada durante esta entrega. P1 UI está terminado y documentado;
+los restantes problemas de UI siguen pendientes.
 
 | Problema | Funcionalidad | UI mínima necesaria | Backend en main | Frontend |
 |---|---|---|---|---|
-| 1 — Publicación y distribución recuperable | Publicar con intereses y distribuir por lotes | Crear publicación, estado de operación y preview de IDs visibles | Implementado; worker P1 | Pendiente |
+| 1 — Publicación y distribución recuperable | Publicar con intereses y distribuir por lotes | Crear publicación, estado de operación y preview de IDs visibles | Implementado; worker P1 | Completado y validado — ver problem_1.md |
 | 2 — Seguir/dejar de seguir | Follow público, solicitud privada, aprobación y contadores | Perfil por UUID, seguir/cancelar/dejar de seguir y solicitudes recibidas | Implementado; worker compartido P2/P7/P8 | Pendiente |
 | 3 — Feed personalizado | Hasta 20 posts, ranking por bloques y cursor opaco | Inicio con tarjetas, siguiente página y refrescar | Implementado; navegación de 15 min | Pendiente |
 | 4 — Amigos en común y sugerencias | Segundo grado/intereses, hasta 10 sugerencias | Sugerencias y consulta de amigos en común | Parcial: segundo grado real; mutual friends lanza 501 y faltan intereses | Bloqueado por backend incompleto |
@@ -26,15 +27,16 @@ de verificación ejecutada durante esta entrega. Ningún problema de UI está te
 
 ## Orden y dependencias
 
-0. Base técnica, layout y conexión real a readiness. Esta ejecución termina aquí.
+0. Base técnica, layout y conexión real a readiness. Completo; ver iteration_0.md.
 1. P1 con la infraestructura de identidad necesaria: registro/login/logout, sesión,
    lectura del perfil del titular y manejo central de 401. Publicar y seguir operación.
    El backend usa bearer HMAC propio (no asumir JWT estándar), expira en 3600 segundos
    por defecto y verifica auth_version/estado actual. No hay refresh ni /users/me ni logout
-   del servidor; resolver titular según contrato existente y validar con GET /users/{id}.
+   del servidor. En P1 se agregó GET /users/me para validar el bearer y obtener el titular.
    Preferir memoria/sessionStorage para sesión de pestaña; limpiar token y caché al salir.
-   P1 admite user_id sin bearer: la UI no corrige esa autorización del servidor. Registrar
-   el límite y acordar cualquier cambio backend si fuera necesario, sin reescribirlo.
+   POST /posts ahora exige bearer y autor coincidente en servidor. El alias educativo
+   /problems/1/publish conserva su contrato público para scripts, como límite documentado.
+   Este paso está completo: 69 tests frontend, 14 E2E reales y 32 regresiones Python focalizadas.
 2. P2: depende de identidad/P1 para probar entrega y retiro. Solicitudes privadas incluidas.
 3. P3: depende de P1/P2; permite verificar visibilidad y contadores con un feed real.
 4. P5: depende de posts/P3 e identidad. Refrescar datos del servidor después de mutaciones.
@@ -56,10 +58,13 @@ incluye rutas todavía pendientes: OpenAPI no prueba comportamiento.
 
 - Entidades: User, Post, PublicationJob/Operation; MongoDB contenido/jobs, Neo4j audiencia,
   Redis feed/visibilidad. Requiere `publication-worker`.
-- Endpoints: POST `/posts` (o `/problems/1/publish`) → 202 con operation_id/post_id/status;
+- Endpoints: POST `/posts` con bearer → 202 con operation_id/post_id/status;
   GET `/problems/operations/{id}`, `/posts/{id}`, `/posts/by-user/{id}` y
   `/problems/1/feed-preview/{user_id}`. Preview son IDs, no sustituye P3.
-- Identidad: POST `/users`, `/users/login`, GET `/users/{id}`; registro siempre rol user.
+- Identidad: POST `/users`, `/users/login`, GET `/users/me`; registro siempre rol user.
+- OperationDetailResponse incluye post_id nullable, tomado del job para P1;
+  la UI no deduce la publicación desde parámetros de URL. La ruta normal /posts valida
+  autor en backend; alias educativo y consultas públicas conservan los límites previos.
 - Formularios: registro (username 3–50, nombre 1–150, password 8–128, email y cuenta
   public/private); login (username 3–50, password 1–128); post (texto 1–10000, al menos
   un interés requerido por caso de uso aunque OpenAPI permita lista vacía; solo public).
@@ -170,19 +175,21 @@ incluye rutas todavía pendientes: OpenAPI no prueba comportamiento.
 ## Arquitectura y base de esta iteración
 
 React + TypeScript estricto + Vite; React Router; TanStack Query; Tailwind CSS.
-React Hook Form + Zod se usarán para formularios al implementar P1 (Zod ya valida readiness).
+React Hook Form + Zod validan registro, login y publicación de P1.
 Vitest + Testing Library y Playwright desde la base. Sin Redux, SSR ni carpetas vacías.
 
-`app/` contiene providers/router/layout; `features/system/` solo comprueba conexión real;
+`app/` contiene providers/router/layout; `features/system/` comprueba conexión real;
+`features/auth/` contiene identidad y sesión; `features/posts/` publicación, operaciones,
+contenido propio y preview de distribución P1;
 `components/common/` mensajes reutilizables; `services/http/` cliente, errores y timeout;
 `services/api/` tipos OpenAPI; `styles/` diseño responsive; `tests/e2e/` arranque real.
 Cada funcionalidad futura tendrá su carpeta cuando se implemente.
 
 Layout claro con sidebar escritorio, navegación compacta móvil, tarjetas blancas, tipografía
-del sistema, foco visible y enlaces accesibles. Una sola pantalla de preparación y fallback
-404; no se añaden botones ficticios de módulos aún no construidos ni posts de muestra.
-La pantalla consume GET `/health/ready`, muestra servicios reales y permite reintentar.
-Readiness 503 se muestra como degradado, sin falsear conexión. No hay login funcional en iteración 0.
+del sistema, foco visible y enlaces accesibles. P1 agrega registro/login, publicaciones propias,
+composer y operación a la bienvenida/fallback 404. No se añaden botones de módulos pendientes.
+La bienvenida consume GET `/health/ready`, muestra servicios reales y permite reintentar.
+Readiness 503 se muestra como degradado. Las capturas de iteración 0 quedan como evidencia histórica.
 
 `VITE_API_BASE_URL=/backend` usa proxy local de Vite hacia `http://127.0.0.1:8000`.
 `API_PROXY_TARGET` configura el destino solo del proceso Vite, sin exponer credenciales.
@@ -202,8 +209,9 @@ externamente si se usa otra origin; no modificar backend solo para el desarrollo
 Infraestructura general de datos (50000+), DER, informe y contrafactuales son entregables
 del TP; no implican nuevas pantallas. No se expondrán controles técnicos de retry/failure injection.
 
-## Evidencia de iteración 0
+## Evidencia por iteración
 
-Los resultados ejecutados y los límites del entorno se registran en `iteration_0.md` al
-cerrar la preparación. Las evidencias históricas de backend citadas por las guías no se
-presentarán como pruebas ejecutadas aquí. Parada obligatoria antes de P1.
+Preparación: `iteration_0.md`. P1: `problem_1.md`, 69 tests frontend (38 unitarios y
+31 componentes), 14 E2E sobre build/preview y 32 pruebas Python focalizadas. Capturas
+desktop/móvil en `screenshots/p1/`. Los escenarios de P1 usan API, workers y motores reales.
+No se reclama una ejecución completa de la suite Python. Parada obligatoria antes de P2.
