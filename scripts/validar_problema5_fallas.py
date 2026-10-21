@@ -75,7 +75,10 @@ async def main():
         "counter_redis": int(await redis.get(f"post_reactions:{post}:count") or 0),
         "notifications_remaining": await redis.hlen(f"user:{author}:notifications"),
     }
-    result["ok"] = result["notifications_remaining"] == 0
+    result["ok"] = all(result[key] == 0 for key in (
+        "reactions_mongo", "counter_redis", "notifications_remaining",
+    ))
+    assert result["ok"], result
     print(json.dumps(result), flush=True)
     # Force a valid overlapping schedule: create writes Mongo, delete finishes, create resumes.
     created = asyncio.Event()
@@ -84,6 +87,9 @@ async def main():
     class PausedReactions:
         def __init__(self):
             self.repo = MongoReactionRepository(db)
+
+        def __getattr__(self, name):
+            return getattr(self.repo, name)
 
         async def upsert(self, reaction):
             previous = await self.repo.upsert(reaction)
@@ -105,6 +111,7 @@ async def main():
     await asyncio.gather(task, removal)
     docs = await db.reactions.count_documents({"post_id": str(post)})
     count = int(await redis.get(f"post_reactions:{post}:count") or 0)
+    assert (docs, count) == (0, 0), (docs, count)
     print(
         json.dumps(
             {

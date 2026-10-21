@@ -1,3 +1,4 @@
+import hashlib
 from dataclasses import dataclass
 from uuid import UUID
 
@@ -10,7 +11,11 @@ from app.application.services import (
     OperationStep,
 )
 from app.application.services.idempotency_service import IdempotencyConflictError
-from app.core.exceptions import ConflictError, InvalidOperationError, ResourceNotFoundError
+from app.core.exceptions import (
+    ConflictError,
+    InvalidOperationError,
+    ResourceNotFoundError,
+)
 from app.domain.counter_names import POST_COMMENTS, POST_REACTIONS
 from app.domain.entities import Comment, Post, Reaction
 from app.domain.entities.models import ModerationStatus
@@ -26,15 +31,19 @@ from app.domain.repositories import (
 
 @dataclass(slots=True)
 class _ReactionState:
-    previous: Reaction | None = None  # la reacción que había antes (None = era nueva)
-    counted: bool = False  # ¿ya sumé al contador?
-    notified: bool = False  # ¿ya notifiqué?
+    previous: Reaction | None = None
+    wrote_mongo: bool = False
+    counted: bool = False
+    notified: bool = False
+    snapshot_known: bool = False
 
 
 @dataclass(slots=True)
 class _RemovalState:
-    removed: Reaction | None = None  # la reacción que se borró (None = no había)
-    counted: bool = False  # ¿ya resté al contador?
+    removed: Reaction | None = None
+    attempted_delete: bool = False
+    counted: bool = False
+    snapshot_known: bool = False
 
 
 class InteractWithPostUseCase:
@@ -72,6 +81,39 @@ class InteractWithPostUseCase:
         if self._users is not None and await self._users.is_suspended(user_id):
             raise ConflictError("Suspended accounts cannot interact")
 
+    async def _reconcile_reaction_counter(self, post_id: UUID, fallback_delta: int) -> None:
+        count_fn = getattr(self._reactions, "count_for_post", None)
+        set_fn = getattr(self._counters, "set_value", None)
+        if callable(count_fn) and callable(set_fn):
+            total = await count_fn(post_id)
+            if isinstance(total, int):
+                await set_fn(POST_REACTIONS, post_id, total)
+                return
+        if fallback_delta != 0:
+            await self._counters.increment(POST_REACTIONS, post_id, fallback_delta)
+
+    async def _reconcile_comment_counter(self, post_id: UUID, fallback_delta: int) -> None:
+        count_fn = getattr(self._comments, "count_for_post", None)
+        set_fn = getattr(self._counters, "set_value", None)
+        if callable(count_fn) and callable(set_fn):
+            total = await count_fn(post_id)
+            if isinstance(total, int):
+                await set_fn(POST_COMMENTS, post_id, total)
+                return
+        if fallback_delta != 0:
+            await self._counters.increment(POST_COMMENTS, post_id, fallback_delta)
+
+    @staticmethod
+    def _comment_fingerprint(comment: Comment) -> str:
+        raw = f"{comment.post_id}:{comment.user_id}:{comment.text}".encode()
+        return hashlib.sha256(raw).hexdigest()
+
+    async def _repair_counters(self, post_id: UUID) -> None:
+        # Called under the common post lock before any new writer. MongoDB is
+        # authoritative after a crashed API; counts do not depend on a lost delta.
+        await self._reconcile_reaction_counter(post_id, 0)
+        await self._reconcile_comment_counter(post_id, 0)
+
     async def react(self, reaction: Reaction) -> OperationContext:
         await self._check_actor(reaction.user_id)
         if self._reaction_lock is None:
@@ -81,30 +123,37 @@ class InteractWithPostUseCase:
 
     async def _react(self, reaction: Reaction) -> OperationContext:
         post = await self._get_active_post(reaction.post_id)
+        await self._repair_counters(reaction.post_id)
         state = _ReactionState()
         event_id = reaction.id
 
         async def save_reaction() -> None:
-            state.previous = await self._reactions.upsert(reaction)
+            snapshot = await self._reactions.get_for_user(reaction.post_id, reaction.user_id)
+            if snapshot is None or isinstance(snapshot, Reaction):
+                state.previous, state.snapshot_known = snapshot, True
+            state.wrote_mongo = True
+            previous = await self._reactions.upsert(reaction)
+            if not state.snapshot_known:
+                state.previous = previous
 
         async def restore_reaction() -> None:
+            if not state.wrote_mongo:
+                return
             if state.previous is None:
                 await self._reactions.delete_for_user(reaction.post_id, reaction.user_id)
             else:
                 await self._reactions.upsert(state.previous)
+            # Reverse order compensation reaches Mongo last. Only now is its
+            # count the final rollback state, including an uncertain Redis write.
+            await self._reconcile_reaction_counter(reaction.post_id, -1 if state.counted else 0)
 
         async def count_reaction() -> None:
-            if state.previous is None:  # solo suma si era nueva (cambiar de tipo no suma)
-                await self._counters.increment(POST_REACTIONS, reaction.post_id, 1)
+            if state.previous is None:
                 state.counted = True
-
-        async def uncount_reaction() -> None:
-            if state.counted:
-                await self._counters.increment(POST_REACTIONS, reaction.post_id, -1)
+                await self._counters.increment(POST_REACTIONS, reaction.post_id, 1)
 
         async def notify_author() -> None:
             if state.previous is None and post.user_id != reaction.user_id:
-                # The server may commit HSET and lose the response or fail at PUBLISH.
                 state.notified = True
                 await self._notifications.publish(
                     post.user_id,
@@ -125,8 +174,17 @@ class InteractWithPostUseCase:
         return await self._compensation.execute(
             operation,
             [
-                OperationStep("mongo_upsert_reaction", save_reaction, restore_reaction),
-                OperationStep("redis_increment_reaction_counter", count_reaction, uncount_reaction),
+                OperationStep(
+                    "mongo_upsert_reaction",
+                    save_reaction,
+                    restore_reaction,
+                    compensate_on_failure=True,
+                ),
+                OperationStep(
+                    "redis_increment_reaction_counter",
+                    count_reaction,
+                    compensate_on_failure=True,
+                ),
                 OperationStep(
                     "redis_publish_notification",
                     notify_author,
@@ -145,31 +203,44 @@ class InteractWithPostUseCase:
 
     async def _remove_reaction(self, post_id: UUID, user_id: UUID) -> OperationContext:
         await self._get_active_post(post_id)
+        await self._repair_counters(post_id)
         state = _RemovalState()
 
         async def delete_reaction() -> None:
-            state.removed = await self._reactions.delete_for_user(post_id, user_id)
+            snapshot = await self._reactions.get_for_user(post_id, user_id)
+            if snapshot is None or isinstance(snapshot, Reaction):
+                state.removed, state.snapshot_known = snapshot, True
+            state.attempted_delete = True
+            removed = await self._reactions.delete_for_user(post_id, user_id)
+            if not state.snapshot_known:
+                state.removed = removed
 
         async def restore_reaction() -> None:
+            if not state.attempted_delete:
+                return
             if state.removed is not None:
                 await self._reactions.upsert(state.removed)
+            await self._reconcile_reaction_counter(post_id, 1 if state.counted else 0)
 
         async def uncount_reaction() -> None:
-            if state.removed is not None:  # solo resta si había algo que borrar
-                await self._counters.increment(POST_REACTIONS, post_id, -1)
+            if state.removed is not None:
                 state.counted = True
-
-        async def recount_reaction() -> None:
-            if state.counted:
-                await self._counters.increment(POST_REACTIONS, post_id, 1)
+                await self._counters.increment(POST_REACTIONS, post_id, -1)
 
         operation = OperationContext(operation_type="problem_05_remove_reaction")
         return await self._compensation.execute(
             operation,
             [
-                OperationStep("mongo_delete_reaction", delete_reaction, restore_reaction),
                 OperationStep(
-                    "redis_decrement_reaction_counter", uncount_reaction, recount_reaction
+                    "mongo_delete_reaction",
+                    delete_reaction,
+                    restore_reaction,
+                    compensate_on_failure=True,
+                ),
+                OperationStep(
+                    "redis_decrement_reaction_counter",
+                    uncount_reaction,
+                    compensate_on_failure=True,
                 ),
             ],
         )
@@ -178,37 +249,55 @@ class InteractWithPostUseCase:
         self, comment: Comment, idempotency_key: str | None = None
     ) -> OperationContext:
         await self._check_actor(comment.user_id)
+        if self._reaction_lock is None:
+            raise RuntimeError("ReactionLock es obligatorio para modificar comentarios")
+        async with self._reaction_lock.hold(comment.post_id):
+            return await self._comment(comment, idempotency_key)
+
+    async def _comment(self, comment: Comment, idempotency_key: str | None) -> OperationContext:
         post = await self._get_active_post(comment.post_id)
+        await self._repair_counters(comment.post_id)
 
         scoped_key: str | None = None
+        fingerprint = self._comment_fingerprint(comment)
         if idempotency_key is not None and self._idempotency is not None:
-            # La clave se asocia a la persona y a la operación: nadie puede usar la de otro.
             scoped_key = f"comment:{comment.user_id}:{idempotency_key}"
             try:
-                previous = await self._idempotency.begin(scoped_key, "problem_05_comment")
+                previous = await self._idempotency.begin(
+                    scoped_key, "problem_05_comment", fingerprint=fingerprint
+                )
             except IdempotencyConflictError as exc:
                 raise ConflictError(str(exc)) from exc
-            if previous is not None:  # reintento de algo ya hecho: no se repite nada
+            if previous is not None:
                 return OperationContext(
                     operation_type="problem_05_comment",
                     operation_id=UUID(previous.decode()),
                     status=OperationStatus.COMPLETED,
                 )
 
+        wrote_comment = False
+        counted_comment = False
+        notified_author = False
+
         async def save_comment() -> None:
+            nonlocal wrote_comment
+            wrote_comment = True
             await self._comments.create(comment)
 
         async def delete_comment() -> None:
-            await self._comments.delete(comment.id)
+            if wrote_comment:
+                await self._comments.delete(comment.id)
+                await self._reconcile_comment_counter(comment.post_id, -1 if counted_comment else 0)
 
         async def count_comment() -> None:
+            nonlocal counted_comment
+            counted_comment = True
             await self._counters.increment(POST_COMMENTS, comment.post_id, 1)
 
-        async def uncount_comment() -> None:
-            await self._counters.increment(POST_COMMENTS, comment.post_id, -1)
-
         async def notify_author() -> None:
+            nonlocal notified_author
             if post.user_id != comment.user_id:
+                notified_author = True
                 await self._notifications.publish(
                     post.user_id,
                     {
@@ -221,7 +310,7 @@ class InteractWithPostUseCase:
                 )
 
         async def revoke_notification() -> None:
-            if post.user_id != comment.user_id:
+            if notified_author and post.user_id != comment.user_id:
                 await self._notifications.revoke(post.user_id, comment.id)
 
         operation = OperationContext(operation_type="problem_05_comment")
@@ -229,9 +318,16 @@ class InteractWithPostUseCase:
             await self._compensation.execute(
                 operation,
                 [
-                    OperationStep("mongo_create_comment", save_comment, delete_comment),
                     OperationStep(
-                        "redis_increment_comment_counter", count_comment, uncount_comment
+                        "mongo_create_comment",
+                        save_comment,
+                        delete_comment,
+                        compensate_on_failure=True,
+                    ),
+                    OperationStep(
+                        "redis_increment_comment_counter",
+                        count_comment,
+                        compensate_on_failure=True,
                     ),
                     OperationStep(
                         "redis_publish_notification",
@@ -243,8 +339,12 @@ class InteractWithPostUseCase:
             )
         except Exception:
             if scoped_key is not None and self._idempotency is not None:
-                await self._idempotency.release(scoped_key)  # permite reintentar
+                await self._idempotency.release(scoped_key)
             raise
         if scoped_key is not None and self._idempotency is not None:
-            await self._idempotency.complete(scoped_key, str(operation.operation_id).encode())
+            await self._idempotency.complete(
+                scoped_key,
+                str(operation.operation_id).encode(),
+                fingerprint=fingerprint,
+            )
         return operation

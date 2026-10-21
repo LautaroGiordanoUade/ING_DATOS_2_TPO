@@ -67,6 +67,29 @@ class RedisCounterRepository:
         )
         return int(result)
 
+    async def set_value(self, namespace: str, entity_id: UUID, value: int) -> int:
+        key = RedisKeys.counter(namespace, entity_id)
+        client = cast(Any, self._client)
+        clamped = max(0, int(value))
+        protected = namespace in ("post_reactions", "post_comments")
+        await client.eval(
+            """local target = KEYS[1]
+            if ARGV[2] == '1' and (redis.call('EXISTS', KEYS[2]) == 1
+                or redis.call('EXISTS', KEYS[3]) == 1) then
+                target = target .. ':moderation_saved'
+                redis.call('SET', KEYS[1], 0)
+            end
+            redis.call('SET', target, ARGV[1])
+            return 1""",
+            3,
+            key,
+            f"moderation:{entity_id}:hidden",
+            f"suspension:{entity_id}:hidden",
+            clamped,
+            "1" if protected else "0",
+        )
+        return clamped
+
     async def get_many(self, namespace: str, entity_ids: tuple[UUID, ...]) -> dict[UUID, int]:
         if not entity_ids:
             return {}
@@ -119,3 +142,9 @@ class RedisIdempotencyRepository:
 
     async def release(self, key: str) -> None:
         await self._client.delete(RedisKeys.idempotency(key))
+
+    async def get_reservation(self, key: str) -> str | None:
+        value = await self._client.get(RedisKeys.idempotency(key))
+        if value is None:
+            return None
+        return value.decode() if isinstance(value, bytes) else str(value)

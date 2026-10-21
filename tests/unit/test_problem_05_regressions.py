@@ -125,3 +125,78 @@ async def test_redis_lock_releases_after_exception() -> None:
         async with RedisReactionLock(client).hold(uuid4()):
             raise ValueError("failure")
     acquired.release.assert_awaited_once()
+
+
+async def test_comment_idempotency_rejects_different_content_fingerprint() -> None:
+    from app.application.services.idempotency_service import IdempotencyService
+    from app.core.exceptions import ConflictError
+    from tests.unit.test_idempotency import FakeIdempotencyRepository
+
+    post = Post(user_id=uuid4(), text="post")
+    actor = uuid4()
+    posts, reactions, counters, notifications = (AsyncMock() for _ in range(4))
+    posts.get.return_value = post
+    comments = AsyncMock()
+    log = InMemoryOperationLogRepository()
+    idempotency = IdempotencyService(FakeIdempotencyRepository())
+
+    uc = InteractWithPostUseCase(
+        posts,
+        reactions,
+        comments,
+        counters,
+        notifications,
+        CompensationService(log, NoOpFailureInjector()),
+        idempotency=idempotency,
+        reaction_lock=LocalReactionLock(),
+    )
+
+    first = Comment(post_id=post.id, user_id=actor, text="Comentario original")
+    second = Comment(post_id=post.id, user_id=actor, text="Texto modificado con misma key")
+
+    op1 = await uc.comment(first, idempotency_key="same-key")
+    op1_retry = await uc.comment(first, idempotency_key="same-key")
+    assert op1.operation_id == op1_retry.operation_id
+
+    with pytest.raises(ConflictError):
+        await uc.comment(second, idempotency_key="same-key")
+
+
+async def test_uncertain_step_failure_reconciles_counter_idempotently() -> None:
+    post = Post(user_id=uuid4(), text="post")
+    actor = uuid4()
+    posts, reactions, counters, notifications = (AsyncMock() for _ in range(4))
+    posts.get.return_value = post
+    reactions.upsert.return_value = None
+    reactions.count_for_post = AsyncMock(return_value=0)
+    counters.set_value = AsyncMock(return_value=0)
+
+    async def uncertain_increment(namespace: str, post_id: UUID, amount: int) -> int:
+        raise TimeoutError("Redis socket timeout after INCRBY")
+
+    counters.increment.side_effect = uncertain_increment
+    log = InMemoryOperationLogRepository()
+    uc = make_use_case(posts, reactions, counters, notifications, log, LocalReactionLock())
+
+    with pytest.raises(TimeoutError):
+        await uc.react(Reaction(post_id=post.id, user_id=actor, kind="like"))
+
+    reactions.delete_for_user.assert_awaited_once_with(post.id, actor)
+    assert counters.set_value.await_args_list[-1].args == ("post_reactions", post.id, 0)
+
+
+async def test_orphaned_lock_uses_bounded_lease_and_recovers() -> None:
+    from unittest.mock import Mock
+
+    client = AsyncMock()
+    acquired = AsyncMock()
+    acquired.acquire.return_value = True
+    client.lock = Mock(return_value=acquired)
+
+    lock = RedisReactionLock(client, lease_seconds=15.0, blocking_timeout=2.0)
+    async with lock.hold(uuid4()):
+        pass
+
+    _, kwargs = client.lock.call_args
+    assert kwargs["timeout"] == 15.0
+    acquired.release.assert_awaited_once()
