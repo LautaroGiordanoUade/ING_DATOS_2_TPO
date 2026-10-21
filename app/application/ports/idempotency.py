@@ -1,5 +1,6 @@
 from typing import Protocol
 
+
 class IdempotencyRepository(Protocol):
     async def reserve(self, key: str, operation_name: str, ttl_seconds: int) -> bool: ...
     async def get_result(self, key: str) -> bytes | None: ...

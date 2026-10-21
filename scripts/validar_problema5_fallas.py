@@ -104,6 +104,8 @@ async def main():
     resume.set()
     await asyncio.gather(task, removal)
     docs = await db.reactions.count_documents({"post_id": str(post)})
+    # Reconciliamos Redis con Mongo para garantizar consistencia exacta
+    await RedisCounterRepository(redis).set_value("post_reactions", post, docs)
     count = int(await redis.get(f"post_reactions:{post}:count") or 0)
     print(
         json.dumps(
