@@ -12,6 +12,7 @@ from pymongo import AsyncMongoClient
 from redis.asyncio import Redis
 
 from app.core.config import get_settings
+from app.infrastructure.persistence.mongodb.p1_fixtures import fixture_user_document
 
 
 def request(method, path, payload=None, headers=None):
@@ -72,7 +73,7 @@ async def main():
         await result.consume()
     await db.users.insert_many(
         [
-            {"_id": user, "username": "qa-p1-" + user, "account_status": "active"}
+            fixture_user_document(user, suspended=user == excluded[1])
             for user in [author, *audience, *excluded]
         ]
     )

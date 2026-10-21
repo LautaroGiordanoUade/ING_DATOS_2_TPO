@@ -190,6 +190,10 @@ están formateados. Mypy comprueba el destino Linux utilizado por los workers de
 
 ## Datos reproducibles
 
+Si se ejecutó el generador P1 anterior a P7/P8, completar primero los usuarios de prueba
+siguiendo [la migración de fixtures P1](docs/p1_fixture_migration.md). Corrige el error de
+índice único `email_1` sin borrar usuarios, relaciones ni publicaciones.
+
 ```powershell
 python scripts/seed_data.py --users 100 --posts 1000 --messages 1000 --seed 42
 ```
