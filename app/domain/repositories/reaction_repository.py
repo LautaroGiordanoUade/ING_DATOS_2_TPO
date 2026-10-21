@@ -13,3 +13,7 @@ class ReactionRepository(Protocol):
     async def delete_for_user(self, post_id: UUID, user_id: UUID) -> Reaction | None:
         """Borra la reacción. Devuelve la que se borró, o None si no había nada."""
         ...
+    
+    async def count_for_post(self, post_id: UUID) -> int: 
+        """Cuenta y devuelve la cantidad de reacciones de una publicación."""
+        ...
