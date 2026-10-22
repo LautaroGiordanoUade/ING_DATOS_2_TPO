@@ -1,5 +1,5 @@
 from app.application.services import CompensationService
-from app.core.exceptions import FeatureNotImplementedError
+from app.core.exceptions import (ConflictError, ResourceNotFoundError,))
 from app.domain.entities import Message
 from app.domain.repositories import (
     ConversationRepository,
@@ -25,6 +25,15 @@ class SendGroupMessageUseCase:
         self._compensation = compensation
 
     async def execute(self, message: Message) -> None:
-        # TODO(TP): Persistir antes de entregar; definir compensación e idempotencia.
-        # TODO(TP): Actualizar unread por participante y presencia/entrega Redis.
-        raise FeatureNotImplementedError("Problema 6: mensaje grupal")
+        conversation = await self._conversations.get(
+            message.conversation_id
+        )
+        if conversation is None:
+            raise ResourceNotFoundError(
+                "Conversación no encontrada"
+                )
+        if message.sender_id not in conversation.participant_ids:
+            raise ConflictError(
+                "El usuario no pertenece a la conversación"
+            )
+        await self._messages.create(message)
