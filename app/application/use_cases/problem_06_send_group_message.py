@@ -1,5 +1,5 @@
 from app.application.services import CompensationService
-from app.core.exceptions import (ConflictError, ResourceNotFoundError,))
+from app.core.exceptions import (ConflictError, ResourceNotFoundError,)
 from app.domain.entities import Message
 from app.domain.repositories import (
     ConversationRepository,
