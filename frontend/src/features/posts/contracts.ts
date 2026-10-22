@@ -34,7 +34,7 @@ export const operationLabels: Record<Operation['status'], string> = {
   compensating: 'Revirtiendo cambios', compensated: 'Publicación cancelada', failed: 'La operación requiere revisión',
 }
 export const postSchema = z.object({
-  id: z.uuid(), user_id: z.uuid(), text: z.string(), media: z.array(z.string()), interests: z.array(z.string()),
+  id: z.guid(), user_id: z.guid(), text: z.string(), media: z.array(z.string()), interests: z.array(z.string()),
   published_at: z.string(), reaction_count: z.number(), comment_count: z.number(),
 })
 export type Post = z.infer<typeof postSchema>
