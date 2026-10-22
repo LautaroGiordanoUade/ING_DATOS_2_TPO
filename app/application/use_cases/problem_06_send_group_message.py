@@ -7,6 +7,7 @@ from app.domain.repositories import (
     MessageRepository,
     NotificationRepository,
 )
+from app.domain.counter_names import CONVERSATION_UNREAD
 
 
 class SendGroupMessageUseCase:
@@ -37,3 +38,10 @@ class SendGroupMessageUseCase:
                 "El usuario no pertenece a la conversación"
             )
         await self._messages.create(message)
+        for participant_id in conversation.participant_ids: 
+            if participant_id != message.sender_id: 
+                await self._counters.increment( 
+                    CONVERSATION_UNREAD, 
+                    participant_id, 
+                    1, 
+                )     
