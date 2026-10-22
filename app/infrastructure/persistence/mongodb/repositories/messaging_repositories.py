@@ -42,13 +42,33 @@ class MongoMessageRepository:
         self._database = database
 
     async def create(self, message: Message) -> Message:
-        # TODO(TP): Persistir mensaje antes de entrega y definir idempotencia.
-        raise FeatureNotImplementedError("MongoMessageRepository.create")
+        await self._database["messages"].insert_one(
+            {
+                "_id": str(message.id),
+                "conversation_id": str(message.conversation_id),
+                "sender_id": str(message.sender_id),
+                "text": message.text,
+                "read_by": [str(user_id) for user_id in message.read_by],
+                "created_at": message.created_at,
+            }
+        )
+        return message
 
     async def delete(self, message_id: UUID) -> None:
-        # TODO(TP): Implementar compensación según la política elegida.
-        raise FeatureNotImplementedError("MongoMessageRepository.delete")
+        await self._database["messages"].delete_one(
+            {"_id": str(message_id)}
+        )
 
-    async def mark_read(self, message_id: UUID, participant_id: UUID) -> None:
-        # TODO(TP): Actualizar read_by por participante de forma concurrentemente segura.
-        raise FeatureNotImplementedError("MongoMessageRepository.mark_read")
+    async def mark_read(
+        self,
+        message_id: UUID,
+        participant_id: UUID,
+    ) -> None:
+        await self._database["messages"].update_one(
+            {"_id": str(message_id)},
+            {
+                "$addToSet": {
+                    "read_by": str(participant_id)
+                }
+            },
+        )
