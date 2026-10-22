@@ -1,8 +1,15 @@
-
+import hashlib
+from uuid import UUID
+from app.application.ports.conversation_lock import ConversationLock
 from app.application.services import (
     CompensationService,
+    IdempotencyService,
     OperationContext,
     OperationStep,
+    OperationStatus,
+)
+from app.application.services.idempotency_service import (
+    IdempotencyConflictError,
 )
 from app.core.exceptions import (
     ConflictError,
@@ -26,16 +33,52 @@ class SendGroupMessageUseCase:
         counters: CounterRepository,
         delivery: NotificationRepository,
         compensation: CompensationService,
+        conversation_lock: ConversationLock | None = None,
+        idempotency: IdempotencyService | None= None,
     ) -> None:
         self._conversations = conversations
         self._messages = messages
         self._counters = counters
         self._delivery = delivery
         self._compensation = compensation
+        self._conversation_lock = conversation_lock
+        self._idempotency= idempotency
+
+    @staticmethod
+    def _message_fingerprint(
+        message: Message,
+    ) -> str:
+        raw = (
+            f"{message.conversation_id}:"
+            f"{message.sender_id}:"
+            f"{message.text}"
+        ).encode()
+        return hashlib.sha256(raw).hexdigest()
 
     async def execute(
         self,
         message: Message,
+        idempotency_key: str | None = None,
+    ) -> OperationContext:
+
+        if self._conversation_lock is None:
+            return await self._execute(
+                message,
+                idempotency_key,
+            )
+
+        async with self._conversation_lock.hold(
+            message.conversation_id
+        ):
+            return await self._execute(
+                message,
+                idempotency_key,
+            )
+
+    async def _execute(
+        self,
+        message: Message,
+        idempotency_key: str | None=None,
     ) -> OperationContext:
 
         conversation = await self._conversations.get(
@@ -51,7 +94,38 @@ class SendGroupMessageUseCase:
             raise ConflictError(
                 "El usuario no pertenece a la conversación"
             )
+        
+        scoped_key: str | None = None
 
+        fingerprint = self._message_fingerprint(
+            message
+        )
+
+        if (
+            idempotency_key is not None
+            and self._idempotency is not None
+        ):
+            scoped_key = (
+                f"message:{message.sender_id}:"
+                f"{idempotency_key}"
+            )
+
+            try:
+                previous = await self._idempotency.begin(
+                    scoped_key,
+                    "problem_06_send_group_message",
+                    fingerprint=fingerprint,
+                )
+            except IdempotencyConflictError as exc:
+                raise ConflictError(str(exc)) from exc
+
+            if previous is not None:
+                return OperationContext(
+                    operation_type="problem_06_send_group_message",
+                    operation_id=UUID(previous.decode()),
+                    status=OperationStatus.COMPLETED,
+                )
+        
         message_saved = False
         unread_updated = False
         message_delivered = False
@@ -125,27 +199,50 @@ class SendGroupMessageUseCase:
         operation = OperationContext(
             operation_type="problem_06_send_group_message"
         )
+        
+        try:
+            operation = await self._compensation.execute(
+                operation,
+                [
+                    OperationStep(
+                        "mongo_create_message",
+                        save_message,
+                        delete_message, 
+                        compensate_on_failure=True,
+                    ),
+                    OperationStep(
+                        "redis_increment_unread",
+                        increment_unread,
+                        rollback_unread,
+                        compensate_on_failure=True,
+                    ),
+                    OperationStep(
+                        "redis_publish_message",
+                        deliver_message,
+                        revoke_delivery,
+                        compensate_on_failure=True,
+                    ),
+                ],
+            )
+        except Exception:
+            if (
+                scoped_key is not None
+                and self._idempotency is not None
+            ):
+                await self._idempotency.release(
+                    scoped_key
+                )
+            raise
 
-        return await self._compensation.execute(
-            operation,
-            [
-                OperationStep(
-                    "mongo_create_message",
-                    save_message,
-                    delete_message,
-                    compensate_on_failure=True,
-                ),
-                OperationStep(
-                    "redis_increment_unread",
-                    increment_unread,
-                    rollback_unread,
-                    compensate_on_failure=True,
-                ),
-                OperationStep(
-                    "redis_publish_message",
-                    deliver_message,
-                    revoke_delivery,
-                    compensate_on_failure=True,
-                ),
-            ],
-        )
+        if (
+            scoped_key is not None
+            and self._idempotency is not None
+        ):
+            await self._idempotency.complete(
+                scoped_key,
+                str(operation.operation_id).encode(),
+                fingerprint=fingerprint,
+            )
+        return operation
+
+    
