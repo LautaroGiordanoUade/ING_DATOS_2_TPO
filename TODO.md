@@ -70,7 +70,7 @@ rutas en Swagger o respuestas en modo demo.
 - [x] Snapshot previo de reacción y reconciliación después de restaurar MongoDB.
 - [x] Recálculo absoluto atómico respetando gates P7/P8 y contadores preservados.
 - [x] Fingerprint del contenido para idempotencia de comentarios.
-- [ ] Recuperación durable de toda la operación tras caída, incluidas notificaciones e idempotencia pendiente.
+- [x] Recuperación durable de toda la operación tras caída, incluidas notificaciones e idempotencia pendiente.
 - Ver docs/problem_05_consistency.md para las garantías y límites actuales.
 
 ## Problema 6: mensajería grupal

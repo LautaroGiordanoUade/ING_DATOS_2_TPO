@@ -3,7 +3,7 @@ from uuid import UUID
 from pydantic import TypeAdapter
 from pymongo.asynchronous.database import AsyncDatabase
 
-from app.application.services.operation import OperationContext
+from app.application.services.operation import OperationContext, OperationStatus
 
 _operation_adapter = TypeAdapter(OperationContext)
 
@@ -25,3 +25,24 @@ class MongoOperationLogRepository:
             return None
         document.pop("_id", None)
         return _operation_adapter.validate_python(document)
+
+    async def pending(
+        self, operation_types: tuple[str, ...] | None = None
+    ) -> list[OperationContext]:
+        query: dict[str, object] = {
+            "status": {
+                "$in": [
+                    OperationStatus.PENDING.value,
+                    OperationStatus.RUNNING.value,
+                    OperationStatus.COMPENSATING.value,
+                ]
+            }
+        }
+        if operation_types is not None:
+            query["operation_type"] = {"$in": list(operation_types)}
+        cursor = self._collection.find(query).sort("created_at", 1)
+        operations: list[OperationContext] = []
+        async for document in cursor:
+            document.pop("_id", None)
+            operations.append(_operation_adapter.validate_python(document))
+        return operations

@@ -2,6 +2,7 @@ import hashlib
 from dataclasses import dataclass
 from uuid import UUID
 
+from app.application.ports.operation_log import OperationLogRepository
 from app.application.ports.reaction_lock import ReactionLock
 from app.application.services import (
     CompensationService,
@@ -58,6 +59,7 @@ class InteractWithPostUseCase:
         idempotency: IdempotencyService | None = None,
         reaction_lock: ReactionLock | None = None,
         users: UserRepository | None = None,
+        operation_log: OperationLogRepository | None = None,
     ) -> None:
         self._posts = posts
         self._reactions = reactions
@@ -68,6 +70,7 @@ class InteractWithPostUseCase:
         self._idempotency = idempotency
         self._reaction_lock = reaction_lock
         self._users = users
+        self._operation_log = operation_log or getattr(compensation, "_operation_log", None)
 
     async def _get_active_post(self, post_id: UUID) -> Post:
         post = await self._posts.get(post_id)
@@ -109,8 +112,10 @@ class InteractWithPostUseCase:
         return hashlib.sha256(raw).hexdigest()
 
     async def _repair_counters(self, post_id: UUID) -> None:
-        # Called under the common post lock before any new writer. MongoDB is
-        # authoritative after a crashed API; counts do not depend on a lost delta.
+        # Called under the common post lock before any new writer.
+        # Resolves any crashed or pending operation for this post first,
+        # ensuring orphaned notifications and reserved idempotency keys are recovered.
+        await self._recover_pending_locked(post_id)
         await self._reconcile_reaction_counter(post_id, 0)
         await self._reconcile_comment_counter(post_id, 0)
 
@@ -170,7 +175,16 @@ class InteractWithPostUseCase:
             if state.notified:
                 await self._notifications.revoke(post.user_id, event_id)
 
-        operation = OperationContext(operation_type="problem_05_react")
+        operation = OperationContext(
+            operation_type="problem_05_react",
+            metadata={
+                "post_id": str(reaction.post_id),
+                "user_id": str(reaction.user_id),
+                "author_id": str(post.user_id),
+                "event_id": str(event_id),
+                "kind": reaction.kind,
+            },
+        )
         return await self._compensation.execute(
             operation,
             [
@@ -227,7 +241,13 @@ class InteractWithPostUseCase:
                 state.counted = True
                 await self._counters.increment(POST_REACTIONS, post_id, -1)
 
-        operation = OperationContext(operation_type="problem_05_remove_reaction")
+        operation = OperationContext(
+            operation_type="problem_05_remove_reaction",
+            metadata={
+                "post_id": str(post_id),
+                "user_id": str(user_id),
+            },
+        )
         return await self._compensation.execute(
             operation,
             [
@@ -313,7 +333,18 @@ class InteractWithPostUseCase:
             if notified_author and post.user_id != comment.user_id:
                 await self._notifications.revoke(post.user_id, comment.id)
 
-        operation = OperationContext(operation_type="problem_05_comment")
+        operation = OperationContext(
+            operation_type="problem_05_comment",
+            metadata={
+                "post_id": str(comment.post_id),
+                "user_id": str(comment.user_id),
+                "author_id": str(post.user_id),
+                "comment_id": str(comment.id),
+                "text": comment.text,
+                "scoped_key": scoped_key,
+                "fingerprint": fingerprint,
+            },
+        )
         try:
             await self._compensation.execute(
                 operation,
@@ -347,4 +378,152 @@ class InteractWithPostUseCase:
                 str(operation.operation_id).encode(),
                 fingerprint=fingerprint,
             )
+        return operation
+
+    async def recover_pending(
+        self, post_id: UUID | None = None
+    ) -> list[OperationContext]:
+        if self._operation_log is None or not hasattr(self._operation_log, "pending"):
+            return []
+        pending_ops = await self._operation_log.pending(
+            ("problem_05_react", "problem_05_remove_reaction", "problem_05_comment")
+        )
+        if post_id is not None:
+            pending_ops = [
+                op for op in pending_ops
+                if op.metadata.get("post_id") == str(post_id)
+            ]
+        recovered: list[OperationContext] = []
+        for op in pending_ops:
+            recovered.append(await self.recover_operation(op))
+        return recovered
+
+    async def _recover_pending_locked(self, post_id: UUID) -> list[OperationContext]:
+        if self._operation_log is None or not hasattr(self._operation_log, "pending"):
+            return []
+        pending_ops = await self._operation_log.pending(
+            ("problem_05_react", "problem_05_remove_reaction", "problem_05_comment")
+        )
+        recovered: list[OperationContext] = []
+        for op in pending_ops:
+            if op.metadata.get("post_id") == str(post_id):
+                recovered.append(await self._recover_operation_locked(op, post_id))
+        return recovered
+
+    async def recover_operation(self, operation: OperationContext) -> OperationContext:
+        if operation.status in (OperationStatus.COMPLETED, OperationStatus.FAILED):
+            return operation
+        post_id_str = operation.metadata.get("post_id")
+        if not post_id_str:
+            return operation
+        post_id = UUID(post_id_str)
+
+        if self._reaction_lock is None:
+            raise RuntimeError("ReactionLock es obligatorio para recuperar operaciones")
+
+        async with self._reaction_lock.hold(post_id):
+            return await self._recover_operation_locked(operation, post_id)
+
+    async def _recover_operation_locked(
+        self, operation: OperationContext, post_id: UUID
+    ) -> OperationContext:
+        if operation.status in (OperationStatus.COMPLETED, OperationStatus.FAILED):
+            return operation
+
+        if operation.operation_type == "problem_05_react":
+            user_id = UUID(operation.metadata["user_id"])
+            author_id = UUID(operation.metadata["author_id"])
+            event_id = UUID(operation.metadata["event_id"])
+            kind = str(operation.metadata.get("kind", "like"))
+
+            if operation.status == OperationStatus.COMPENSATING:
+                current = await self._reactions.get_for_user(post_id, user_id)
+                if current is not None and current.id == event_id:
+                    await self._reactions.delete_for_user(post_id, user_id)
+                await self._reconcile_reaction_counter(post_id, 0)
+                if author_id != user_id:
+                    await self._notifications.revoke(author_id, event_id)
+                operation.status = OperationStatus.COMPENSATED
+            else:
+                current = await self._reactions.get_for_user(post_id, user_id)
+                if current is not None and current.id == event_id:
+                    await self._reconcile_reaction_counter(post_id, 0)
+                    if author_id != user_id:
+                        await self._notifications.publish(
+                            author_id,
+                            {
+                                "event_id": str(event_id),
+                                "type": "reaction",
+                                "post_id": str(post_id),
+                                "actor_id": str(user_id),
+                                "kind": kind,
+                            },
+                        )
+                    operation.status = OperationStatus.COMPLETED
+                else:
+                    await self._reconcile_reaction_counter(post_id, 0)
+                    operation.status = OperationStatus.FAILED
+
+        elif operation.operation_type == "problem_05_remove_reaction":
+            await self._reconcile_reaction_counter(post_id, 0)
+            operation.status = (
+                OperationStatus.COMPENSATED
+                if operation.status == OperationStatus.COMPENSATING
+                else OperationStatus.COMPLETED
+            )
+
+        elif operation.operation_type == "problem_05_comment":
+            user_id = UUID(operation.metadata["user_id"])
+            author_id = UUID(operation.metadata["author_id"])
+            comment_id = UUID(operation.metadata["comment_id"])
+            scoped_key = operation.metadata.get("scoped_key")
+            fingerprint = operation.metadata.get("fingerprint")
+
+            has_comment = False
+            if hasattr(self._comments, "get"):
+                has_comment = (await self._comments.get(comment_id)) is not None
+            elif hasattr(self._comments, "_collection"):
+                has_comment = (
+                    await self._comments._collection.find_one({"_id": str(comment_id)})
+                ) is not None
+
+            if operation.status == OperationStatus.COMPENSATING:
+                if has_comment:
+                    await self._comments.delete(comment_id)
+                await self._reconcile_comment_counter(post_id, 0)
+                if author_id != user_id:
+                    await self._notifications.revoke(author_id, comment_id)
+                if scoped_key and self._idempotency:
+                    await self._idempotency.release(scoped_key)
+                operation.status = OperationStatus.COMPENSATED
+            else:
+                if has_comment:
+                    await self._reconcile_comment_counter(post_id, 0)
+                    if author_id != user_id:
+                        await self._notifications.publish(
+                            author_id,
+                            {
+                                "event_id": str(comment_id),
+                                "type": "comment",
+                                "post_id": str(post_id),
+                                "actor_id": str(user_id),
+                                "comment_id": str(comment_id),
+                            },
+                        )
+                    if scoped_key and self._idempotency:
+                        await self._idempotency.complete(
+                            scoped_key,
+                            str(operation.operation_id).encode(),
+                            fingerprint=fingerprint,
+                        )
+                    operation.status = OperationStatus.COMPLETED
+                else:
+                    if scoped_key and self._idempotency:
+                        await self._idempotency.release(scoped_key)
+                    await self._reconcile_comment_counter(post_id, 0)
+                    operation.status = OperationStatus.FAILED
+
+        operation.touch()
+        if self._operation_log:
+            await self._operation_log.save(operation)
         return operation

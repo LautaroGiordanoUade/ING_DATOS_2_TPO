@@ -265,3 +265,47 @@ asyncio.run(main())
     )
     assert response.status_code == 202, response.text
     assert int(await h.resources.redis.get(f"post_reactions:{h.post.id}:count") or 0) == 1
+
+
+
+async def test_crashed_operation_is_durably_recovered(harness: Harness) -> None:
+    from app.application.services.operation import OperationContext, OperationStatus
+
+    h = harness
+    post = h.post
+    actor = h.user
+    reaction = Reaction(post_id=post.id, user_id=actor.id, kind="like")
+    await MongoReactionRepository(h.posts._database).upsert(reaction)
+    await h.resources.redis.set(f"post_reactions:{post.id}:count", 0)
+
+    # Simulate an operation left in RUNNING status after a crash
+    operation = OperationContext(
+        operation_type="problem_05_react",
+        status=OperationStatus.RUNNING,
+        current_step="redis_publish_notification",
+        completed_steps=["mongo_upsert_reaction"],
+        metadata={
+            "post_id": str(post.id),
+            "user_id": str(actor.id),
+            "author_id": str(post.user_id),
+            "event_id": str(reaction.id),
+            "kind": "like",
+        },
+    )
+    await h.resources.operation_log.save(operation)
+
+    # Next writer interacts with the post
+    response = await h.client.post(
+        "/api/v1/problems/5/reaction",
+        json={
+            "post_id": str(post.id),
+            "user_id": str(actor.id),
+            "kind": "love",
+        },
+    )
+    assert response.status_code == 202
+
+    # Verify the crashed operation was recovered and marked COMPLETED
+    recovered_op = await h.resources.operation_log.get(operation.operation_id)
+    assert recovered_op is not None
+    assert recovered_op.status == OperationStatus.COMPLETED

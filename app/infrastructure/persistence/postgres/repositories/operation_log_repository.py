@@ -20,3 +20,8 @@ class PostgresOperationLogRepository:
         # TODO(TP): Implementar consulta programática del registro de operación.
         raise FeatureNotImplementedError("PostgresOperationLogRepository.get")
 
+    async def pending(
+        self, operation_types: tuple[str, ...] | None = None
+    ) -> list[OperationContext]:
+        # TODO(TP): Implementar consulta programática de operaciones pendientes.
+        raise FeatureNotImplementedError("PostgresOperationLogRepository.pending")
