@@ -22,6 +22,17 @@ class FakeOperationLog:
     async def get(self, operation_id: UUID) -> OperationContext | None:
         return self.items.get(operation_id)
 
+    async def pending(
+        self, operation_types: tuple[str, ...] | None = None
+    ) -> list[OperationContext]:
+        return [
+            deepcopy(op)
+            for op in self.items.values()
+            if op.status
+            in (OperationStatus.PENDING, OperationStatus.RUNNING, OperationStatus.COMPENSATING)
+            and (operation_types is None or op.operation_type in operation_types)
+        ]
+
 
 @pytest.mark.asyncio
 async def test_completed_steps_are_compensated_in_reverse_order() -> None:
@@ -51,4 +62,3 @@ async def test_completed_steps_are_compensated_in_reverse_order() -> None:
     assert events == ["first", "undo-first"]
     assert operation.status is OperationStatus.COMPENSATED
     assert operation.completed_steps == ["first"]
-

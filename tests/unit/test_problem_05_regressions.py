@@ -8,7 +8,11 @@ from uuid import UUID, uuid4
 import pytest
 
 from app.application.ports import NoOpFailureInjector
-from app.application.services import CompensationService, OperationStatus
+from app.application.services import (
+    CompensationService,
+    OperationContext,
+    OperationStatus,
+)
 from app.application.use_cases.problem_05_interact_with_post import InteractWithPostUseCase
 from app.domain.entities import Comment, Post, Reaction
 from app.infrastructure.persistence.memory import InMemoryOperationLogRepository
@@ -200,3 +204,190 @@ async def test_orphaned_lock_uses_bounded_lease_and_recovers() -> None:
     _, kwargs = client.lock.call_args
     assert kwargs["timeout"] == 15.0
     acquired.release.assert_awaited_once()
+
+
+async def test_recovery_reaction_delivers_pending_notification_and_completes() -> None:
+    post = Post(user_id=uuid4(), text="post")
+    actor = uuid4()
+    reaction = Reaction(post_id=post.id, user_id=actor, kind="like")
+    posts, reactions, counters, notifications = (AsyncMock() for _ in range(4))
+    posts.get.return_value = post
+    reactions.get_for_user.return_value = reaction
+    reactions.count_for_post.return_value = 1
+    log = InMemoryOperationLogRepository()
+    lock = LocalReactionLock()
+
+    operation = OperationContext(
+        operation_type="problem_05_react",
+        status=OperationStatus.RUNNING,
+        current_step="redis_publish_notification",
+        completed_steps=["mongo_upsert_reaction", "redis_increment_reaction_counter"],
+        metadata={
+            "post_id": str(post.id),
+            "user_id": str(actor),
+            "author_id": str(post.user_id),
+            "event_id": str(reaction.id),
+            "kind": "like",
+        },
+    )
+    await log.save(operation)
+
+    uc = make_use_case(posts, reactions, counters, notifications, log, lock)
+    recovered = await uc.recover_pending(post.id)
+    assert len(recovered) == 1
+    assert recovered[0].status == OperationStatus.COMPLETED
+    notifications.publish.assert_awaited_once()
+    assert notifications.publish.call_args[0][0] == post.user_id
+    assert notifications.publish.call_args[0][1]["event_id"] == str(reaction.id)
+
+
+async def test_recovery_comment_completes_idempotency_and_notification() -> None:
+    from app.application.services.idempotency_service import IdempotencyService
+    from tests.unit.test_idempotency import FakeIdempotencyRepository
+
+    post = Post(user_id=uuid4(), text="post")
+    actor = uuid4()
+    comment = Comment(post_id=post.id, user_id=actor, text="test comment")
+    posts, reactions, counters, notifications = (AsyncMock() for _ in range(4))
+    posts.get.return_value = post
+    comments = AsyncMock()
+    comments.get.return_value = comment
+    comments.count_for_post.return_value = 1
+    log = InMemoryOperationLogRepository()
+    lock = LocalReactionLock()
+    idempotency_repo = FakeIdempotencyRepository()
+    idempotency = IdempotencyService(idempotency_repo)
+
+    scoped_key = f"comment:{actor}:my-idem-key"
+    fingerprint = InteractWithPostUseCase._comment_fingerprint(comment)
+    await idempotency.begin(scoped_key, "problem_05_comment", fingerprint=fingerprint)
+
+    operation = OperationContext(
+        operation_type="problem_05_comment",
+        status=OperationStatus.RUNNING,
+        current_step="redis_publish_notification",
+        completed_steps=["mongo_create_comment", "redis_increment_comment_counter"],
+        metadata={
+            "post_id": str(post.id),
+            "user_id": str(actor),
+            "author_id": str(post.user_id),
+            "comment_id": str(comment.id),
+            "text": comment.text,
+            "scoped_key": scoped_key,
+            "fingerprint": fingerprint,
+        },
+    )
+    await log.save(operation)
+
+    uc = InteractWithPostUseCase(
+        posts,
+        reactions,
+        comments,
+        counters,
+        notifications,
+        CompensationService(log, NoOpFailureInjector()),
+        idempotency=idempotency,
+        reaction_lock=lock,
+    )
+
+    recovered = await uc.recover_pending(post.id)
+    assert len(recovered) == 1
+    assert recovered[0].status == OperationStatus.COMPLETED
+    notifications.publish.assert_awaited_once()
+
+    retry_result = await idempotency.begin(
+        scoped_key, "problem_05_comment", fingerprint=fingerprint
+    )
+    assert retry_result == str(operation.operation_id).encode()
+
+
+async def test_recovery_failed_comment_releases_idempotency_reservation() -> None:
+    from app.application.services.idempotency_service import IdempotencyService
+    from tests.unit.test_idempotency import FakeIdempotencyRepository
+
+    post = Post(user_id=uuid4(), text="post")
+    actor = uuid4()
+    comment = Comment(post_id=post.id, user_id=actor, text="crashed comment")
+    posts, reactions, counters, notifications = (AsyncMock() for _ in range(4))
+    posts.get.return_value = post
+    comments = AsyncMock()
+    comments.get.return_value = None
+    log = InMemoryOperationLogRepository()
+    lock = LocalReactionLock()
+    idempotency_repo = FakeIdempotencyRepository()
+    idempotency = IdempotencyService(idempotency_repo)
+
+    scoped_key = f"comment:{actor}:failed-idem-key"
+    fingerprint = InteractWithPostUseCase._comment_fingerprint(comment)
+    await idempotency.begin(scoped_key, "problem_05_comment", fingerprint=fingerprint)
+
+    operation = OperationContext(
+        operation_type="problem_05_comment",
+        status=OperationStatus.RUNNING,
+        current_step="mongo_create_comment",
+        completed_steps=[],
+        metadata={
+            "post_id": str(post.id),
+            "user_id": str(actor),
+            "author_id": str(post.user_id),
+            "comment_id": str(comment.id),
+            "text": comment.text,
+            "scoped_key": scoped_key,
+            "fingerprint": fingerprint,
+        },
+    )
+    await log.save(operation)
+
+    uc = InteractWithPostUseCase(
+        posts,
+        reactions,
+        comments,
+        counters,
+        notifications,
+        CompensationService(log, NoOpFailureInjector()),
+        idempotency=idempotency,
+        reaction_lock=lock,
+    )
+
+    recovered = await uc.recover_pending(post.id)
+    assert len(recovered) == 1
+    assert recovered[0].status == OperationStatus.FAILED
+
+    assert scoped_key not in idempotency_repo.reserved
+    new_res = await idempotency.begin(scoped_key, "problem_05_comment", fingerprint=fingerprint)
+    assert new_res is None
+
+
+async def test_recovery_compensating_operation_cleans_up_and_marks_compensated() -> None:
+    post = Post(user_id=uuid4(), text="post")
+    actor = uuid4()
+    reaction_id = uuid4()
+    posts, reactions, counters, notifications = (AsyncMock() for _ in range(4))
+    posts.get.return_value = post
+    reactions.get_for_user.return_value = Reaction(
+        id=reaction_id, post_id=post.id, user_id=actor, kind="like"
+    )
+    log = InMemoryOperationLogRepository()
+    lock = LocalReactionLock()
+
+    operation = OperationContext(
+        operation_type="problem_05_react",
+        status=OperationStatus.COMPENSATING,
+        current_step="mongo_upsert_reaction",
+        completed_steps=["mongo_upsert_reaction", "redis_increment_reaction_counter"],
+        metadata={
+            "post_id": str(post.id),
+            "user_id": str(actor),
+            "author_id": str(post.user_id),
+            "event_id": str(reaction_id),
+            "kind": "like",
+        },
+    )
+    await log.save(operation)
+
+    uc = make_use_case(posts, reactions, counters, notifications, log, lock)
+    recovered = await uc.recover_pending(post.id)
+    assert len(recovered) == 1
+    assert recovered[0].status == OperationStatus.COMPENSATED
+    reactions.delete_for_user.assert_awaited_once_with(post.id, actor)
+    notifications.revoke.assert_awaited_once_with(post.user_id, reaction_id)

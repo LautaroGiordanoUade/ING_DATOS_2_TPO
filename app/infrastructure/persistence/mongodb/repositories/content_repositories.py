@@ -7,7 +7,10 @@ from pymongo.errors import DuplicateKeyError
 from app.core.exceptions import FeatureNotImplementedError
 from app.domain.entities import Comment, Post, Reaction
 from app.infrastructure.persistence.mongodb.collections import MongoCollection
-from app.infrastructure.persistence.mongodb.mappers.comment_mapper import comment_to_document
+from app.infrastructure.persistence.mongodb.mappers.comment_mapper import (
+    comment_to_document,
+    document_to_comment,
+)
 from app.infrastructure.persistence.mongodb.mappers.post_mapper import (
     document_to_post,
     post_to_document,
@@ -118,6 +121,10 @@ class MongoCommentRepository:
         except DuplicateKeyError:
             pass  # mismo id = mismo comentario: un reintento no duplica nada
         return comment
+
+    async def get(self, comment_id: UUID) -> Comment | None:
+        doc = await self._collection.find_one({"_id": str(comment_id)})
+        return None if doc is None else document_to_comment(doc)
 
     async def delete(self, comment_id: UUID) -> None:
         await self._collection.delete_one({"_id": str(comment_id)})
