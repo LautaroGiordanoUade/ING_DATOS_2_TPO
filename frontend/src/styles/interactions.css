@@ -1,0 +1,131 @@
+.post-interactions {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid #edf0e9;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.reaction-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.reaction-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: #f7f9f5;
+  border: 1px solid #d9e3d3;
+  color: #3f5542;
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.reaction-button:hover:not(:disabled) {
+  background: #ebf3e7;
+  border-color: #bcd0b2;
+}
+
+.reaction-button.active {
+  background: #e2ede0;
+  border-color: #557954;
+  color: #2b492a;
+  font-weight: 600;
+}
+
+.reaction-remove-button {
+  background: transparent;
+  border: 1px dashed #d9a79f;
+  color: #a8473b;
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 11px;
+  cursor: pointer;
+  margin-left: auto;
+}
+
+.reaction-remove-button:hover:not(:disabled) {
+  background: #fdf3f1;
+}
+
+.custom-reaction-form {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.custom-reaction-form input {
+  padding: 6px 8px;
+  font-size: 12px;
+  max-width: 140px;
+}
+
+.comment-toggle-button {
+  background: transparent;
+  border: none;
+  color: #42664e;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  font-size: 12px;
+  cursor: pointer;
+  padding: 0;
+  align-self: flex-start;
+}
+
+.comment-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.comment-form textarea {
+  min-height: 60px;
+  padding: 8px 10px;
+  font-size: 13px;
+}
+
+.comment-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.comment-counter {
+  font-size: 11px;
+  color: #7a8275;
+}
+
+.interaction-feedback {
+  font-size: 12px;
+  padding: 6px 10px;
+  border-radius: 6px;
+}
+
+.interaction-feedback.error {
+  background: #fcf1f0;
+  color: #a03c31;
+  border: 1px solid #f2c7c2;
+}
+
+.interaction-feedback.success {
+  background: #edf5ed;
+  color: #365d3f;
+  border: 1px solid #c9e0c7;
+}
+
+@media (max-width: 700px) {
+  .reaction-remove-button {
+    margin-left: 0;
+    width: 100%;
+  }
+}
