@@ -6,6 +6,7 @@ import { router } from './app/router/router'
 import './styles/index.css'
 import './styles/p1.css'
 import './styles/feed.css'
+import './styles/interactions.css'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
