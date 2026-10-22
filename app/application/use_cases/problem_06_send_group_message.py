@@ -45,3 +45,18 @@ class SendGroupMessageUseCase:
                     participant_id, 
                     1, 
                 )     
+        for participant_id in conversation.participant_ids:
+            if participant_id != message.sender_id:
+                await self._delivery.publish(
+                    participant_id,
+                    {
+                        "event_id": str(message.id),
+                        "type": "group_message",
+                        "conversation_id": str(
+                            message.conversation_id
+                        ),
+                        "message_id": str(message.id),
+                        "sender_id": str(message.sender_id),
+                    },
+                )
+
