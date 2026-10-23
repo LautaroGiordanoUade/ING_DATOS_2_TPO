@@ -4,7 +4,7 @@ from uuid import UUID
 from neo4j import AsyncDriver
 
 from app.application.services.follow_job import FollowJob
-from app.core.exceptions import ConflictError, FeatureNotImplementedError
+from app.core.exceptions import ConflictError
 
 
 class Neo4jSocialGraphRepository:
@@ -138,8 +138,26 @@ class Neo4jSocialGraphRepository:
             return tuple([UUID(record["id"]) async for record in result])
 
     async def get_mutual_friends(self, user_id: UUID, other_user_id: UUID) -> tuple[UUID, ...]:
-        # TODO(TP): Implementar consulta Cypher para amigos en común.
-        raise FeatureNotImplementedError("Neo4jSocialGraphRepository.get_mutual_friends")
+        if user_id == other_user_id:
+            return ()
+        async with self._driver.session() as session:
+            result = await session.run(
+                """
+                MATCH (u1:User {id:$u1})-[:FOLLOWS {status:'accepted'}]->(f:User)
+                      <-[:FOLLOWS {status:'accepted'}]-(u2:User {id:$u2})
+                WHERE f <> u1 AND f <> u2
+                  AND coalesce(u1.account_status,'active')='active'
+                  AND coalesce(u2.account_status,'active')='active'
+                  AND coalesce(f.account_status,'active')='active'
+                  AND NOT (u1)-[:BLOCKS]-(f)
+                  AND NOT (u2)-[:BLOCKS]-(f)
+                  AND NOT (u1)-[:BLOCKS]-(u2)
+                RETURN DISTINCT f.id AS id ORDER BY id
+                """,
+                u1=str(user_id),
+                u2=str(other_user_id),
+            )
+            return tuple([UUID(record["id"]) async for record in result])
 
     async def eligible_authors(self, user_id: UUID, authors: tuple[UUID, ...]) -> set[UUID]:
         if not authors:

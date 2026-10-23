@@ -7,6 +7,7 @@ import './styles/index.css'
 import './styles/p1.css'
 import './styles/feed.css'
 import './styles/interactions.css'
+import './styles/recommendations.css'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
