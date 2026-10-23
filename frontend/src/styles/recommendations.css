@@ -1,0 +1,63 @@
+.recommendations-page .user-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+  margin-top: 15px;
+}
+
+.user-card {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.user-card.loading, .user-card.unavailable {
+  font-size: 13px;
+  color: #747e70;
+  text-align: center;
+  padding: 30px;
+}
+
+.user-bio {
+  font-size: 13px;
+  color: #4b5247;
+  line-height: 1.6;
+  margin: 6px 0;
+  overflow-wrap: anywhere;
+}
+
+.user-card-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.user-card-actions .button-secondary {
+  width: 100%;
+  font-size: 12px;
+  min-height: 38px;
+  text-align: center;
+}
+
+.section-badge {
+  font-size: 11px;
+  color: #557954;
+  background: #ebf3e7;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-weight: 600;
+}
+
+.mutual-friends-section h2 {
+  font-size: 18px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.mutual-results h3 {
+  font-size: 14px;
+  font-weight: 600;
+  color: #3b503d;
+}

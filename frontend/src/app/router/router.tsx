@@ -9,6 +9,11 @@ const RegisterPage = lazy(() => import('../../features/auth/AuthPage').then((mod
 const ComposerPage = lazy(() => import('../../features/posts/ComposerPage').then((module) => ({ default: module.ComposerPage })))
 const OperationPage = lazy(() => import('../../features/posts/OperationPage').then((module) => ({ default: module.OperationPage })))
 const MyPostsPage = lazy(() => import('../../features/posts/MyPostsPage').then((module) => ({ default: module.MyPostsPage })))
+const RecommendationsPage = lazy(() =>
+  import('../../features/recommendations/RecommendationsPage').then((module) => ({
+    default: module.RecommendationsPage,
+  }))
+)
 
 export const router = createBrowserRouter([
   {
@@ -17,12 +22,25 @@ export const router = createBrowserRouter([
       { path: '/', element: <HomePage /> },
       { path: '/login', element: <LoginPage /> },
       { path: '/registro', element: <RegisterPage /> },
-      { element: <RequireAuth />, children: [
-        { path: '/mis-publicaciones', element: <MyPostsPage /> },
-        { path: '/publicar', element: <ComposerPage /> },
-        { path: '/operaciones/:operationId', element: <OperationPage /> },
-      ] },
-      { path: '*', element: <section className="card empty-page"><h1>Página no encontrada</h1><p>Esta dirección no está disponible.</p><Link to="/">Volver al inicio</Link></section> },
+      {
+        element: <RequireAuth />,
+        children: [
+          { path: '/mis-publicaciones', element: <MyPostsPage /> },
+          { path: '/publicar', element: <ComposerPage /> },
+          { path: '/operaciones/:operationId', element: <OperationPage /> },
+          { path: '/recomendaciones', element: <RecommendationsPage /> },
+        ],
+      },
+      {
+        path: '*',
+        element: (
+          <section className="card empty-page">
+            <h1>Página no encontrada</h1>
+            <p>Esta dirección no está disponible.</p>
+            <Link to="/">Volver al inicio</Link>
+          </section>
+        ),
+      },
     ],
   },
 ])

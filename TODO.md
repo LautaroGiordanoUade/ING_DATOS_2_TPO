@@ -53,8 +53,8 @@ rutas en Swagger o respuestas en modo demo.
 
 ## Problema 4: amigos en común y sugerencias
 
-- [ ] Cypher de amigos en común y 10 sugerencias por segundo grado/intereses.
-- [ ] Excluir bloqueados, suspendidos y cuentas ya seguidas.
+- [x] Cypher de amigos en común y 10 sugerencias por segundo grado/intereses.
+- [x] Excluir bloqueados, suspendidos y cuentas ya seguidas.
 
 ## Problema 5: reacciones y comentarios
 
