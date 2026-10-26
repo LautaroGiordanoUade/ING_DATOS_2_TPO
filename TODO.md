@@ -74,8 +74,8 @@ rutas en Swagger o respuestas en modo demo.
 - [x] Snapshot previo de reacción y reconciliación después de restaurar MongoDB.
 - [x] Recálculo absoluto atómico respetando gates P7/P8 y contadores preservados.
 - [x] Fingerprint del contenido para idempotencia de comentarios.
-- [x] Recuperación durable de toda la operación tras caída, incluidas notificaciones e idempotencia pendiente.
-- Ver docs/problem_05_consistency.md para las garantías y límites actuales.
+- [x] Recuperación durable de toda la operación tras caída (altas, cambios, bajas y comentarios), incluidas notificaciones e idempotencia pendiente.
+- [x] UI de reacciones y comentarios en `PostInteractions` (`PostCard`), guía completa en `docs/problems/problem_05.md` y detalle de consistencia en `docs/problem_05_consistency.md`.
 
 ## Problema 6: mensajería grupal
 
@@ -125,7 +125,7 @@ rutas en Swagger o respuestas en modo demo.
 
 ## Informe y entrega
 
-- [x] Guía de Docker y guías concretas P1/P5.
+- [x] Guía de Docker y guías concretas P1/P4/P5.
 - [ ] Completar matriz con estimaciones y mediciones finales.
 - [ ] Actualizar DER y justificar cambios/desnormalizaciones.
 - [ ] Documentar secuencias, fallas y evidencia de los demás problemas.

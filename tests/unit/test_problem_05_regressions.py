@@ -391,3 +391,132 @@ async def test_recovery_compensating_operation_cleans_up_and_marks_compensated()
     assert recovered[0].status == OperationStatus.COMPENSATED
     reactions.delete_for_user.assert_awaited_once_with(post.id, actor)
     notifications.revoke.assert_awaited_once_with(post.user_id, reaction_id)
+
+
+async def test_recovery_reaction_change_completes_when_kind_updated_in_place() -> None:
+    post = Post(user_id=uuid4(), text="post")
+    actor = uuid4()
+    original_id = uuid4()
+    new_event_id = uuid4()
+    posts, reactions, counters, notifications = (AsyncMock() for _ in range(4))
+    posts.get.return_value = post
+    reactions.get_for_user.return_value = Reaction(
+        id=original_id, post_id=post.id, user_id=actor, kind="love"
+    )
+    reactions.count_for_post.return_value = 1
+    log = InMemoryOperationLogRepository()
+    lock = LocalReactionLock()
+
+    operation = OperationContext(
+        operation_type="problem_05_react",
+        status=OperationStatus.RUNNING,
+        current_step="redis_increment_reaction_counter",
+        completed_steps=["mongo_upsert_reaction"],
+        metadata={
+            "post_id": str(post.id),
+            "user_id": str(actor),
+            "author_id": str(post.user_id),
+            "event_id": str(new_event_id),
+            "kind": "love",
+            "previous_id": str(original_id),
+            "previous_kind": "like",
+        },
+    )
+    await log.save(operation)
+
+    uc = make_use_case(posts, reactions, counters, notifications, log, lock)
+    recovered = await uc.recover_pending(post.id)
+    assert len(recovered) == 1
+    assert recovered[0].status == OperationStatus.COMPLETED
+    notifications.publish.assert_not_awaited()
+
+
+async def test_recovery_compensating_reaction_change_restores_previous_kind() -> None:
+    post = Post(user_id=uuid4(), text="post")
+    actor = uuid4()
+    original_id = uuid4()
+    new_event_id = uuid4()
+    posts, reactions, counters, notifications = (AsyncMock() for _ in range(4))
+    posts.get.return_value = post
+    reactions.get_for_user.return_value = Reaction(
+        id=original_id, post_id=post.id, user_id=actor, kind="love"
+    )
+    log = InMemoryOperationLogRepository()
+    lock = LocalReactionLock()
+
+    operation = OperationContext(
+        operation_type="problem_05_react",
+        status=OperationStatus.COMPENSATING,
+        current_step="mongo_upsert_reaction",
+        completed_steps=["mongo_upsert_reaction"],
+        metadata={
+            "post_id": str(post.id),
+            "user_id": str(actor),
+            "author_id": str(post.user_id),
+            "event_id": str(new_event_id),
+            "kind": "love",
+            "previous_id": str(original_id),
+            "previous_kind": "like",
+        },
+    )
+    await log.save(operation)
+
+    uc = make_use_case(posts, reactions, counters, notifications, log, lock)
+    recovered = await uc.recover_pending(post.id)
+    assert len(recovered) == 1
+    assert recovered[0].status == OperationStatus.COMPENSATED
+    reactions.upsert.assert_awaited_once()
+    restored: Reaction = reactions.upsert.call_args[0][0]
+    assert restored.id == original_id
+    assert restored.kind == "like"
+    reactions.delete_for_user.assert_not_awaited()
+
+
+async def test_recovery_remove_reaction_handles_running_and_compensating_states() -> None:
+    post = Post(user_id=uuid4(), text="post")
+    actor = uuid4()
+    removed_id = uuid4()
+    posts, reactions, counters, notifications = (AsyncMock() for _ in range(4))
+    posts.get.return_value = post
+    reactions.get_for_post = AsyncMock()
+    log = InMemoryOperationLogRepository()
+    lock = LocalReactionLock()
+
+    # Case 1: RUNNING but reaction still present in MongoDB -> FAILED
+    reactions.get_for_user.return_value = Reaction(
+        id=removed_id, post_id=post.id, user_id=actor, kind="like"
+    )
+    op_failed = OperationContext(
+        operation_type="problem_05_remove_reaction",
+        status=OperationStatus.RUNNING,
+        current_step="mongo_delete_reaction",
+        completed_steps=[],
+        metadata={"post_id": str(post.id), "user_id": str(actor)},
+    )
+    await log.save(op_failed)
+    uc = make_use_case(posts, reactions, counters, notifications, log, lock)
+    res1 = await uc.recover_pending(post.id)
+    assert res1[0].status == OperationStatus.FAILED
+
+    # Case 2: COMPENSATING after reaction was deleted in MongoDB -> restores reaction & COMPENSATED
+    reactions.get_for_user.return_value = None
+    op_comp = OperationContext(
+        operation_type="problem_05_remove_reaction",
+        status=OperationStatus.COMPENSATING,
+        current_step="mongo_delete_reaction",
+        completed_steps=["mongo_delete_reaction"],
+        metadata={
+            "post_id": str(post.id),
+            "user_id": str(actor),
+            "removed_id": str(removed_id),
+            "removed_kind": "like",
+        },
+    )
+    await log.save(op_comp)
+    res2 = await uc.recover_pending(post.id)
+    assert len(res2) == 1
+    assert res2[0].status == OperationStatus.COMPENSATED
+    reactions.upsert.assert_awaited_once()
+    restored: Reaction = reactions.upsert.call_args[0][0]
+    assert restored.id == removed_id
+    assert restored.kind == "like"

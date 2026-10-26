@@ -19,23 +19,25 @@ muere el proceso. Todos los escritores deben usar ese volumen (o el mismo
 Las operaciones de interacción (`problem_05_react`, `problem_05_remove_reaction`,
 `problem_05_comment`) persisten de forma durable en la colección `operations` de MongoDB
 junto con sus metadatos (`post_id`, `user_id`, `author_id`, `event_id`/`comment_id`,
-`scoped_key`, `fingerprint`).
+`previous_id`/`previous_kind`, `removed_id`/`removed_kind`, `scoped_key`, `fingerprint`).
 
 Si un proceso se interrumpe abruptamente (crash, reinicio o SIGKILL):
 1. **Detección de operaciones pendientes:** Tanto en el ingreso del siguiente escritor a la publicación
    (`_repair_counters`) como en el worker en segundo plano (`app.workers.moderation`), se consultan las
    operaciones con estado `running`, `pending` o `compensating` mediante `operation_log.pending()`.
 2. **Reconciliación bajo bloqueo:** Bajo el bloqueo de la publicación (`reaction_lock.hold(post_id)`):
-   - **Operaciones completadas en MongoDB:** Si la reacción o el comentario ya existían en MongoDB,
-     se recalculan los contadores absolutos en Redis, se emite la notificación pendiente al autor
-     (evitando notificaciones perdidas tras el corte), se completa la clave de idempotencia
-     (`idempotency.complete(...)` para que los reintentos devuelvan el resultado determinista 202) y
-     se transiciona el estado de la operación a `completed`.
+   - **Operaciones completadas en MongoDB:** Si la reacción nueva (`current.id == event_id`), el cambio de
+     reacción (`current.kind == kind`), la baja (`current is None` en `problem_05_remove_reaction`) o el
+     comentario ya se aplicaron en MongoDB, se recalculan los contadores absolutos en Redis, se emite la
+     notificación pendiente al autor cuando corresponda (evitando notificaciones perdidas tras el corte),
+     se completa la clave de idempotencia (`idempotency.complete(...)` para que los reintentos devuelvan el
+     resultado determinista 202) y se transiciona el estado de la operación a `completed`.
    - **Operaciones interrumpidas antes de persistir o en compensación:** Si la operación no llegó a
-     persistirse en MongoDB o cayó mientras se compensaba, se limpian las referencias parciales, se
-     recalculan los contadores, se revoca la notificación en Redis si existía y se **libera la reserva
-     de idempotencia** (`idempotency.release(scoped_key)`), evitando bloqueos huérfanos 409 y permitiendo
-     que el cliente reintente inmediatamente. La operación pasa a `compensated` o `failed`.
+     persistirse en MongoDB o cayó mientras se compensaba, se restauran los snapshots previos de reacción
+     (`previous_kind` o `removed_kind`) o se limpian las referencias parciales, se recalculan los contadores,
+     se revoca la notificación en Redis si existía y se **libera la reserva de idempotencia**
+     (`idempotency.release(scoped_key)`), evitando bloqueos huérfanos 409 y permitiendo que el cliente
+     reintente inmediatamente. La operación pasa a `compensated` o `failed`.
 
 ## Consistencia de contadores y notificaciones
 
@@ -60,5 +62,6 @@ El mismo mecanismo cubre las notificaciones de comentarios.
 La revocación elimina la notificación guardada; no puede retirar un evento Pub/Sub
 que un cliente ya recibió.
 
+Diseño completo, diagramas y guía de pruebas: `docs/problems/problem_05.md`.
 Regresiones y pruebas: `tests/unit/test_problem_05_regressions.py` y
 `tests/integration/test_problem_05_consistency.py`.

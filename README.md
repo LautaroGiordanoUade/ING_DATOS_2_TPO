@@ -9,7 +9,9 @@ La SPA React + TypeScript + Vite en `frontend/` implementa P1: registro/login, s
 publicación real, consulta de operación y preview de distribución, con layout responsive.
 P3 muestra el feed real de cuentas seguidas en Inicio, con paginación y refresco; las
 publicaciones propias se consultan en `/mis-publicaciones`. P4 agrega en `/recomendaciones`
-las cuentas sugeridas por segundo grado y el buscador de amigos en común. Guía: [P3 UI](docs/frontend/problem_3.md).
+las cuentas sugeridas por segundo grado y el buscador de amigos en común. P5 integra en cada
+tarjeta de publicación (`PostCard`) la barra de reacciones y el formulario de comentarios con
+`Idempotency-Key` (`PostInteractions`). Guía: [P3 UI](docs/frontend/problem_3.md).
 Instrucciones: [frontend/README.md](frontend/README.md) y [guía P1 UI](docs/frontend/problem_1.md).
 Inventario, dependencias y próximas iteraciones: [plan del frontend](docs/frontend/IMPLEMENTATION_PLAN.md).
 
@@ -44,7 +46,7 @@ docker compose ps
 Invoke-RestMethod http://localhost:8000/health/ready
 ```
 
-Levanta la API, los workers de publicaciones/moderación (P2/P7/P8) y tres motores: MongoDB, Redis y Neo4j. Swagger está en
+Levanta la API, los workers de publicaciones/moderación (P2/P5/P7/P8) y tres motores: MongoDB, Redis y Neo4j. Swagger está en
 http://localhost:8000/docs y Neo4j Browser en http://localhost:7474.
 El usuario Neo4j es `neo4j`; la contraseña local predeterminada es `local_dev_password`.
 Puede cambiarse con `NEO4J_PASSWORD` en `.env` antes del primer inicio.
@@ -78,6 +80,16 @@ Prueba HTTP local:
 Get-Content -Raw scripts/validar_problema4.py | docker compose exec -T api python -
 ```
 
+P5 implementa reacciones (alta, cambio y baja), comentarios con `Idempotency-Key` y fingerprint,
+contadores atómicos con gates P7/P8, notificaciones, bloqueo híbrido por publicación y recuperación
+durable tras caída. Ver [Problema 5](docs/problems/problem_05.md) y
+[Consistencia P5](docs/problem_05_consistency.md). Pruebas HTTP y de fallas:
+
+```powershell
+Get-Content -Raw scripts/validar_problema5.py | docker compose exec -T api python -
+Get-Content -Raw scripts/validar_problema5_fallas.py | docker compose exec -T api python -
+```
+
 ```powershell
 # Ver errores de arranque
 docker compose logs --tail 100 api neo4j
@@ -95,9 +107,10 @@ docker compose up -d --build
 
 MongoDB y Neo4j guardan sus datos en volúmenes; Redis usa volumen y AOF con sincronización
 cada segundo (puede perder el último segundo ante una caída abrupta).
-El registro de operaciones ahora se guarda en MongoDB. Esto conserva los pasos al reiniciar,
-el P1 retoma automáticamente lotes y compensaciones con los volúmenes conservados.
-P7 también reanuda su workflow durable al reiniciar el worker; la recuperación de otros flujos sigue pendiente.
+El registro de operaciones ahora se guarda en MongoDB. Esto conserva los pasos al reiniciar:
+el P1 retoma automáticamente lotes y compensaciones con los volúmenes conservados, y el
+`moderation-worker` reanuda los workflows durables de P2, P7 y P8 y reconcilia las operaciones
+pendientes de P5.
 Las carpetas PostgreSQL y Alembic quedan como legado; la API ya no las usa.
 
 ## Problemas implementados
@@ -110,8 +123,8 @@ de credenciales, presencia, compensaciones y recuperación. Comparte el consumid
 Guía: [Problema 8](docs/problem_8_suspension_test_guide.md).
 
 P1 publica mediante una cola durable y distribución en lotes. P4 resuelve amigos en común y
-sugerencias de segundo grado en Neo4j/MongoDB. P5 implementa reacciones, comentarios, contadores y
-notificaciones, con los límites descritos en su guía.
+sugerencias de segundo grado en Neo4j/MongoDB. P5 implementa reacciones, comentarios, contadores,
+notificaciones y recuperación durable, con el detalle de diseño en [Problema 5](docs/problems/problem_05.md).
 El Problema 6 conserva operaciones pendientes; el preview del P1 no reemplaza P3.
 
 En Git Bash, para probar P1 con 2000 seguidores aislados:
@@ -135,7 +148,7 @@ La falla asíncrona se ve en esa consulta, no como error inmediato del POST acep
 El worker debe estar levantado incluso si la API corre localmente. El despliegue soportado
 es Docker Linux en un host; el bloqueo local compartido permite un solo consumidor.
 Guía de fallas, recuperación, modelo Neo4j y secuencia: [Problema 1](docs/problems/problem_01.md).
-Límites de P5: [Consistencia del problema 5](docs/problem_05_consistency.md).
+Diseño y límites de P5: [Problema 5](docs/problems/problem_05.md) y [Consistencia P5](docs/problem_05_consistency.md).
 
 ## Instalación local
 

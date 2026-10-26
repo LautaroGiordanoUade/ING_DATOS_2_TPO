@@ -267,7 +267,6 @@ asyncio.run(main())
     assert int(await h.resources.redis.get(f"post_reactions:{h.post.id}:count") or 0) == 1
 
 
-
 async def test_crashed_operation_is_durably_recovered(harness: Harness) -> None:
     from app.application.services.operation import OperationContext, OperationStatus
 

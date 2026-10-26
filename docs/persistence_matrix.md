@@ -9,13 +9,13 @@ ni mediciones de rendimiento. El generador general aún no implementa ese volume
 | Publicación | UUID, lotes de feed, autor/fecha | 50000+ | lectura muy alta, escritura alta | durable, distribución recuperable | MongoDB contenido y jobs; P1 implementado |
 | Audiencia de publicación | seguidores por autor; snapshot por operación | miles por creador, límite 100000 | lectura por publicación, snapshot por pedido | snapshot fijo para completar/revertir | Neo4j origen, MongoDB snapshot; P1 implementado |
 | Feed | usuario, bloques recientes, ranking y cursor | posts x seguidores | lectura/escritura muy altas | candidatos invisibles hasta commit; filtros actuales por página | Redis sorted sets y navegación con TTL, MongoDB contenido, Neo4j elegibilidad; P1/P2/P3 implementados |
-| Reacción | usuario/post; alta/cambio/baja | proporcional a publicaciones | alta/alta | única por par y coordinación del contador | MongoDB + Redis; P5 implementado con límites documentados |
-| Comentario | post/fecha, append | 50000+ candidato a mayor volumen | alta/alta | durable e idempotencia por clave | MongoDB + Redis; P5 implementado |
-| Notificación | destinatario/evento; entrega live | proporcional a interacciones | lectura alta, escritura alta | evento persistido y Pub/Sub; no exactly-once | Redis; P5 implementado |
+| Reacción | usuario/post; alta/cambio/baja | proporcional a publicaciones | alta/alta | única por par, bloqueo híbrido y coordinación del contador | MongoDB + Redis; P5 implementado con recuperación durable |
+| Comentario | post/fecha, append | 50000+ candidato a mayor volumen | alta/alta | durable e idempotencia por clave y fingerprint | MongoDB + Redis; P5 implementado con recuperación durable |
+| Notificación | destinatario/evento; entrega live | proporcional a interacciones | lectura alta, escritura alta | evento persistido y Pub/Sub; revocable en compensación | Redis; P5 implementado |
 | Seguimiento y recomendaciones | recorridos 1-2 saltos y amigos en común | 10000+ relaciones | lectura alta, escritura media | evitar duplicados, coordinar estado/feed y validar activos en MongoDB | Neo4j relaciones, MongoDB jobs/estado activo y Redis derivados; P2 y P4 implementados |
 | Conversación/mensaje | participantes, historial, lectura propia | 50000+ mensajes | alta/alta | historial durable, entrega/unread coordinados | MongoDB/Redis; P6 pendiente |
 | Moderación | reportes por post; decidir/revertir | fracción de posts | lectura media, escritura baja | efectos globales compensables | MongoDB/Redis; P7 implementado, workflow durable y consumidor único |
-| Operación/jobs | UUID, pendientes, avance por lote | por operación + historial de pasos | lectura baja, escritura por paso | durable y reanudable | MongoDB; P1 recuperable, P5 registro durable |
+| Operación/jobs | UUID, pendientes, avance por lote | por operación + historial de pasos | lectura baja, escritura por paso | durable y reanudable | MongoDB; P1 y P5 recuperables en `operations`/`publication_jobs` |
 
 Redis conserva responsabilidad operativa de notificaciones, además de feed y contadores.
 Neo4j resuelve relaciones, y MongoDB conserva datos/documentos de negocio y recuperación.

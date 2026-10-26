@@ -51,6 +51,36 @@ it('envía reacción y actualiza los contadores desde el servidor', async () => 
   expect(screen.getByRole('button', { name: 'Quitar mi reacción' })).toBeVisible()
 })
 
+it('permite enviar una reacción personalizada y refresca contadores', async () => {
+  const onCountsChange = vi.fn()
+  const request = vi.fn<AuthRequest>().mockImplementation(async (path, init) => {
+    if (path === '/api/v1/problems/5/reaction' && init?.method === 'POST') {
+      return { operation_id: '55000000-0000-4000-8000-000000000002', status: 'completed' }
+    }
+    if (path === `/api/v1/posts/${postId}`) {
+      return {
+        id: postId,
+        user_id: '11000000-0000-4000-8000-000000000001',
+        text: 'Publicación',
+        media: [],
+        interests: ['datos'],
+        published_at: '2026-10-22T12:00:00Z',
+        reaction_count: 6,
+        comment_count: 2,
+      }
+    }
+    throw new Error(`Ruta inesperada: ${path}`)
+  })
+
+  mount(request, onCountsChange)
+  await userEvent.click(screen.getByRole('button', { name: '＋ Otra' }))
+  await userEvent.type(screen.getByPlaceholderText('Ej: aplauso'), 'aplauso')
+  await userEvent.click(screen.getByRole('button', { name: 'Aplicar' }))
+
+  await screen.findByText('Reacción enviada (aplauso).')
+  expect(onCountsChange).toHaveBeenCalledWith(6, 2)
+})
+
 it('permite quitar la reacción y refresca contadores', async () => {
   const onCountsChange = vi.fn()
   const request = vi.fn<AuthRequest>().mockImplementation(async (path) => {
