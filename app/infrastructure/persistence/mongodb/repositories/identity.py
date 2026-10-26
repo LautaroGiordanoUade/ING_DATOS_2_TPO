@@ -55,6 +55,8 @@ class MongoUserRepository:
         )
 
     async def active_ids(self, user_ids: tuple[UUID, ...]) -> tuple[UUID, ...]:
+        if not user_ids:
+            return ()
         docs = await self._collection.find(
             {"_id": {"$in": [str(i) for i in user_ids]}, "account_status": {"$ne": "suspended"}},
             {"_id": 1},

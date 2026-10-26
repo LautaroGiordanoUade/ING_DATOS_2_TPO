@@ -83,6 +83,22 @@ it('impide consultar amigos en común con la propia cuenta', async () => {
   ).toHaveTextContent('No podés consultar amigos en común con tu propia cuenta.')
 })
 
+it('valida formato UUID antes de enviar consulta de amigos en común', async () => {
+  const request = vi.fn<AuthRequest>().mockImplementation(async (path) => {
+    if (path.includes('/recommendations/')) return []
+    throw new Error(`Ruta inesperada: ${path}`)
+  })
+
+  mount(request)
+  const input = screen.getByLabelText('Identificador del otro usuario')
+  await userEvent.type(input, 'no-es-un-uuid')
+  await userEvent.click(screen.getByRole('button', { name: 'Consultar' }))
+
+  expect(
+    await screen.findByRole('alert')
+  ).toHaveTextContent('Ingresá un identificador (UUID) de usuario válido.')
+})
+
 it('consulta amigos en común y muestra los perfiles resultantes', async () => {
   const targetId = '99000000-0000-4000-8000-000000000001'
   const request = vi.fn<AuthRequest>().mockImplementation(async (path) => {

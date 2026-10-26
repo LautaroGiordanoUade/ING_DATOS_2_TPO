@@ -3,9 +3,6 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, Header, Query, Response, status
 
-from app.api.demo_data import (
-    DEMO_USER_ID,
-)
 from app.api.dependencies.auth import CurrentUserDep, ModeratorDep
 from app.api.dependencies.databases import ResourcesDep
 from app.api.dependencies.demo import DemoModeDep
@@ -149,8 +146,6 @@ async def mutual_friends(
     use_case: Annotated[SocialRecommendationsUseCase, Depends(get_recommendations_use_case)],
     demo_mode: DemoModeDep,
 ) -> tuple[UUID, ...]:
-    if demo_mode:
-        return (DEMO_USER_ID,)
     return await use_case.mutual_friends(query.user_id, query.other_user_id)
 
 

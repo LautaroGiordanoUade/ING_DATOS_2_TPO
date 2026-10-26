@@ -18,10 +18,10 @@ MongoDB conserva operations para auditoría y publication_jobs para el trabajo d
 P1: payload, snapshot de audiencia, cursor y decisión de commit/rollback. No se necesita una
 transacción global. El trabajo es autoritativo para la consulta de operaciones del P1.
 
-Neo4j es fuente de verdad del grafo FOLLOWS y BLOCKS; se prevén intereses para P4.
-P1 ejecuta Cypher real para resolver audiencia. P2 implementa follow/unfollow y solicitudes
-privadas; P8 implementa trazabilidad. Intereses y sugerencias completas siguen pendientes
-para P4. La clave User.id tiene constraint único.
+Neo4j es fuente de verdad del grafo FOLLOWS y BLOCKS. P1 ejecuta Cypher real para resolver
+audiencia. P2 implementa follow/unfollow y solicitudes privadas; P4 implementa amigos en común y
+sugerencias de segundo grado combinando el recorrido en Neo4j con validación de estado activo en
+MongoDB; P8 implementa trazabilidad. La clave User.id tiene constraint único.
 
 Redis mantiene sorted sets de feed, contadores y notificaciones operativas. P5 almacena
 notificaciones y publica eventos Pub/Sub; P1 usa un marcador común de visibilidad, además
@@ -72,6 +72,11 @@ reserva ambos participantes con un índice único parcial, guarda snapshots y ch
 conserva la reserva si falla la recuperación. Neo4j mantiene el vínculo; Redis materializa
 contadores y referencias. Un gate por par coordina entregas P1 y restauraciones P7/P8.
 Ver docs/problems/problem_02.md para la secuencia y los límites.
+
+P4 ejecuta consultas Cypher de amigos en común y recomendaciones de segundo grado en Neo4j,
+excluyendo solicitudes pendientes, bloqueos y usuarios suspendidos, y revalida el estado activo
+de los candidatos por lote en MongoDB con sobremuestreo antes de recortar a 10 resultados.
+Ver docs/problems/problem_04.md.
 
 ## Moderación P7
 

@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useAuth } from '../auth/context'
 import { ErrorMessage } from '../../components/common/ErrorMessage'
 import { getMutualFriends, getRecommendations } from './api'
+import { mutualFriendsQuerySchema } from './contracts'
 import { UserCard } from './UserCard'
 
 export function RecommendationsPage() {
@@ -37,6 +38,14 @@ export function RecommendationsPage() {
     }
     if (cleaned.toLowerCase() === user!.id.toLowerCase()) {
       setValidationError('No podés consultar amigos en común con tu propia cuenta.')
+      return
+    }
+    const parsed = mutualFriendsQuerySchema.safeParse({
+      user_id: user!.id,
+      other_user_id: cleaned,
+    })
+    if (!parsed.success) {
+      setValidationError('Ingresá un identificador (UUID) de usuario válido.')
       return
     }
     setActiveQueryTarget(cleaned)
