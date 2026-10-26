@@ -162,6 +162,52 @@ navegación lateral/inferior bajo **Sugerencias** (`/recomendaciones`, ruta prot
   impide consultar la propia cuenta y valida formato UUID con Zod `mutualFriendsQuerySchema` antes
   de emitir el request) y grilla de tarjetas con los perfiles resultantes.
 
+### Usuarios, contraseñas y UUIDs de prueba en base de datos
+
+Para las pruebas manuales en UI (`/login` y `/recomendaciones`) y en Swagger, se unificó la
+contraseña de la cuenta personal y de todos los lotes de prueba `qa-p4-*` en **`123456789`**
+(y `scripts/validar_problema4.py` usa `DEFAULT_PASSWORD = os.getenv("P4_PASSWORD", "123456789")`).
+
+#### 1. Cuentas principales del entorno
+
+| Username | Contraseña | User UUID (`_id`) | Email | Rol / Estado |
+|---|---|---|---|---|
+| `rosariobonata` | `123456789` | `aaf5a730-8863-444a-a551-bd8325bd308d` | `rosariobonata@gmail.com` | `user` / `active` |
+| `Lautaro` | `12345678` | `11111111-1111-4111-8111-111111111111` | — | `user` / `active` |
+| `lautaro1` .. `lautaro10` | `12345678` | `a8debe19-def9-5b85-870e-13848e1ef956` (`lautaro1`), `1fe58082-d620-5806-af2e-ada98385fafa` (`lautaro2`) | `lautaroN.11111111@followers.example.test` | `user` / `active` |
+
+#### 2. Lote principal de validación Problema 4 con ranking de 2 candidatos (`qa-p4-832003b7-*`)
+
+| Username | Contraseña | User UUID (`_id`) | Email | Rol en el grafo P4 |
+|---|---|---|---|---|
+| `qa-p4-832003b7-usera` | `123456789` | `b07b4b02-077a-4182-9cf2-b5b6b5a551b8` | `qa-p4-832003b7-usera@test.local` | Usuario solicitante (`usera`): sigue a `common` y a `userb` |
+| `qa-p4-832003b7-userb` | `123456789` | `471c75b8-5060-40fe-9e15-2a2845b312bb` | `qa-p4-832003b7-userb@test.local` | Segundo usuario (`userb`): sigue a `common` y a `target` |
+| `qa-p4-832003b7-common` | `123456789` | `fadf72b8-aa69-46c4-8a14-86236f9f55a5` | `qa-p4-832003b7-common@test.local` | Amigo en común entre `usera` y `userb`; sigue a `target` y `target2` |
+| `qa-p4-832003b7-target` | `123456789` | `6b66bd4a-91a0-4b80-b2f4-a4955149236b` | `qa-p4-832003b7-target@test.local` | Cuenta sugerida #1 para `usera` (`score = 2`, vía `common` y `userb`) |
+| `qa-p4-832003b7-target2` | `123456789` | `3ac4c0c4-b358-4b7d-b090-1097f0cbdbee` | `qa-p4-832003b7-target2@test.local` | Cuenta sugerida #2 para `usera` (`score = 1`, vía `common`) |
+
+#### 3. Lotes adicionales del Problema 4 en MongoDB y Neo4j (contraseña unificada: `123456789`)
+
+| Lote | Username | Contraseña | User UUID (`_id`) | Rol en el grafo P4 |
+|---|---|---|---|---|
+| `c81b1853` | `qa-p4-c81b1853-usera` | `123456789` | `ca11c97b-09b5-48e9-a347-69847f4e3744` | Solicitante (`usera`) |
+| `c81b1853` | `qa-p4-c81b1853-userb` | `123456789` | `befaee3f-3fd3-4a16-a272-45497434199f` | Segundo usuario (`userb`) |
+| `c81b1853` | `qa-p4-c81b1853-common` | `123456789` | `45cae6f4-d848-4c1a-a963-f24a13098dbb` | Amigo en común (`common`) |
+| `c81b1853` | `qa-p4-c81b1853-target` | `123456789` | `68a9d521-2612-4ec6-9e61-462dcc3fa78a` | Cuenta sugerida (`target`) |
+| `224ca30e` | `qa-p4-224ca30e-usera` | `123456789` | `844a47ed-c833-4d46-9b10-636c328c51e9` | Solicitante (`usera`) |
+| `224ca30e` | `qa-p4-224ca30e-userb` | `123456789` | `e995638a-bc63-4cde-a954-b9eba60dd953` | Segundo usuario (`userb`) |
+| `224ca30e` | `qa-p4-224ca30e-common` | `123456789` | `a6289002-4656-4b3c-8a18-2bb74de18d4a` | Amigo en común (`common`) |
+| `224ca30e` | `qa-p4-224ca30e-target` | `123456789` | `c438b5f1-aaa6-40b2-b48c-948b49530f82` | Cuenta sugerida (`target`) |
+| `1c8b7410` | `qa-p4-1c8b7410-usera` | `123456789` | `3c866d11-5ca8-4aee-b1c9-ee7ea1a61fde` | Solicitante (`usera`) |
+| `1c8b7410` | `qa-p4-1c8b7410-userb` | `123456789` | `f00d6857-c416-465d-8c02-69e387af3cb1` | Segundo usuario (`userb`) |
+| `1c8b7410` | `qa-p4-1c8b7410-common` | `123456789` | `5dea8f13-2915-4418-b46f-b4993cc85d64` | Amigo en común (`common`) |
+| `1c8b7410` | `qa-p4-1c8b7410-target` | `123456789` | `d50c0341-cbe7-47e1-a31a-e8e97c59cc28` | Cuenta sugerida (`target`) |
+| `b9cf6dc1` | `qa-p4-b9cf6dc1-usera` | `123456789` | `be3744df-cb53-4397-8179-3dcd82eeb921` | Solicitante (`usera`) |
+| `b9cf6dc1` | `qa-p4-b9cf6dc1-userb` | `123456789` | `a456a8fd-18ee-4441-8596-223234e3f18c` | Segundo usuario (`userb`) |
+| `b9cf6dc1` | `qa-p4-b9cf6dc1-common` | `123456789` | `560aedbe-b442-4228-aca0-c37663436beb` | Amigo en común (`common`) |
+| `b9cf6dc1` | `qa-p4-b9cf6dc1-target` | `123456789` | `84ec5ff2-cf5d-4f0f-86d2-1afdd527cd21` | Cuenta sugerida (`target`) |
+| `e27737fa` | `qa-p4-e27737fa-usera` | `123456789` | `763a5c31-3a45-44fc-86d3-dc559e2f500d` | Usuario individual (`usera`) |
+
 ## Ejecución y defensa
 
 Con Docker Compose levantado:
@@ -178,9 +224,9 @@ docker compose exec -T api python < scripts/validar_problema4.py
 ```
 
 El script `scripts/validar_problema4.py` crea cinco usuarios QA aislados (`usera`, `userb`,
-`common`, `target`, `target2`) con contraseñas aleatorias, ejecuta seguimientos reales a través
-del worker de P2 (`A -> Common`, `A -> B`, `B -> Common`, `B -> Target`, `Common -> Target`,
-`Common -> Target2`) y comprueba:
+`common`, `target`, `target2`) con contraseña por defecto `123456789` (configurable mediante
+`P4_PASSWORD`), ejecuta seguimientos reales a través del worker de P2 (`A -> Common`, `A -> B`,
+`B -> Common`, `B -> Target`, `Common -> Target`, `Common -> Target2`) y comprueba:
 
 1. Que `GET /api/v1/problems/4/mutual-friends` entre `usera` y `userb` detecte a `common` sin
    incluir a los propios consultados.

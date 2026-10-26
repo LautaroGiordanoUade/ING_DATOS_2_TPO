@@ -4,7 +4,6 @@ Requiere Docker Compose y la API iniciada.
 
 import json
 import os
-import secrets
 import time
 import urllib.error
 import urllib.request
@@ -12,6 +11,7 @@ from typing import Any
 from uuid import uuid4
 
 BASE = os.getenv("P4_BASE_URL", "http://127.0.0.1:8000")
+DEFAULT_PASSWORD = os.getenv("P4_PASSWORD", "123456789")
 
 
 def request(
@@ -59,11 +59,11 @@ def follow_and_wait(follower_id: str, followed_id: str, token: str, label: str) 
 
 def main() -> None:
     suffix = uuid4().hex[:8]
-    password = secrets.token_urlsafe(16)
+    password = DEFAULT_PASSWORD
     tokens: dict[str, str] = {}
     ids: dict[str, str] = {}
 
-    print(f"[*] Creando usuarios de prueba (prefijo qa-p4-{suffix})...")
+    print(f"[*] Creando usuarios de prueba (prefijo qa-p4-{suffix}, password={password})...")
     for role in ("usera", "userb", "common", "target", "target2"):
         username = f"qa-p4-{suffix}-{role}"
         code, body = request(
