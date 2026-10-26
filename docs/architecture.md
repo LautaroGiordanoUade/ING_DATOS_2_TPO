@@ -54,10 +54,12 @@ Antes del commit, una falla revierte referencias y contenido. Después de decidi
 se completa la activación aunque se reinicie. Las lecturas de feed deben comprobar el marcador
 published; ZRANGE directo también puede mostrar candidatos pendientes.
 
-P5 usa compensaciones en request y un bloqueo Redis sin vencimiento por publicación.
-Su recuperación tras caída de proceso todavía requiere reconciliación manual.
+P5 combina un bloqueo de archivo del sistema operativo sobre el volumen compartido
+`interaction_locks` con un lease Redis de 30 segundos renovado por heartbeat, compensaciones
+en orden inverso y recuperación durable automática tanto en la entrada del siguiente escritor
+como en segundo plano desde `moderation-worker` (`interactions.recover_pending()`).
 
-Detalles: docs/problems/problem_01.md y docs/problem_05_consistency.md.
+Detalles: docs/problems/problem_01.md, docs/problems/problem_05.md y docs/problem_05_consistency.md.
 La carga de 50000 registros y el informe final siguen pendientes.
 
 P3 consulta el feed materializado sin recorrer todos los seguidos. Lee bloques cronológicos

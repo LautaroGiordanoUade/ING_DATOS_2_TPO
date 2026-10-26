@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useAuth } from '../auth/context'
 import { ApiError } from '../../services/http/client'
-import { PRESET_REACTIONS } from './contracts'
+import { PRESET_REACTIONS, commentPayloadSchema, reactionPayloadSchema } from './contracts'
 import { refreshPostCounters, removeReaction, sendComment, sendReaction } from './api'
 
 interface PostInteractionsProps {
@@ -40,12 +40,27 @@ export function PostInteractions({ postId, onCountsChange }: PostInteractionsPro
   if (!user) return null
 
   const handleReact = async (kindToSet: string) => {
+    const parsed = reactionPayloadSchema.safeParse({
+      post_id: postId,
+      user_id: user.id,
+      kind: kindToSet,
+    })
+    if (!parsed.success) {
+      setReactionMsg({
+        type: 'error',
+        text: parsed.error.issues[0]?.message ?? 'El tipo de reacción no es válido.',
+      })
+      return
+    }
+
     setIsReacting(true)
     setReactionMsg(null)
     try {
-      await sendReaction(request, { post_id: postId, user_id: user.id, kind: kindToSet })
-      setSelectedKind(kindToSet)
-      setReactionMsg({ type: 'success', text: `Reacción enviada (${kindToSet}).` })
+      await sendReaction(request, parsed.data)
+      setSelectedKind(parsed.data.kind)
+      setCustomKind('')
+      setShowCustom(false)
+      setReactionMsg({ type: 'success', text: `Reacción enviada (${parsed.data.kind}).` })
       const updated = await refreshPostCounters(request, postId)
       onCountsChange(updated.reaction_count, updated.comment_count)
     } catch (err) {
@@ -73,20 +88,23 @@ export function PostInteractions({ postId, onCountsChange }: PostInteractionsPro
 
   const handleSubmitComment = async (e: React.FormEvent) => {
     e.preventDefault()
-    const trimmed = commentText.trim()
-    if (!trimmed) {
-      setCommentMsg({ type: 'error', text: 'Escribí un comentario antes de enviar.' })
-      return
-    }
-    if (trimmed.length > 2000) {
-      setCommentMsg({ type: 'error', text: 'El comentario no puede superar los 2.000 caracteres.' })
+    const parsed = commentPayloadSchema.safeParse({
+      post_id: postId,
+      user_id: user.id,
+      text: commentText,
+    })
+    if (!parsed.success) {
+      setCommentMsg({
+        type: 'error',
+        text: parsed.error.issues[0]?.message ?? 'Escribí un comentario válido.',
+      })
       return
     }
 
     setIsCommenting(true)
     setCommentMsg(null)
     try {
-      await sendComment(request, { post_id: postId, user_id: user.id, text: trimmed }, idempotencyKey)
+      await sendComment(request, parsed.data, idempotencyKey)
       setCommentMsg({ type: 'success', text: 'Comentario enviado exitosamente.' })
       setCommentText('')
       setIdempotencyKey(crypto.randomUUID()) // Nueva clave solo ante éxito

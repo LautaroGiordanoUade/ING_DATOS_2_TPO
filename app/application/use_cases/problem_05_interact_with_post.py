@@ -132,14 +132,28 @@ class InteractWithPostUseCase:
         state = _ReactionState()
         event_id = reaction.id
 
+        operation = OperationContext(
+            operation_type="problem_05_react",
+            metadata={
+                "post_id": str(reaction.post_id),
+                "user_id": str(reaction.user_id),
+                "author_id": str(post.user_id),
+                "event_id": str(event_id),
+                "kind": reaction.kind,
+            },
+        )
+
         async def save_reaction() -> None:
             snapshot = await self._reactions.get_for_user(reaction.post_id, reaction.user_id)
             if snapshot is None or isinstance(snapshot, Reaction):
                 state.previous, state.snapshot_known = snapshot, True
             state.wrote_mongo = True
             previous = await self._reactions.upsert(reaction)
-            if not state.snapshot_known:
+            if not state.snapshot_known and isinstance(previous, Reaction):
                 state.previous = previous
+            if state.previous is not None:
+                operation.metadata["previous_id"] = str(state.previous.id)
+                operation.metadata["previous_kind"] = state.previous.kind
 
         async def restore_reaction() -> None:
             if not state.wrote_mongo:
@@ -175,16 +189,6 @@ class InteractWithPostUseCase:
             if state.notified:
                 await self._notifications.revoke(post.user_id, event_id)
 
-        operation = OperationContext(
-            operation_type="problem_05_react",
-            metadata={
-                "post_id": str(reaction.post_id),
-                "user_id": str(reaction.user_id),
-                "author_id": str(post.user_id),
-                "event_id": str(event_id),
-                "kind": reaction.kind,
-            },
-        )
         return await self._compensation.execute(
             operation,
             [
@@ -220,14 +224,25 @@ class InteractWithPostUseCase:
         await self._repair_counters(post_id)
         state = _RemovalState()
 
+        operation = OperationContext(
+            operation_type="problem_05_remove_reaction",
+            metadata={
+                "post_id": str(post_id),
+                "user_id": str(user_id),
+            },
+        )
+
         async def delete_reaction() -> None:
             snapshot = await self._reactions.get_for_user(post_id, user_id)
             if snapshot is None or isinstance(snapshot, Reaction):
                 state.removed, state.snapshot_known = snapshot, True
             state.attempted_delete = True
             removed = await self._reactions.delete_for_user(post_id, user_id)
-            if not state.snapshot_known:
+            if not state.snapshot_known and isinstance(removed, Reaction):
                 state.removed = removed
+            if state.removed is not None:
+                operation.metadata["removed_id"] = str(state.removed.id)
+                operation.metadata["removed_kind"] = state.removed.kind
 
         async def restore_reaction() -> None:
             if not state.attempted_delete:
@@ -241,13 +256,6 @@ class InteractWithPostUseCase:
                 state.counted = True
                 await self._counters.increment(POST_REACTIONS, post_id, -1)
 
-        operation = OperationContext(
-            operation_type="problem_05_remove_reaction",
-            metadata={
-                "post_id": str(post_id),
-                "user_id": str(user_id),
-            },
-        )
         return await self._compensation.execute(
             operation,
             [
@@ -380,19 +388,14 @@ class InteractWithPostUseCase:
             )
         return operation
 
-    async def recover_pending(
-        self, post_id: UUID | None = None
-    ) -> list[OperationContext]:
+    async def recover_pending(self, post_id: UUID | None = None) -> list[OperationContext]:
         if self._operation_log is None or not hasattr(self._operation_log, "pending"):
             return []
         pending_ops = await self._operation_log.pending(
             ("problem_05_react", "problem_05_remove_reaction", "problem_05_comment")
         )
         if post_id is not None:
-            pending_ops = [
-                op for op in pending_ops
-                if op.metadata.get("post_id") == str(post_id)
-            ]
+            pending_ops = [op for op in pending_ops if op.metadata.get("post_id") == str(post_id)]
         recovered: list[OperationContext] = []
         for op in pending_ops:
             recovered.append(await self.recover_operation(op))
@@ -435,20 +438,32 @@ class InteractWithPostUseCase:
             author_id = UUID(operation.metadata["author_id"])
             event_id = UUID(operation.metadata["event_id"])
             kind = str(operation.metadata.get("kind", "like"))
+            previous_kind = operation.metadata.get("previous_kind")
+            previous_id = operation.metadata.get("previous_id")
 
             if operation.status == OperationStatus.COMPENSATING:
                 current = await self._reactions.get_for_user(post_id, user_id)
-                if current is not None and current.id == event_id:
+                if previous_kind is not None:
+                    restored_id = UUID(str(previous_id)) if previous_id else event_id
+                    await self._reactions.upsert(
+                        Reaction(
+                            id=restored_id,
+                            post_id=post_id,
+                            user_id=user_id,
+                            kind=str(previous_kind),
+                        )
+                    )
+                elif current is not None and current.id == event_id:
                     await self._reactions.delete_for_user(post_id, user_id)
                 await self._reconcile_reaction_counter(post_id, 0)
-                if author_id != user_id:
+                if previous_kind is None and author_id != user_id:
                     await self._notifications.revoke(author_id, event_id)
                 operation.status = OperationStatus.COMPENSATED
             else:
                 current = await self._reactions.get_for_user(post_id, user_id)
                 if current is not None and current.id == event_id:
                     await self._reconcile_reaction_counter(post_id, 0)
-                    if author_id != user_id:
+                    if previous_kind is None and author_id != user_id:
                         await self._notifications.publish(
                             author_id,
                             {
@@ -460,17 +475,37 @@ class InteractWithPostUseCase:
                             },
                         )
                     operation.status = OperationStatus.COMPLETED
+                elif current is not None and current.kind == kind:
+                    await self._reconcile_reaction_counter(post_id, 0)
+                    operation.status = OperationStatus.COMPLETED
                 else:
                     await self._reconcile_reaction_counter(post_id, 0)
                     operation.status = OperationStatus.FAILED
 
         elif operation.operation_type == "problem_05_remove_reaction":
-            await self._reconcile_reaction_counter(post_id, 0)
-            operation.status = (
-                OperationStatus.COMPENSATED
-                if operation.status == OperationStatus.COMPENSATING
-                else OperationStatus.COMPLETED
-            )
+            user_id = UUID(operation.metadata["user_id"])
+            removed_kind = operation.metadata.get("removed_kind")
+            removed_id = operation.metadata.get("removed_id")
+            current = await self._reactions.get_for_user(post_id, user_id)
+
+            if operation.status == OperationStatus.COMPENSATING:
+                if current is None and removed_kind is not None:
+                    restored_id = UUID(str(removed_id)) if removed_id else operation.operation_id
+                    await self._reactions.upsert(
+                        Reaction(
+                            id=restored_id,
+                            post_id=post_id,
+                            user_id=user_id,
+                            kind=str(removed_kind),
+                        )
+                    )
+                await self._reconcile_reaction_counter(post_id, 0)
+                operation.status = OperationStatus.COMPENSATED
+            else:
+                await self._reconcile_reaction_counter(post_id, 0)
+                operation.status = (
+                    OperationStatus.COMPLETED if current is None else OperationStatus.FAILED
+                )
 
         elif operation.operation_type == "problem_05_comment":
             user_id = UUID(operation.metadata["user_id"])

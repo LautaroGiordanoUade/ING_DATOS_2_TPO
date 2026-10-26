@@ -153,7 +153,6 @@ async def mutual_friends(
 async def react(
     payload: ReactionCreate,
     use_case: Annotated[InteractWithPostUseCase, Depends(get_interaction_use_case)],
-    demo_mode: DemoModeDep,
 ) -> OperationResponse:
     operation = await use_case.react(
         Reaction(post_id=payload.post_id, user_id=payload.user_id, kind=payload.kind)
@@ -165,7 +164,6 @@ async def react(
 async def remove_reaction(
     payload: ReactionRemove,
     use_case: Annotated[InteractWithPostUseCase, Depends(get_interaction_use_case)],
-    demo_mode: DemoModeDep,
 ) -> OperationResponse:
     operation = await use_case.remove_reaction(payload.post_id, payload.user_id)
     return OperationResponse(operation_id=operation.operation_id, status=operation.status.value)
@@ -175,7 +173,6 @@ async def remove_reaction(
 async def comment(
     payload: CommentCreate,
     use_case: Annotated[InteractWithPostUseCase, Depends(get_interaction_use_case)],
-    demo_mode: DemoModeDep,
     idempotency_key: Annotated[str | None, Header(alias="Idempotency-Key")] = None,
 ) -> OperationResponse:
     operation = await use_case.comment(

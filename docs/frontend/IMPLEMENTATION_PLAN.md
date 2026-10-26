@@ -1,4 +1,4 @@
-# Plan del frontend — estado después de P1, P3 y P4
+# Plan del frontend — estado después de P1, P3, P4 y P5
 
 Inspección actualizada sobre la rama de trabajo. No se encontró un enunciado original separado
 (PDF/DOCX). El inventario se basa en `TODO.md`, `docs/problems/problem_01.md` a `problem_08.md`,
@@ -9,8 +9,8 @@ el enunciado original habrá que contrastarlo antes de ampliar el alcance.
 
 Los ocho números son los ocho casos de uso existentes. Autenticación es infraestructura
 compartida, no un noveno problema. El estado del backend distingue código/documentación
-de verificación ejecutada durante esta entrega. P1, P3 y P4 UI están implementados; P5 cuenta con
-interacciones en tarjeta; los restantes módulos de UI siguen pendientes.
+de verificación ejecutada durante esta entrega. P1, P3, P4 y P5 UI están implementados; los
+restantes módulos de UI siguen pendientes.
 
 | Problema | Funcionalidad | UI mínima necesaria | Backend en main | Frontend |
 |---|---|---|---|---|
@@ -18,7 +18,7 @@ interacciones en tarjeta; los restantes módulos de UI siguen pendientes.
 | 2 — Seguir/dejar de seguir | Follow público, solicitud privada, aprobación y contadores | Perfil por UUID, seguir/cancelar/dejar de seguir y solicitudes recibidas | Implementado; worker compartido P2/P7/P8 | Pendiente |
 | 3 — Feed personalizado | Hasta 20 posts, ranking por bloques y cursor opaco | Inicio con tarjetas, siguiente página y refrescar | Implementado; navegación de 15 min | Completado y validado — ver problem_3.md |
 | 4 — Amigos en común y sugerencias | Segundo grado y amigos en común, hasta 10 sugerencias | Sugerencias y consulta de amigos en común en `/recomendaciones` | Implementado; Neo4j + filtro activo MongoDB | Completado y validado (`RecommendationsPage`, `UserCard`) |
-| 5 — Reacciones y comentarios | Reacción única, cambio/baja, comentarios y contadores | Controles en tarjeta y formulario de comentario | Implementado con recuperación durable | Implementado (`PostInteractions`) |
+| 5 — Reacciones y comentarios | Reacción única, cambio/baja, comentarios y contadores | Controles en tarjeta y formulario de comentario | Implementado con recuperación durable | Completado y validado (`PostInteractions` en `PostCard`) |
 | 6 — Mensajería grupal | Historial, entrega, unread y lectura por participante | Conversación grupal, historial y envío, solo cuando existan contratos reales | Pendiente; envío lanza 501, faltan lecturas públicas completas | Bloqueado por backend incompleto |
 | 7 — Moderación | Reportar, decidir, consultar y revertir | Reportar desde post; lista/detalle de reportes, decisión/reversión e historial | Implementado; bearer y roles user/moderator/admin | Pendiente |
 | 8 — Suspensión y trazabilidad | Suspender/reactivar, revocar credenciales y consultar traza privada | Cuenta, motivo de suspensión/reactivación, historial y traza | Implementado; efectos MongoDB/Neo4j/Redis | Pendiente |
@@ -39,7 +39,9 @@ interacciones en tarjeta; los restantes módulos de UI siguen pendientes.
 3. P3: completo por pedido explícito de priorizar el feed antes de la UI P2. Reutiliza
    el backend P2 ya implementado y los seguidores sembrados; no requiere construir su UI.
    Inicio muestra seguidos y /mis-publicaciones conserva el contenido propio. Ver problem_3.md.
-4. P5: depende de posts/P3 e identidad. Refrescar datos del servidor después de mutaciones.
+4. P5: implementado en backend (`InteractWithPostUseCase` con recuperación durable) y en
+   frontend (`features/interactions/` integrado en `PostCard`), refrescando los contadores del
+   servidor después de cada mutación.
 5. P7: depende de identidad por rol y posts/P3/P5 para comprobar hide/revert y contadores.
 6. P8: depende de identidad/P2/P3/P7 para verificar suspensión sin revivir contenido moderado.
 7. P4: implementado en backend (`SocialRecommendationsUseCase` y `Neo4jSocialGraphRepository`)
@@ -125,12 +127,14 @@ incluye rutas todavía pendientes: OpenAPI no prueba comportamiento.
   usar rutas del problema para consultar operation_id. No hay listado público de comentarios
   ni consulta de reacción propia: no inventar historial/estado propio; revisar necesidad de
   extensión mínima del contrato antes de prometer esas vistas.
-- Formulario: comentario 1–2000, kind 1–30 según API (no inventar enumeración), UUIDs.
-  Controles de alta/cambio/baja; no convertir contadores locales en fuente de verdad.
+- Formulario: comentario 1–2000 (`commentPayloadSchema`), kind 1–30 (`reactionPayloadSchema`), UUIDs.
+  Controles de alta/cambio/baja en `PostInteractions`; refresca contadores del servidor con
+  `refreshPostCounters` después de cada mutación.
 - Estados: enviando, resultado de operación, 404 contenido retirado, 409 concurrencia,
-  422 y 503; conservar texto ante error. Sin UI de notificaciones ajena al alcance.
-- Tests: validaciones/idempotencia/error; controles y formulario; E2E reacción/cambio/baja,
-  comentario y contadores reales.
+  422 y 503; conserva texto e `Idempotency-Key` ante error para reintento seguro.
+- Tests implementados: 14 unitarios en `test_problem_05_regressions.py`, 11 de integración real
+  en `test_problem_05_consistency.py`, 7 de componente en `PostInteractions.test.tsx` y scripts
+  `scripts/validar_problema5.py` y `scripts/validar_problema5_fallas.py`.
 
 ### P6 — mensajería grupal
 
@@ -226,3 +230,7 @@ Sin cambios de backend. Capturas en `screenshots/p3/`.
 P4: `docs/problems/problem_04.md`, módulo `features/recommendations/` con 5 tests de componente
 en Vitest, 8 tests unitarios Python, 4 tests de integración real Neo4j/MongoDB y script HTTP
 `scripts/validar_problema4.py`.
+P5: `docs/problems/problem_05.md` y `docs/problem_05_consistency.md`, módulo `features/interactions/`
+con 7 tests de componente en Vitest, 14 tests unitarios Python en `test_problem_05_regressions.py`,
+11 tests de integración real en `test_problem_05_consistency.py` y scripts `scripts/validar_problema5.py`
+y `scripts/validar_problema5_fallas.py`.
