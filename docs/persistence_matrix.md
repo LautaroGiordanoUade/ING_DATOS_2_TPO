@@ -12,7 +12,7 @@ ni mediciones de rendimiento. El generador general aún no implementa ese volume
 | Reacción | usuario/post; alta/cambio/baja | proporcional a publicaciones | alta/alta | única por par y coordinación del contador | MongoDB + Redis; P5 implementado con límites documentados |
 | Comentario | post/fecha, append | 50000+ candidato a mayor volumen | alta/alta | durable e idempotencia por clave | MongoDB + Redis; P5 implementado |
 | Notificación | destinatario/evento; entrega live | proporcional a interacciones | lectura alta, escritura alta | evento persistido y Pub/Sub; no exactly-once | Redis; P5 implementado |
-| Seguimiento/intereses | recorridos 1-2 saltos | 10000+ relaciones | lectura alta, escritura media | evitar duplicados y coordinar estado/feed | Neo4j relaciones, MongoDB jobs y Redis derivados; P2 implementado, intereses P4 pendiente |
+| Seguimiento y recomendaciones | recorridos 1-2 saltos y amigos en común | 10000+ relaciones | lectura alta, escritura media | evitar duplicados, coordinar estado/feed y validar activos en MongoDB | Neo4j relaciones, MongoDB jobs/estado activo y Redis derivados; P2 y P4 implementados |
 | Conversación/mensaje | participantes, historial, lectura propia | 50000+ mensajes | alta/alta | historial durable, entrega/unread coordinados | MongoDB/Redis; P6 pendiente |
 | Moderación | reportes por post; decidir/revertir | fracción de posts | lectura media, escritura baja | efectos globales compensables | MongoDB/Redis; P7 implementado, workflow durable y consumidor único |
 | Operación/jobs | UUID, pendientes, avance por lote | por operación + historial de pasos | lectura baja, escritura por paso | durable y reanudable | MongoDB; P1 recuperable, P5 registro durable |

@@ -143,9 +143,11 @@ class Neo4jSocialGraphRepository:
         async with self._driver.session() as session:
             result = await session.run(
                 """
-                MATCH (u1:User {id:$u1})-[:FOLLOWS {status:'accepted'}]->(f:User)
-                      <-[:FOLLOWS {status:'accepted'}]-(u2:User {id:$u2})
+                MATCH (u1:User {id:$u1})-[r1:FOLLOWS]->(f:User)
+                      <-[r2:FOLLOWS]-(u2:User {id:$u2})
                 WHERE f <> u1 AND f <> u2
+                  AND coalesce(r1.status,'accepted')='accepted'
+                  AND coalesce(r2.status,'accepted')='accepted'
                   AND coalesce(u1.account_status,'active')='active'
                   AND coalesce(u2.account_status,'active')='active'
                   AND coalesce(f.account_status,'active')='active'
@@ -180,13 +182,20 @@ class Neo4jSocialGraphRepository:
         async with self._driver.session() as session:
             result = await session.run(
                 """
-                MATCH (u:User {id:$id})-[:FOLLOWS {status:'accepted'}]->(middle:User)
-                      -[:FOLLOWS {status:'accepted'}]->(candidate:User)
-                WHERE candidate <> u AND coalesce(u.account_status,'active')='active'
+                MATCH (u:User {id:$id})-[r1:FOLLOWS]->(middle:User)
+                      -[r2:FOLLOWS]->(candidate:User)
+                WHERE candidate <> u
+                  AND coalesce(r1.status,'accepted')='accepted'
+                  AND coalesce(r2.status,'accepted')='accepted'
+                  AND coalesce(u.account_status,'active')='active'
                   AND coalesce(middle.account_status,'active')='active'
                   AND coalesce(candidate.account_status,'active')='active'
-                  AND NOT (u)-[:FOLLOWS]->(candidate) AND NOT (u)-[:BLOCKS]-(candidate)
-                RETURN candidate.id AS id, count(*) AS score ORDER BY score DESC, id LIMIT $limit
+                  AND NOT (u)-[:FOLLOWS]->(candidate)
+                  AND NOT (u)-[:BLOCKS]-(middle)
+                  AND NOT (middle)-[:BLOCKS]-(candidate)
+                  AND NOT (u)-[:BLOCKS]-(candidate)
+                RETURN candidate.id AS id, count(DISTINCT middle) AS score
+                ORDER BY score DESC, id LIMIT $limit
             """,
                 id=str(user_id),
                 limit=limit,

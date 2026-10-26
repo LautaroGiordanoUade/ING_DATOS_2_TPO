@@ -1,26 +1,24 @@
-# Plan del frontend — estado después de P1 y P3
+# Plan del frontend — estado después de P1, P3 y P4
 
-Inspección del 21/10/2026 sobre `main` actualizado, commit `0d0f734`.
-Rama de trabajo: `feature/frontend-react-ui`. No existía frontend ni AGENTS.md aplicable.
-No se encontró un enunciado original separado (PDF/DOCX). El inventario se basa en
-`TODO.md`, `docs/problems/problem_01.md` a `problem_08.md`, guías, casos de uso,
-adaptadores y OpenAPI generado directamente desde `app.main:app`. Si se aporta el
-enunciado original habrá que contrastarlo antes de ampliar el alcance.
+Inspección actualizada sobre la rama de trabajo. No se encontró un enunciado original separado
+(PDF/DOCX). El inventario se basa en `TODO.md`, `docs/problems/problem_01.md` a `problem_08.md`,
+guías, casos de uso, adaptadores y OpenAPI generado directamente desde `app.main:app`. Si se aporta
+el enunciado original habrá que contrastarlo antes de ampliar el alcance.
 
 ## Inventario real
 
 Los ocho números son los ocho casos de uso existentes. Autenticación es infraestructura
 compartida, no un noveno problema. El estado del backend distingue código/documentación
-de verificación ejecutada durante esta entrega. P1 y P3 UI están terminados y documentados;
-los restantes problemas de UI siguen pendientes.
+de verificación ejecutada durante esta entrega. P1, P3 y P4 UI están implementados; P5 cuenta con
+interacciones en tarjeta; los restantes módulos de UI siguen pendientes.
 
 | Problema | Funcionalidad | UI mínima necesaria | Backend en main | Frontend |
 |---|---|---|---|---|
 | 1 — Publicación y distribución recuperable | Publicar con intereses y distribuir por lotes | Crear publicación, estado de operación y preview de IDs visibles | Implementado; worker P1 | Completado y validado — ver problem_1.md |
 | 2 — Seguir/dejar de seguir | Follow público, solicitud privada, aprobación y contadores | Perfil por UUID, seguir/cancelar/dejar de seguir y solicitudes recibidas | Implementado; worker compartido P2/P7/P8 | Pendiente |
 | 3 — Feed personalizado | Hasta 20 posts, ranking por bloques y cursor opaco | Inicio con tarjetas, siguiente página y refrescar | Implementado; navegación de 15 min | Completado y validado — ver problem_3.md |
-| 4 — Amigos en común y sugerencias | Segundo grado/intereses, hasta 10 sugerencias | Sugerencias y consulta de amigos en común | Parcial: segundo grado real; mutual friends lanza 501 y faltan intereses | Bloqueado por backend incompleto |
-| 5 — Reacciones y comentarios | Reacción única, cambio/baja, comentarios y contadores | Controles en tarjeta y formulario de comentario | Implementado con límites de recuperación durable documentados | Pendiente |
+| 4 — Amigos en común y sugerencias | Segundo grado y amigos en común, hasta 10 sugerencias | Sugerencias y consulta de amigos en común en `/recomendaciones` | Implementado; Neo4j + filtro activo MongoDB | Completado y validado (`RecommendationsPage`, `UserCard`) |
+| 5 — Reacciones y comentarios | Reacción única, cambio/baja, comentarios y contadores | Controles en tarjeta y formulario de comentario | Implementado con recuperación durable | Implementado (`PostInteractions`) |
 | 6 — Mensajería grupal | Historial, entrega, unread y lectura por participante | Conversación grupal, historial y envío, solo cuando existan contratos reales | Pendiente; envío lanza 501, faltan lecturas públicas completas | Bloqueado por backend incompleto |
 | 7 — Moderación | Reportar, decidir, consultar y revertir | Reportar desde post; lista/detalle de reportes, decisión/reversión e historial | Implementado; bearer y roles user/moderator/admin | Pendiente |
 | 8 — Suspensión y trazabilidad | Suspender/reactivar, revocar credenciales y consultar traza privada | Cuenta, motivo de suspensión/reactivación, historial y traza | Implementado; efectos MongoDB/Neo4j/Redis | Pendiente |
@@ -44,11 +42,12 @@ los restantes problemas de UI siguen pendientes.
 4. P5: depende de posts/P3 e identidad. Refrescar datos del servidor después de mutaciones.
 5. P7: depende de identidad por rol y posts/P3/P5 para comprobar hide/revert y contadores.
 6. P8: depende de identidad/P2/P3/P7 para verificar suspensión sin revivir contenido moderado.
-7. P4: después de completar backend de intereses/amigos en común y probar su contrato.
+7. P4: implementado en backend (`SocialRecommendationsUseCase` y `Neo4jSocialGraphRepository`)
+   y en frontend (`features/recommendations/` con ruta protegida `/recomendaciones`).
 8. P6: después de completar backend de conversación/historial/participantes/unread.
 
-Cada paso requiere autorización del usuario; no se avanza automáticamente. P4/P6
-requieren trabajo backend futuro expresamente acotado antes de declarar una UI completa.
+Cada paso requiere autorización del usuario; no se avanza automáticamente. P6
+requiere trabajo backend futuro expresamente acotado antes de declarar una UI completa.
 
 ## Contratos e implementación por problema
 
@@ -108,14 +107,15 @@ incluye rutas todavía pendientes: OpenAPI no prueba comportamiento.
 
 ### P4 — amigos en común y sugerencias
 
-- Entidades: User, intereses, FOLLOWS/BLOCKS; Neo4j y MongoDB para estado activo.
-- GET `/problems/4/recommendations/{user_id}` devuelve UUIDs reales de segundo grado;
-  GET `/problems/4/mutual-friends?user_id=...&other_user_id=...` sigue sin implementación.
-- UI futura: sugerencias (máximo 10) y consulta por UUID; perfiles mediante contrato real,
-  validación de IDs, loading/vacío/501/503. No presentar recomendaciones parciales como TP completo.
-- Componentes reutilizados: UserAvatar/perfil/acciones P2 y mensajes de estado.
-- Tests futuros: exclusión seguido/bloqueado/suspendido y criterio intereses; componentes
-  vacíos/errores y E2E con grafo controlado. Dependencias P2 e implementación backend faltante.
+- Entidades: User, FOLLOWS/BLOCKS; Neo4j y MongoDB para estado activo.
+- GET `/problems/4/recommendations/{user_id}` devuelve hasta 10 UUIDs reales de segundo grado;
+  GET `/problems/4/mutual-friends?user_id=...&other_user_id=...` devuelve UUIDs reales de amigos
+  en común ordenados por identificador.
+- UI implementada en `/recomendaciones` (`RecommendationsPage` y `UserCard`): muestra sugerencias
+  (máximo 10), carga perfiles mediante `GET /users/{id}`, permite seleccionar cualquier tarjeta
+  sugerida o ingresar un UUID validado con `mutualFriendsQuerySchema` para consultar amigos en común.
+- Tests implementados: unitarios e integración de backend (`test_problem_04_recommendations.py`),
+  smoke HTTP (`scripts/validar_problema4.py`) y pruebas de componente en `RecommendationsPage.test.tsx`.
 
 ### P5 — reacciones y comentarios
 
@@ -130,7 +130,7 @@ incluye rutas todavía pendientes: OpenAPI no prueba comportamiento.
 - Estados: enviando, resultado de operación, 404 contenido retirado, 409 concurrencia,
   422 y 503; conservar texto ante error. Sin UI de notificaciones ajena al alcance.
 - Tests: validaciones/idempotencia/error; controles y formulario; E2E reacción/cambio/baja,
-  comentario y contadores reales. Documentar recuperación durable aún pendiente en backend.
+  comentario y contadores reales.
 
 ### P6 — mensajería grupal
 
@@ -183,7 +183,9 @@ Vitest + Testing Library y Playwright desde la base. Sin Redux, SSR ni carpetas 
 `app/` contiene providers/router/layout; `features/system/` comprueba conexión real;
 `features/auth/` contiene identidad y sesión; `features/posts/` publicación, operaciones,
 contenido propio y preview de distribución P1; `features/feed/` contiene API, paginación
-y tarjetas con autor para P3;
+y tarjetas con autor para P3; `features/recommendations/` contiene sugerencias de segundo
+grado y consulta de amigos en común para P4; `features/interactions/` contiene reacciones
+y comentarios para P5;
 `components/common/` mensajes reutilizables; `services/http/` cliente, errores y timeout;
 `services/api/` tipos OpenAPI; `styles/` diseño responsive; `tests/e2e/` arranque real.
 Cada funcionalidad futura tendrá su carpeta cuando se implemente.
@@ -191,7 +193,7 @@ Cada funcionalidad futura tendrá su carpeta cuando se implemente.
 Layout claro con sidebar escritorio, navegación compacta móvil, tarjetas blancas, tipografía
 del sistema, foco visible y enlaces accesibles. P1 agrega registro/login, publicaciones propias,
 composer y operación a la bienvenida/fallback 404. P3 convierte Inicio en feed y mueve
-las publicaciones propias a /mis-publicaciones. No se añaden botones de módulos pendientes.
+las publicaciones propias a /mis-publicaciones. P4 agrega /recomendaciones en el menú lateral.
 La bienvenida consume GET `/health/ready`, muestra servicios reales y permite reintentar.
 Readiness 503 se muestra como degradado. Las capturas de iteración 0 quedan como evidencia histórica.
 
@@ -220,5 +222,7 @@ Preparación: `iteration_0.md`. P1: `problem_1.md`, 69 tests frontend (38 unitar
 desktop/móvil en `screenshots/p1/`. Los escenarios de P1 usan API, workers y motores reales.
 P3: `problem_3.md`, 81 tests frontend (41 unitarios y 40 componentes), 18 E2E sobre
 build/preview y comprobación real de lautaro1/lautaro1000 viendo el post de Lautaro.
-Sin cambios de backend. Capturas en `screenshots/p3/`. No se reclama una ejecución completa
-de la suite Python. Siguiente pendiente: P2; requiere autorización antes de comenzar.
+Sin cambios de backend. Capturas en `screenshots/p3/`.
+P4: `docs/problems/problem_04.md`, módulo `features/recommendations/` con 5 tests de componente
+en Vitest, 8 tests unitarios Python, 4 tests de integración real Neo4j/MongoDB y script HTTP
+`scripts/validar_problema4.py`.

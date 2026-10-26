@@ -53,8 +53,12 @@ rutas en Swagger o respuestas en modo demo.
 
 ## Problema 4: amigos en común y sugerencias
 
-- [x] Cypher de amigos en común y 10 sugerencias por segundo grado/intereses.
-- [x] Excluir bloqueados, suspendidos y cuentas ya seguidas.
+- [x] Consultas Cypher reales de amigos en común y hasta 10 sugerencias de segundo grado en Neo4j.
+- [x] Exclusión de solicitudes pendientes (P2), bloqueos directos o en el camino y cuentas ya seguidas.
+- [x] Validación cruzada de cuentas activas en MongoDB (`is_suspended` y `active_ids`) con sobremuestreo.
+- [x] Orden determinista por `score DESC, id ASC` en sugerencias y `id ASC` en amigos en común.
+- [x] UI en `/recomendaciones` (`RecommendationsPage`, `UserCard`), tests unitarios/integración y smoke HTTP en `scripts/validar_problema4.py`.
+- [x] Guía, secuencia y contratos en `docs/problems/problem_04.md`.
 
 ## Problema 5: reacciones y comentarios
 
