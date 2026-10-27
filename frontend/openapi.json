@@ -1993,6 +1993,71 @@
         }
       }
     },
+    "/api/v1/interactions/reactions/{post_id}/me": {
+      "get": {
+        "tags": [
+          "interactions"
+        ],
+        "summary": "Own Reaction",
+        "description": "Return the bearer owner's reaction, or null when they have not reacted.",
+        "operationId": "own_reaction_api_v1_interactions_reactions__post_id__me_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "post_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Post Id"
+            }
+          },
+          {
+            "name": "x-fail-at-step",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Fail-At-Step"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OwnReactionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/interactions/reactions": {
       "post": {
         "tags": [
@@ -2024,6 +2089,56 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/ReactionCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "interactions"
+        ],
+        "summary": "Delete Reaction",
+        "operationId": "delete_reaction_api_v1_interactions_reactions_delete",
+        "parameters": [
+          {
+            "name": "x-fail-at-step",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Fail-At-Step"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReactionRemove"
               }
             }
           }
@@ -4388,6 +4503,26 @@
           "status"
         ],
         "title": "OperationResponse"
+      },
+      "OwnReactionResponse": {
+        "properties": {
+          "kind": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Kind"
+          }
+        },
+        "type": "object",
+        "required": [
+          "kind"
+        ],
+        "title": "OwnReactionResponse"
       },
       "PostCreate": {
         "properties": {

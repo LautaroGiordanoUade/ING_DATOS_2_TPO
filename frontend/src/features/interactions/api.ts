@@ -2,6 +2,7 @@ import type { AuthRequest } from '../auth/api'
 import {
   commentPayloadSchema,
   interactionOperationSchema,
+  ownReactionSchema,
   reactionPayloadSchema,
   reactionRemoveSchema,
   type CommentPayload,
@@ -10,6 +11,13 @@ import {
   type ReactionRemovePayload,
 } from './contracts'
 import { postSchema, type Post } from '../posts/contracts'
+
+export async function getOwnReaction(request: AuthRequest, postId: string, signal?: AbortSignal) {
+  const data = await request(`/api/v1/interactions/reactions/${postId}/me`, {
+    ...(signal ? { signal } : {}),
+  })
+  return ownReactionSchema.parse(data)
+}
 
 export async function sendReaction(
   request: AuthRequest,

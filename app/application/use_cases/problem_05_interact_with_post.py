@@ -84,6 +84,10 @@ class InteractWithPostUseCase:
         if self._users is not None and await self._users.is_suspended(user_id):
             raise ConflictError("Suspended accounts cannot interact")
 
+    async def own_reaction(self, post_id: UUID, user_id: UUID) -> Reaction | None:
+        await self._get_active_post(post_id)
+        return await self._reactions.get_for_user(post_id, user_id)
+
     async def _reconcile_reaction_counter(self, post_id: UUID, fallback_delta: int) -> None:
         count_fn = getattr(self._reactions, "count_for_post", None)
         set_fn = getattr(self._counters, "set_value", None)
