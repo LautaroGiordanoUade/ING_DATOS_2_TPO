@@ -1,7 +1,9 @@
 # Matriz entidad/proceso y motor
 
 Las cantidades siguientes son objetivos de prueba/estimaciones de diseño, no datos ya cargados
-ni mediciones de rendimiento. El generador general aún no implementa ese volumen.
+ni mediciones de rendimiento. El generador ya implementa 50000 publicaciones; las cantidades
+verificadas están en [dataset.md](dataset.md). La actualización integral de esta matriz y
+las mediciones de operaciones siguen en el plan de cierre.
 
 | Entidad/proceso | Patrón de acceso | Volumen objetivo | Lectura/escritura | Consistencia | Motor y estado |
 |---|---|---:|---|---|---|

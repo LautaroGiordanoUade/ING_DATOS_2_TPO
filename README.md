@@ -1,5 +1,7 @@
 # Niche Social Network — esqueleto del TPI Etapa 2
 
+Carga reproducible de 50.000 publicaciones y datos relacionados: [Dataset](docs/dataset.md).
+
 ## Frontend React
 
 `docker compose up -d --build` también construye y levanta el frontend en
