@@ -1,0 +1,46 @@
+{
+  "date": "2026-10-27",
+  "dataset": "tpo-v1-42",
+  "config": {
+    "users": 1200,
+    "posts": 50000,
+    "comments": 15000,
+    "reactions": 30000,
+    "messages": 10000,
+    "conversations": 120,
+    "reports": 24,
+    "seed": 42
+  },
+  "sha256": "49f73981cbff5816e68258acfcde6fe4c5c498f3b81444886a2b888d462dc5a3",
+  "initial_verification": {
+    "counts": {
+      "users": 1200,
+      "posts": 50000,
+      "comments": 15000,
+      "reactions": 30000,
+      "messages": 10000,
+      "conversations": 120,
+      "moderation_reports": 24
+    },
+    "relationships": 11981,
+    "feed_references": 469561,
+    "cross_engine_ids": true,
+    "references": true,
+    "counters_and_feeds": true,
+    "message_sequences_and_unread": true,
+    "meets_requirement": true
+  },
+  "initial_load_elapsed_seconds": 19.389,
+  "replay_status": "already_loaded",
+  "unit_tests_passed": 99,
+  "new_loader_integration_tests_passed": 1,
+  "environment": "Proyecto Docker aislado tpo-seed-qa-20261027, sin modificar volúmenes del proyecto principal",
+  "app_mypy_files_passed": 174,
+  "http_exercise": {
+    "P1_to_P7": "passed in initial HTTP exercise",
+    "P8": true,
+    "P8_resumed_after_wait_timeout": true,
+    "P8_suspend_seconds": 256.922,
+    "account_restored": true
+  }
+}

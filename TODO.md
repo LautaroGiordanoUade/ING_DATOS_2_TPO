@@ -138,7 +138,7 @@ rutas en Swagger o respuestas en modo demo.
 - [x] Volúmenes y healthchecks de motores/API.
 - [x] La API ya no inicializa PostgreSQL; identidad/moderación se asignan a MongoDB.
 - [x] Registro de operaciones durable MongoDB y consulta por operation_id.
-- [ ] Generador general realista, reproducible y con al menos 50000 registros.
+- [x] Generador reproducible: 50000 publicaciones y población proporcional; carga por lotes, replay y verificación cruzada. Ver docs/dataset.md.
 - [ ] Completar índices/constraints de los problemas restantes.
 - [ ] Procedimiento de reconstrucción frente a pérdida de datos Redis.
 - PostgreSQL/Alembic quedan como código legado sin uso en ejecución; no son un cuarto motor.
