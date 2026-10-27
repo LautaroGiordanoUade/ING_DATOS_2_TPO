@@ -1,4 +1,4 @@
-# Plan del frontend — estado después de P1, P3, P4, P5 y P6
+# Plan del frontend — estado después de P1 a P6
 
 Inspección actualizada sobre la rama de trabajo. No se encontró un enunciado original separado
 (PDF/DOCX). El inventario se basa en `TODO.md`, `docs/problems/problem_01.md` a `problem_08.md`,
@@ -9,13 +9,13 @@ el enunciado original habrá que contrastarlo antes de ampliar el alcance.
 
 Los ocho números son los ocho casos de uso existentes. Autenticación es infraestructura
 compartida, no un noveno problema. El estado del backend distingue código/documentación
-de verificación ejecutada durante esta entrega. P1, P3, P4, P5 y P6 UI están implementados; los
+de verificación ejecutada durante esta entrega. P1 a P6 UI están implementados; los
 restantes módulos de UI siguen pendientes.
 
 | Problema | Funcionalidad | UI mínima necesaria | Backend de esta rama | Frontend |
 |---|---|---|---|---|
 | 1 — Publicación y distribución recuperable | Publicar con intereses y distribuir por lotes | Crear publicación, estado de operación y preview de IDs visibles | Implementado; worker P1 | Completado y validado — ver problem_1.md |
-| 2 — Seguir/dejar de seguir | Follow público, solicitud privada, aprobación y contadores | Perfil por UUID, seguir/cancelar/dejar de seguir y solicitudes recibidas | Implementado; worker compartido P2/P7/P8 | Pendiente |
+| 2 — Seguir/dejar de seguir | Follow público, solicitud privada, aprobación y contadores | Perfiles desde sugerencias/autores, seguir/cancelar/dejar de seguir y solicitudes | Implementado; worker compartido P2/P7/P8 | Completado y validado — ver problem_2.md |
 | 3 — Feed personalizado | Hasta 20 posts, ranking por bloques y cursor opaco | Inicio con tarjetas, siguiente página y refrescar | Implementado; navegación de 15 min | Completado y validado — ver problem_3.md |
 | 4 — Amigos en común y sugerencias | Segundo grado y amigos en común, hasta 10 sugerencias | Sugerencias y consulta de amigos en común en `/recomendaciones` | Implementado; Neo4j + filtro activo MongoDB | Completado y validado (`RecommendationsPage`, `UserCard`) |
 | 5 — Reacciones y comentarios | Reacción única, cambio/baja, comentarios y contadores | Controles en tarjeta y formulario de comentario | Implementado con recuperación durable | Completado y validado (`PostInteractions` en `PostCard`) |
@@ -35,7 +35,8 @@ restantes módulos de UI siguen pendientes.
    POST /posts ahora exige bearer y autor coincidente en servidor. El alias educativo
    /problems/1/publish conserva su contrato público para scripts, como límite documentado.
    Este paso está completo: 69 tests frontend, 14 E2E reales y 32 regresiones Python focalizadas.
-2. P2: depende de identidad/P1 para probar entrega y retiro. Solicitudes privadas incluidas.
+2. P2: completo; perfiles, controles de seguimiento, solicitudes privadas y aprobación,
+   operaciones recuperables en la interfaz y actualización de contadores/feed. Ver problem_2.md.
 3. P3: completo por pedido explícito de priorizar el feed antes de la UI P2. Reutiliza
    el backend P2 ya implementado y los seguidores sembrados; no requiere construir su UI.
    Inicio muestra seguidos y /mis-publicaciones conserva el contenido propio. Ver problem_3.md.
@@ -88,9 +89,9 @@ incluye rutas todavía pendientes: OpenAPI no prueba comportamiento.
 - Endpoints: POST/DELETE `/social/follows`, POST `/social/follows/approve`, GET
   `/social/requests`, `/social/relations/{followed_id}`, `/social/counts/{user_id}`,
   `/social/operations/{id}` y perfil `/users/{id}`. Jobs 202; bearer, actor propio;
-  aprobación exclusiva del titular. No exponer retry técnico en navegación normal.
-- UI: perfil por UUID porque no existe buscador de cuentas; solicitudes recibidas;
-  botones reutilizables y confirmación de unfollow. UUID válido, impedir auto-follow,
+  aprobación exclusiva del titular. Retry visible sólo cuando una operación requiere recuperación.
+- UI: `/perfiles/:userId` desde sugerencias/autores y Mi perfil; `/solicitudes`;
+  botones reutilizables para seguir/cancelar/baja/aprobar. UUID válido, impedir auto-follow,
   clave de idempotencia 1–200. Estados none/pending/accepted/processing y jobs terminales.
 - Errores: usuario inexistente/suspendido, bloqueos, 401/403/404/409/422/503, lista vacía.
 - Tests: validación/derivación de estado; botones/permisos/estados; E2E público/privado,
@@ -195,6 +196,7 @@ contenido propio y preview de distribución P1; `features/feed/` contiene API, p
 y tarjetas con autor para P3; `features/recommendations/` contiene sugerencias de segundo
 grado y consulta de amigos en común para P4; `features/interactions/` contiene reacciones
 y comentarios para P5; `features/messages/` contiene grupos, historial y lectura para P6;
+`features/social/` contiene perfiles, seguimiento, solicitudes y seguimiento de operaciones P2;
 `components/common/` mensajes reutilizables; `services/http/` cliente, errores y timeout;
 `services/api/` tipos OpenAPI; `styles/` diseño responsive; `tests/e2e/` arranque real.
 Cada funcionalidad futura tendrá su carpeta cuando se implemente.

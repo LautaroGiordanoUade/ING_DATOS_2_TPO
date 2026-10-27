@@ -32,6 +32,9 @@ rutas en Swagger o respuestas en modo demo.
 - [x] Workflow durable con compensación, recuperación y retry en el worker existente P7/P8.
 - [x] Idempotency-Key, exclusión por participantes y pruebas de fallas/concurrencia/reinicio.
 - [x] Guía y smoke HTTP reproducible en docs/problems/problem_02.md.
+- [x] Interfaz de perfiles, seguir/dejar de seguir, cancelar solicitudes y aprobar solicitudes recibidas.
+- [x] Seguimiento de operaciones y claves por intento, recarga, respuesta perdida y recuperación fallida.
+- [x] Navegación desde sugerencias/autores, contadores y actualización del feed; pruebas desktop/móvil.
 - Límites: un consumidor por host/volumen; una operación activa por participante (409 si está
   ocupado), hasta 10000 publicaciones por autor y 100000 referencias en el feed inspeccionado.
   El ranking y la paginación del feed completo pertenecen al P3.

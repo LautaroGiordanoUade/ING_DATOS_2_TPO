@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
+import { Link } from 'react-router-dom'
 import { useAuth } from '../auth/context'
 import { getUserProfile } from './api'
 import { ApiError } from '../../services/http/client'
@@ -47,6 +48,7 @@ export function UserCard({ userId, onSelectMutual }: UserCardProps) {
       </ul>}
 
       <div className="user-card-actions">
+        {user && <Link className="button-secondary" to={`/perfiles/${userId}`}>Ver perfil</Link>}
         {onSelectMutual && (
           <button
             type="button"

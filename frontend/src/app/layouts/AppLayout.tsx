@@ -35,6 +35,10 @@ export function AppLayout() {
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true"><path d="M21 11a8 8 0 0 1-8 8H7l-5 3V7a5 5 0 0 1 5-5h6a8 8 0 0 1 8 9Z" /><path d="M7 8h9M7 12h6" /></svg>
                 <span className="nav-label">Mensajes</span>
               </NavLink>
+              <NavLink to="/solicitudes" className="nav-item" aria-label="Solicitudes">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true"><circle cx="9" cy="7" r="4" /><path d="M2 21v-2a7 7 0 0 1 14 0v2M17 8l2 2 4-4" /></svg>
+                <span className="nav-label">Solicitudes</span>
+              </NavLink>
             </>
           )}
         </nav>
@@ -55,7 +59,7 @@ export function AppLayout() {
           <div className="session-actions">
             {auth.user ? (
               <>
-                <span className="session-name">@{auth.user.username}</span>
+                <NavLink className="session-name" to={`/perfiles/${auth.user.id}`} aria-label="Mi perfil">@{auth.user.username}</NavLink>
                 <button className="button-secondary" onClick={auth.signOut}>Cerrar sesión</button>
               </>
             ) : auth.status === 'guest' ? (
