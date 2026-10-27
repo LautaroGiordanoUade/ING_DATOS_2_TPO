@@ -7,6 +7,7 @@ from app.application.services.account_processor import AccountProcessor
 from app.application.services.follow_processor import FollowProcessor
 from app.application.services.moderation_processor import ModerationProcessor
 from app.application.use_cases.problem_05_interact_with_post import InteractWithPostUseCase
+from app.application.use_cases.problem_06_send_group_message import SendGroupMessageUseCase
 from app.core.config import get_settings
 from app.infrastructure.persistence.mongodb.client import create_mongo_client
 from app.infrastructure.persistence.mongodb.repositories.accounts import MongoAccountStore
@@ -17,6 +18,7 @@ from app.infrastructure.persistence.mongodb.repositories.content_repositories im
 )
 from app.infrastructure.persistence.mongodb.repositories.follows import MongoFollowStore
 from app.infrastructure.persistence.mongodb.repositories.identity import MongoUserRepository
+from app.infrastructure.persistence.mongodb.repositories.messaging import MongoMessagingStore
 from app.infrastructure.persistence.mongodb.repositories.moderation import MongoModerationRepository
 from app.infrastructure.persistence.mongodb.repositories.operation_log import (
     MongoOperationLogRepository,
@@ -26,6 +28,7 @@ from app.infrastructure.persistence.neo4j.repositories import Neo4jSocialGraphRe
 from app.infrastructure.persistence.redis.accounts import RedisAccountViews
 from app.infrastructure.persistence.redis.client import create_redis_client
 from app.infrastructure.persistence.redis.follows import RedisFollowViews
+from app.infrastructure.persistence.redis.messaging import ConversationLock, RedisMessagingViews
 from app.infrastructure.persistence.redis.moderation import RedisModerationViews
 from app.infrastructure.persistence.redis.reaction_lock import RedisReactionLock
 from app.infrastructure.persistence.redis.repositories.operational_repositories import (
@@ -56,6 +59,10 @@ async def main() -> None:
         follows, Neo4jSocialGraphRepository(neo4j), RedisFollowViews(redis)
     )
     operation_log = MongoOperationLogRepository(database)
+    messaging_store = MongoMessagingStore(database)
+    messaging = SendGroupMessageUseCase(
+        messaging_store, RedisMessagingViews(redis), ConversationLock(redis)
+    )
     interactions = InteractWithPostUseCase(
         MongoPostRepository(database),
         MongoReactionRepository(database),
@@ -72,6 +79,7 @@ async def main() -> None:
         await follows.ensure_indexes()
         await store.ensure_indexes()
         await accounts.ensure_indexes()
+        await messaging_store.ensure_indexes()
         while True:
             try:
                 # Resume interrupted P2 before applying other users' new transitions.
@@ -85,6 +93,10 @@ async def main() -> None:
                 await interactions.recover_pending()
             except Exception:
                 logger.exception("Moderation queue unavailable; persisted work will resume")
+            try:
+                await messaging.recover_pending()
+            except Exception:
+                logger.exception("P6 queue unavailable; persisted messages will resume")
             await asyncio.sleep(0.5)
     finally:
         await mongo.close()

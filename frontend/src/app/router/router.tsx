@@ -5,6 +5,7 @@ import { HomePage } from '../../features/posts/HomePage'
 import { RequireAuth } from '../../features/auth/RequireAuth'
 
 const LoginPage = lazy(() => import('../../features/auth/AuthPage').then((module) => ({ default: module.LoginPage })))
+const MessagesPage = lazy(() => import('../../features/messages/MessagesPage').then((module) => ({ default: module.MessagesPage })))
 const RegisterPage = lazy(() => import('../../features/auth/AuthPage').then((module) => ({ default: module.RegisterPage })))
 const ComposerPage = lazy(() => import('../../features/posts/ComposerPage').then((module) => ({ default: module.ComposerPage })))
 const OperationPage = lazy(() => import('../../features/posts/OperationPage').then((module) => ({ default: module.OperationPage })))
@@ -29,6 +30,7 @@ export const router = createBrowserRouter([
           { path: '/publicar', element: <ComposerPage /> },
           { path: '/operaciones/:operationId', element: <OperationPage /> },
           { path: '/recomendaciones', element: <RecommendationsPage /> },
+          { path: '/mensajes/:conversationId?', element: <MessagesPage /> },
         ],
       },
       {
