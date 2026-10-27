@@ -112,3 +112,8 @@ Esto evita perder una entrega por carreras de suspension/reactivacion o moderaci
 unitarias; la línea base tenía 94 tests. Smoke HTTP final passed; Ruff/mypy/formato del cambio
 correctos. Evidencia: docs/problem_8_http_validation.json. La única advertencia es previa de
 Starlette/httpx. TODO.md marca el P8 implementado, conservando el historial de la sección.
+# Medición con volumen
+
+La captura de membresías Redis se realiza con SCAN/HSCAN de mayor tamaño y lecturas
+por lotes, manteniendo feeds históricos y entregas diferidas. Ver
+[mediciones P8](../problem_8_performance.md) y su evidencia reproducible.

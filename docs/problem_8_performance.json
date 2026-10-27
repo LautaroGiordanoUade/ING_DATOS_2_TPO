@@ -1,0 +1,44 @@
+{
+  "date": "2026-10-27",
+  "dataset": "tpo-v1-42",
+  "posts_total": 50000,
+  "users_total": 1200,
+  "target_posts": 42,
+  "redis_db0_keys_observed": 256806,
+  "baseline_suspend_seconds": 256.922,
+  "baseline_measurement": "Duración persistida del job en la corrida anterior",
+  "optimized_measurement": "HTTP de solicitud a estado completed, incluye polling cada 200 ms",
+  "rounds": [
+    {
+      "posts": 42,
+      "suspend_seconds": 12.213,
+      "reactivate_seconds": 0.617,
+      "state_and_counters_restored": true,
+      "suspend_operation": "9809402e-3795-55d9-aaaa-e96aa6220c53",
+      "reactivate_operation": "872142d8-426c-5085-a8f9-aa011b4dc5b9"
+    },
+    {
+      "posts": 42,
+      "suspend_seconds": 11.604,
+      "reactivate_seconds": 0.622,
+      "state_and_counters_restored": true,
+      "suspend_operation": "61f5de47-fa57-5a7e-9f48-b7e578331c80",
+      "reactivate_operation": "5ff6167a-e4b7-59d1-b350-864283f0bc0a"
+    },
+    {
+      "posts": 42,
+      "suspend_seconds": 12.215,
+      "reactivate_seconds": 0.619,
+      "state_and_counters_restored": true,
+      "suspend_operation": "4e47d5e2-be85-5098-9d93-6f25124ba7e5",
+      "reactivate_operation": "00e977b4-7c7e-5042-aa48-3ca2ed75cf2f"
+    }
+  ],
+  "median_suspend_seconds": 12.213,
+  "median_reactivate_seconds": 0.619,
+  "observed_speedup": 21.04,
+  "backend_tests_passed": 335,
+  "conditions": "Proyecto Docker QA aislado. Corridas optimizadas en paralelo a la regresión del backend en Redis DB2. Comparación local con corrida anterior; no es un SLA.",
+  "validation_base": "b5f6357",
+  "mypy_app_files_passed": 175
+}
