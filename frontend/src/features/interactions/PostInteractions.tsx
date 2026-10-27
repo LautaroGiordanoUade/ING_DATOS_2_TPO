@@ -1,8 +1,9 @@
 import { useState } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '../auth/context'
 import { ApiError } from '../../services/http/client'
 import { PRESET_REACTIONS, commentPayloadSchema, reactionPayloadSchema } from './contracts'
-import { refreshPostCounters, removeReaction, sendComment, sendReaction } from './api'
+import { getOwnReaction, refreshPostCounters, removeReaction, sendComment, sendReaction } from './api'
 
 interface PostInteractionsProps {
   postId: string
@@ -22,13 +23,24 @@ function parseErrorMessage(err: unknown): string {
 
 export function PostInteractions({ postId, onCountsChange }: PostInteractionsProps) {
   const { user, request } = useAuth()
+  const queryClient = useQueryClient()
+  const reactionKey = ['own-reaction', user?.id, postId]
+  const ownReaction = useQuery({
+    queryKey: reactionKey,
+    queryFn: ({ signal }) => getOwnReaction(request, postId, signal),
+    enabled: Boolean(user),
+    retry: false,
+    refetchOnWindowFocus: false,
+    networkMode: 'always',
+  })
 
   // Estados de reacción
-  const [selectedKind, setSelectedKind] = useState<string | null>(null)
+  const selectedKind = ownReaction.data?.kind ?? null
   const [customKind, setCustomKind] = useState('')
   const [showCustom, setShowCustom] = useState(false)
   const [isReacting, setIsReacting] = useState(false)
   const [reactionMsg, setReactionMsg] = useState<{ type: 'error' | 'success'; text: string } | null>(null)
+  const reactionUnavailable = isReacting || ownReaction.isPending || ownReaction.isError
 
   // Estados de comentarios
   const [isCommenting, setIsCommenting] = useState(false)
@@ -56,8 +68,9 @@ export function PostInteractions({ postId, onCountsChange }: PostInteractionsPro
     setIsReacting(true)
     setReactionMsg(null)
     try {
+      await queryClient.cancelQueries({ queryKey: reactionKey })
       await sendReaction(request, parsed.data)
-      setSelectedKind(parsed.data.kind)
+      queryClient.setQueryData(reactionKey, { kind: parsed.data.kind })
       setCustomKind('')
       setShowCustom(false)
       setReactionMsg({ type: 'success', text: `Reacción enviada (${parsed.data.kind}).` })
@@ -74,8 +87,9 @@ export function PostInteractions({ postId, onCountsChange }: PostInteractionsPro
     setIsReacting(true)
     setReactionMsg(null)
     try {
+      await queryClient.cancelQueries({ queryKey: reactionKey })
       await removeReaction(request, { post_id: postId, user_id: user.id })
-      setSelectedKind(null)
+      queryClient.setQueryData(reactionKey, { kind: null })
       setReactionMsg({ type: 'success', text: 'Reacción eliminada.' })
       const updated = await refreshPostCounters(request, postId)
       onCountsChange(updated.reaction_count, updated.comment_count)
@@ -120,6 +134,16 @@ export function PostInteractions({ postId, onCountsChange }: PostInteractionsPro
 
   return (
     <div className="post-interactions" aria-label="Interacciones de la publicación">
+      {ownReaction.isPending && <p role="status">Cargando tu reacción…</p>}
+      {ownReaction.isError && (
+        <div role="alert">
+          No pudimos cargar tu reacción.{' '}
+          <button type="button" disabled={ownReaction.isFetching} onClick={() => void ownReaction.refetch()}>
+            Reintentar reacción
+          </button>
+        </div>
+      )}
+      {selectedKind && <p>Tu reacción: {selectedKind}</p>}
       {/* Barra de Reacciones */}
       <div className="reaction-bar" role="group" aria-label="Reacciones disponibles">
         {PRESET_REACTIONS.map(({ kind, label }) => (
@@ -127,7 +151,8 @@ export function PostInteractions({ postId, onCountsChange }: PostInteractionsPro
             key={kind}
             type="button"
             className={`reaction-button ${selectedKind === kind ? 'active' : ''}`}
-            disabled={isReacting}
+            aria-pressed={selectedKind === kind}
+            disabled={reactionUnavailable}
             onClick={() => void handleReact(kind)}
           >
             {label}
@@ -139,7 +164,7 @@ export function PostInteractions({ postId, onCountsChange }: PostInteractionsPro
             type="button"
             className="reaction-button"
             onClick={() => setShowCustom(true)}
-            disabled={isReacting}
+            disabled={reactionUnavailable}
           >
             ＋ Otra
           </button>
@@ -151,13 +176,13 @@ export function PostInteractions({ postId, onCountsChange }: PostInteractionsPro
               maxLength={30}
               value={customKind}
               onChange={(e) => setCustomKind(e.target.value)}
-              disabled={isReacting}
+              disabled={reactionUnavailable}
             />
             <button
               type="button"
               className="button-primary"
               style={{ minHeight: '32px', padding: '4px 10px', fontSize: '11px' }}
-              disabled={isReacting || !customKind.trim()}
+              disabled={reactionUnavailable || !customKind.trim()}
               onClick={() => {
                 if (customKind.trim()) void handleReact(customKind.trim())
               }}
@@ -171,7 +196,7 @@ export function PostInteractions({ postId, onCountsChange }: PostInteractionsPro
           <button
             type="button"
             className="reaction-remove-button"
-            disabled={isReacting}
+            disabled={reactionUnavailable}
             onClick={() => void handleRemoveReaction()}
           >
             Quitar mi reacción

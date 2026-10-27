@@ -2,6 +2,20 @@
 
 ## Qué está implementado
 
+La interfaz consulta `GET /api/v1/interactions/reactions/{post_id}/me` con bearer para
+restaurar la reacción propia al abrir una publicación, recargar o iniciar una nueva sesión.
+La identidad sale del token: no se admite elegir otro usuario. Devuelve `{"kind": null}`
+cuando no hay reacción y `{"kind": "like"}` (o el tipo guardado) cuando existe. Requiere
+cuenta activa y publicación disponible; devuelve 401 sin credencial válida y 404 si la
+publicación no está disponible. No escribe datos ni modifica contadores.
+
+`PostInteractions` mantiene esta lectura en una caché separada por usuario/publicación,
+la actualiza tras alta/cambio/baja y permite quitar una reacción restaurada sin volver a
+reaccionar. Mientras carga o falla la lectura, bloquea los cambios de reacción y ofrece
+reintentar. Los comentarios siguen disponibles. El tipo personalizado también se muestra.
+Las pruebas E2E de `frontend/tests/e2e/interactions.spec.ts` cubren recarga, cambio,
+nueva sesión sin almacenamiento compartido y borrado persistido, en escritorio y móvil.
+
 Implementado en `InteractWithPostUseCase` combinando **MongoDB** como fuente de verdad documental
 (`posts`, `reactions`, `comments` y `operations`) y **Redis** para los contadores atómicos
 (`post_reactions:{post_id}:count`, `post_comments:{post_id}:count`), las notificaciones persistidas y en

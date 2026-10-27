@@ -9,6 +9,10 @@ class ApiModel(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class OwnReactionResponse(ApiModel):
+    kind: str | None
+
+
 class UserCreate(ApiModel):
     account_type: Literal["public", "private"] = "public"
     username: str = Field(min_length=3, max_length=50)

@@ -566,6 +566,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/interactions/reactions/{post_id}/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Own Reaction
+         * @description Return the bearer owner's reaction, or null when they have not reacted.
+         */
+        get: operations["own_reaction_api_v1_interactions_reactions__post_id__me_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/interactions/reactions": {
         parameters: {
             query?: never;
@@ -577,7 +597,8 @@ export interface paths {
         put?: never;
         /** Create Reaction */
         post: operations["create_reaction_api_v1_interactions_reactions_post"];
-        delete?: never;
+        /** Delete Reaction */
+        delete: operations["delete_reaction_api_v1_interactions_reactions_delete"];
         options?: never;
         head?: never;
         patch?: never;
@@ -1361,6 +1382,11 @@ export interface components {
             operation_id: string;
             /** Status */
             status: string;
+        };
+        /** OwnReactionResponse */
+        OwnReactionResponse: {
+            /** Kind */
+            kind: string | null;
         };
         /** PostCreate */
         PostCreate: {
@@ -3045,6 +3071,39 @@ export interface operations {
             };
         };
     };
+    own_reaction_api_v1_interactions_reactions__post_id__me_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-fail-at-step"?: string | null;
+            };
+            path: {
+                post_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OwnReactionResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     create_reaction_api_v1_interactions_reactions_post: {
         parameters: {
             query?: never;
@@ -3057,6 +3116,39 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["ReactionCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_reaction_api_v1_interactions_reactions_delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-fail-at-step"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReactionRemove"];
             };
         };
         responses: {

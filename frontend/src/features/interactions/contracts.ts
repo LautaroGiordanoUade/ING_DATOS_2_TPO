@@ -1,5 +1,7 @@
 import { z } from 'zod'
 
+export const ownReactionSchema = z.object({ kind: z.string().nullable() })
+
 export const PRESET_REACTIONS = [
   { kind: 'like', label: '👍 Me gusta' },
   { kind: 'love', label: '❤️ Me encanta' },
