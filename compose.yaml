@@ -84,6 +84,7 @@ services:
     restart: unless-stopped
     volumes:
       - moderation_worker_lock:/home/appuser/moderation-worker
+      - interaction_locks:/home/appuser/interaction-locks
     environment:
       APP_ENV: development
       MONGODB_URL: mongodb://mongo:27017

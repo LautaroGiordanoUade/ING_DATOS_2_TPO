@@ -83,9 +83,16 @@ rutas en Swagger o respuestas en modo demo.
 
 ## Problema 6: mensajería grupal
 
-- [ ] Conversaciones/historial MongoDB y validación de participantes.
-- [ ] Presencia y entrega Redis, unread y lectura por participante.
-- [ ] Idempotencia, concurrencia, compensaciones y recuperación.
+- [x] Grupos de 2–20 participantes activos, autenticación y búsqueda por nombre de usuario.
+- [x] Historial MongoDB paginado por secuencia y lectura monotónica por participante.
+- [x] Presencia P8, avisos Redis y unread por conversación/participante, reconstruible desde MongoDB.
+- [x] Claves únicas durables para grupos y mensajes; replay y conflicto de contenido.
+- [x] Coordinación API/worker por conversación y volumen compartido; recuperación hacia adelante.
+- [x] Outbox en el propio mensaje: nunca borrar un mensaje persistido después de intentar entregarlo.
+- [x] Interfaz `/mensajes`, grupos, selección de participantes, historial, envío y marcado de lectura.
+- Pruebas y límites: `docs/problems/problem_06.md`. Un host/volumen compartido,
+  participantes fijos; avisos Pub/Sub sin confirmación de recepción. La interfaz consulta
+  historial cada 3 segundos; `completed` significa distribución procesada, no lectura del receptor.
 
 ## Problema 7: moderación — IMPLEMENTADO
 

@@ -6,7 +6,6 @@ from app.infrastructure.persistence.mongodb.database import get_mongo_database
 from app.infrastructure.persistence.mongodb.repositories import (
     MongoCommentRepository,
     MongoConversationRepository,
-    MongoMessageRepository,
     MongoPostRepository,
     MongoReactionRepository,
 )
@@ -30,7 +29,6 @@ class RepositoryContainer:
     comments: MongoCommentRepository
     reactions: MongoReactionRepository
     conversations: MongoConversationRepository
-    messages: MongoMessageRepository
     graph: Neo4jSocialGraphRepository
     feeds: RedisFeedRepository
     counters: RedisCounterRepository
@@ -49,10 +47,8 @@ def get_repositories(
         comments=MongoCommentRepository(mongo_database),
         reactions=MongoReactionRepository(mongo_database),
         conversations=MongoConversationRepository(mongo_database),
-        messages=MongoMessageRepository(mongo_database),
         graph=Neo4jSocialGraphRepository(resources.neo4j),
         feeds=RedisFeedRepository(resources.redis),
         counters=RedisCounterRepository(resources.redis),
         notifications=RedisNotificationRepository(resources.redis),
     )
-

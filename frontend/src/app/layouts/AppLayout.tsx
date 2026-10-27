@@ -31,6 +31,10 @@ export function AppLayout() {
                 <span className="nav-plus" aria-hidden="true">＋</span>
                 <span className="nav-label">Publicar</span>
               </NavLink>
+              <NavLink to="/mensajes" className="nav-item" aria-label="Mensajes">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true"><path d="M21 11a8 8 0 0 1-8 8H7l-5 3V7a5 5 0 0 1 5-5h6a8 8 0 0 1 8 9Z" /><path d="M7 8h9M7 12h6" /></svg>
+                <span className="nav-label">Mensajes</span>
+              </NavLink>
             </>
           )}
         </nav>

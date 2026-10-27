@@ -1,4 +1,4 @@
-# Plan del frontend — estado después de P1, P3, P4 y P5
+# Plan del frontend — estado después de P1, P3, P4, P5 y P6
 
 Inspección actualizada sobre la rama de trabajo. No se encontró un enunciado original separado
 (PDF/DOCX). El inventario se basa en `TODO.md`, `docs/problems/problem_01.md` a `problem_08.md`,
@@ -9,17 +9,17 @@ el enunciado original habrá que contrastarlo antes de ampliar el alcance.
 
 Los ocho números son los ocho casos de uso existentes. Autenticación es infraestructura
 compartida, no un noveno problema. El estado del backend distingue código/documentación
-de verificación ejecutada durante esta entrega. P1, P3, P4 y P5 UI están implementados; los
+de verificación ejecutada durante esta entrega. P1, P3, P4, P5 y P6 UI están implementados; los
 restantes módulos de UI siguen pendientes.
 
-| Problema | Funcionalidad | UI mínima necesaria | Backend en main | Frontend |
+| Problema | Funcionalidad | UI mínima necesaria | Backend de esta rama | Frontend |
 |---|---|---|---|---|
 | 1 — Publicación y distribución recuperable | Publicar con intereses y distribuir por lotes | Crear publicación, estado de operación y preview de IDs visibles | Implementado; worker P1 | Completado y validado — ver problem_1.md |
 | 2 — Seguir/dejar de seguir | Follow público, solicitud privada, aprobación y contadores | Perfil por UUID, seguir/cancelar/dejar de seguir y solicitudes recibidas | Implementado; worker compartido P2/P7/P8 | Pendiente |
 | 3 — Feed personalizado | Hasta 20 posts, ranking por bloques y cursor opaco | Inicio con tarjetas, siguiente página y refrescar | Implementado; navegación de 15 min | Completado y validado — ver problem_3.md |
 | 4 — Amigos en común y sugerencias | Segundo grado y amigos en común, hasta 10 sugerencias | Sugerencias y consulta de amigos en común en `/recomendaciones` | Implementado; Neo4j + filtro activo MongoDB | Completado y validado (`RecommendationsPage`, `UserCard`) |
 | 5 — Reacciones y comentarios | Reacción única, cambio/baja, comentarios y contadores | Controles en tarjeta y formulario de comentario | Implementado con recuperación durable | Completado y validado (`PostInteractions` en `PostCard`) |
-| 6 — Mensajería grupal | Historial, entrega, unread y lectura por participante | Conversación grupal, historial y envío, solo cuando existan contratos reales | Pendiente; envío lanza 501, faltan lecturas públicas completas | Bloqueado por backend incompleto |
+| 6 — Mensajería grupal | Historial, avisos, unread y lectura por participante | Crear grupos, buscar participantes, historial paginado, envío y lectura | Implementado; MongoDB/Redis, outbox y worker compartido | Implementado — ver problem_6.md |
 | 7 — Moderación | Reportar, decidir, consultar y revertir | Reportar desde post; lista/detalle de reportes, decisión/reversión e historial | Implementado; bearer y roles user/moderator/admin | Pendiente |
 | 8 — Suspensión y trazabilidad | Suspender/reactivar, revocar credenciales y consultar traza privada | Cuenta, motivo de suspensión/reactivación, historial y traza | Implementado; efectos MongoDB/Neo4j/Redis | Pendiente |
 
@@ -46,10 +46,11 @@ restantes módulos de UI siguen pendientes.
 6. P8: depende de identidad/P2/P3/P7 para verificar suspensión sin revivir contenido moderado.
 7. P4: implementado en backend (`SocialRecommendationsUseCase` y `Neo4jSocialGraphRepository`)
    y en frontend (`features/recommendations/` con ruta protegida `/recomendaciones`).
-8. P6: después de completar backend de conversación/historial/participantes/unread.
+8. P6: implementado con backend de grupos/historial/participantes/unread y recuperación;
+   interfaz y pruebas en `problem_6.md`.
 
-Cada paso requiere autorización del usuario; no se avanza automáticamente. P6
-requiere trabajo backend futuro expresamente acotado antes de declarar una UI completa.
+Cada paso requiere autorización del usuario; no se avanza automáticamente. El backend
+y la interfaz de P6 se implementaron dentro del alcance autorizado para mensajería.
 
 ## Contratos e implementación por problema
 
@@ -142,14 +143,14 @@ incluye rutas todavía pendientes: OpenAPI no prueba comportamiento.
 
 ### P6 — mensajería grupal
 
-- Entidades: Conversation, Message, read_by, presencia y unread; MongoDB/Redis.
-- POST `/problems/6/message` y `/messages` existen pero envío real pendiente (501).
-  No hay API suficiente de listado/historial/lectura para construir todo el flujo.
-- UI futura mínima: conversación y formulario (UUIDs, texto 1–10000); miembros/autorización
-  deben validarse en backend. Presencia P8 implementada no equivale a resolver P6.
-- Estados previstos: historial cargando/vacío/error, envío pendiente/error, lectura por participante.
-- Tests después de completar contratos: validaciones/permisos, render/interacción y E2E
-  entre participantes, persistencia antes de entrega, unread y lectura. Sin mensajes simulados.
+- Entidades: grupos, mensajes, read_through, presencia y unread; MongoDB/Redis.
+- API `/messages/conversations`, búsqueda `/messages/participants`, historial/envío/lectura
+  por grupo y estado de entrega por mensaje. Alias autenticado `/problems/6/message`.
+- UI `/mensajes/:conversationId?`: crear grupo buscando usuarios, seleccionar conversación,
+  paginar historial, enviar texto de 1–4000 y marcar lectura explícita hasta el último mensaje.
+- Historial/vacío/error, reintento con la misma clave y texto, distribución pendiente;
+  consultas periódicas y heartbeat P8, disposición escritorio/móvil.
+- Pruebas de componente y E2E de dos participantes; detalles en `problem_6.md`.
 
 ### P7 — moderación
 
@@ -193,7 +194,7 @@ Vitest + Testing Library y Playwright desde la base. Sin Redux, SSR ni carpetas 
 contenido propio y preview de distribución P1; `features/feed/` contiene API, paginación
 y tarjetas con autor para P3; `features/recommendations/` contiene sugerencias de segundo
 grado y consulta de amigos en común para P4; `features/interactions/` contiene reacciones
-y comentarios para P5;
+y comentarios para P5; `features/messages/` contiene grupos, historial y lectura para P6;
 `components/common/` mensajes reutilizables; `services/http/` cliente, errores y timeout;
 `services/api/` tipos OpenAPI; `styles/` diseño responsive; `tests/e2e/` arranque real.
 Cada funcionalidad futura tendrá su carpeta cuando se implemente.
