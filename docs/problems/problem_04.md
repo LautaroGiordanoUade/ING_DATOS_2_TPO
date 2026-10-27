@@ -3,8 +3,8 @@
 ## Qué está implementado
 
 Implementado combinando **Neo4j** como motor principal del grafo social (`FOLLOWS` y `BLOCKS`) y
-**MongoDB** (`users`) como fuente de verdad autoritativa del estado de cada cuenta
-(`account_status: active | suspended`). Al tratarse de consultas de lectura sincrónicas (`GET`),
+**MongoDB** (`users`) como fuente de verdad del perfil, estado e intereses declarados.
+Al tratarse de consultas de lectura sincrónicas (`GET`),
 la API responde **200 OK** con la tupla ordenada de UUIDs sin encolar jobs ni requerir procesos
 workers adicionales. Tampoco existe bypass de modo demo: ambos endpoints ejecutan siempre las
 consultas reales sobre Neo4j y MongoDB.
@@ -14,10 +14,39 @@ El caso de uso `SocialRecommendationsUseCase` resuelve dos operaciones complemen
 - **Amigos en común (`mutual_friends`):** obtiene todas las cuentas activas que son seguidas de
   forma aceptada simultáneamente por `user_id` y `other_user_id`, excluyendo bloqueos en cualquier
   dirección y cuentas suspendidas.
-- **Sugerencias de segundo grado (`recommendations`):** recomienda hasta **10** cuentas activas
-  seguidas por los contactos aceptados del usuario (`(u)-[:FOLLOWS]->(middle)-[:FOLLOWS]->(candidate)`),
-  ordenadas por cantidad de conexiones intermedias distintas (`score DESC`) y desempate
-  determinista por identificador (`id ASC`).
+- **Sugerencias (`recommendations`):** hasta **10** cuentas. Primero segundo grado, ordenado
+  por intereses comunes, luego contactos intermedios distintos y UUID ascendente. Si quedan
+  lugares, completa con otras cuentas con intereses compartidos, ordenadas por intereses
+  comunes y UUID, validando seguimientos/bloqueos en Neo4j. Sin preferencias declaradas
+  mantiene el orden por contactos y UUID.
+
+## Intereses del perfil y edición
+
+`User.interests` vive únicamente en MongoDB: no se infiere de las etiquetas de posts ni se
+duplica en Neo4j. Los usuarios antiguos sin el campo se leen con lista vacía; se conservan
+UUID, relaciones y publicaciones. Registrar usuarios admite una lista opcional de intereses.
+
+`PUT /api/v1/users/me/interests` recibe `{"interests":["Python","música"]}` con bearer.
+Reemplaza atómicamente solo las preferencias del titular activo y devuelve el perfil guardado.
+No acepta elegir otro usuario ni modificar otros campos. Repetir el contenido es idempotente;
+no hay escritura multimotor, compensación ni worker adicional para guardar preferencias.
+
+Se admiten hasta 20 etiquetas de 1 a 40 caracteres normalizados: NFKC, casefold, espacios
+compactados y sin duplicados; los acentos se conservan. `[]` elimina preferencias; entradas
+inválidas devuelven 422 y una credencial/cuenta no válida devuelve 401. La escritura vuelve
+a comprobar el estado activo para no modificar preferencias tras una suspensión.
+
+El índice multikey `ix_user_interests_status_id` sirve a la búsqueda por intereses/estado.
+El orden por UUID puede requerir ordenamiento adicional: no se afirma que todo el ranking
+esté cubierto por el índice. La integración verifica un plan con hint; el rendimiento debe
+medirse con el dataset final.
+
+Los candidatos se leen por lotes de 250 con cursor de UUID. Se examinan todos los lotes para
+calcular el orden y se conservan solo los diez mejores en memoria. No se trunca a los primeros
+30 del grafo antes de consultar intereses. El complemento se calcula después de agotar el
+segundo grado elegible. Perfiles y filtros se consultan en lote, sin una consulta por candidato.
+El costo crece con candidatos y páginas: no hay costo constante ni snapshot transaccional entre
+motores; los cambios concurrentes pueden requerir refrescar para ver un resultado actualizado.
 
 ## Secuencia, consultas Cypher y validación cruzada
 
@@ -31,17 +60,26 @@ sequenceDiagram
     rect rgb(245, 249, 245)
         Note over C,N: Flujo 1: Sugerencias de segundo grado (GET /4/recommendations/{user_id})
         C->>A: GET /api/v1/problems/4/recommendations/{user_id}
-        A->>M: is_suspended(user_id)
+        A->>M: get(user_id), estado e intereses
         alt Usuario solicitante suspendido
             M-->>A: true
             A-->>C: 200 OK []
         else Usuario solicitante activo
             M-->>A: false
-            A->>N: get_suggested_accounts(user_id, limit=30)
-            N-->>A: Candidatos ordenados por score DESC, id ASC
-            A->>M: active_ids(candidates) (filtro en lote)
-            M-->>A: Candidatos con account_status != 'suspended'
-            A-->>C: 200 OK (primeros 10 UUIDs activos)
+            loop Lotes por UUID
+                A->>N: suggestion_candidates(user_id, after, 250)
+                N-->>A: UUIDs y conexiones
+                A->>M: interest_profiles(ids), activos e intereses
+                Note over A: Mantener top 10 por intereses, conexiones y UUID
+            end
+            opt Menos de 10 y hay preferencias
+                loop Lotes de perfiles con intereses compartidos
+                    A->>M: interest_candidates(interests, after, 250)
+                    A->>N: eligible_suggestions(ids)
+                    Note over A: Completar sin bloqueados, seguidos ni duplicados
+                end
+            end
+            A-->>C: 200 OK (hasta 10 UUIDs ordenados)
         end
     end
 
@@ -86,12 +124,13 @@ RETURN DISTINCT f.id AS id ORDER BY id
 - `RETURN DISTINCT f.id AS id ORDER BY id` garantiza idempotencia de lectura y un orden lexicográfico
   determinista de UUIDs.
 
-### 2. Consulta Cypher de sugerencias de segundo grado (`get_suggested_accounts`)
+### 2. Consulta Cypher de candidatos de segundo grado (`suggestion_candidates`)
 
 ```cypher
 MATCH (u:User {id:$id})-[r1:FOLLOWS]->(middle:User)
       -[r2:FOLLOWS]->(candidate:User)
 WHERE candidate <> u
+  AND ($after IS NULL OR candidate.id > $after)
   AND coalesce(r1.status,'accepted')='accepted'
   AND coalesce(r2.status,'accepted')='accepted'
   AND coalesce(u.account_status,'active')='active'
@@ -102,15 +141,15 @@ WHERE candidate <> u
   AND NOT (middle)-[:BLOCKS]-(candidate)
   AND NOT (u)-[:BLOCKS]-(candidate)
 RETURN candidate.id AS id, count(DISTINCT middle) AS score
-ORDER BY score DESC, id LIMIT $limit
+ORDER BY id LIMIT $limit
 ```
 
 - Recorre caminos de longitud 2 sobre seguimientos aceptados `u -> middle -> candidate`.
 - Descarta auto-sugerencias (`candidate <> u`), cuentas a las que `u` ya sigue o ya solicitó seguir
   (`NOT (u)-[:FOLLOWS]->(candidate)`, cubriendo tanto `accepted` como `pending`), y cualquier camino
   donde exista un bloqueo entre `u` y `middle`, entre `middle` y `candidate`, o entre `u` y `candidate`.
-- Calcula el puntaje como `count(DISTINCT middle)` (cantidad de contactos seguidos distintos que
-  conectan a `u` con `candidate`) y desempata de forma determinista por `id` ascendente.
+- Devuelve `count(DISTINCT middle)` y pagina por UUID; la aplicación combina este valor
+  con intereses comunes de MongoDB para calcular el orden final.
 
 ## Determinismo, concurrencia y coordinación con P2 y P8
 
@@ -120,12 +159,12 @@ ORDER BY score DESC, id LIMIT $limit
 | Grafo sin candidatos para el usuario | Si Neo4j devuelve `()`, no se realiza la consulta `$in` vacía a MongoDB. |
 | Solicitud de seguimiento pendiente en cuenta privada (P2) | No genera amigos en común ni puentes de segundo grado, pero sí impide volver a sugerir esa cuenta a quien ya envió la solicitud (`NOT (u)-[:FOLLOWS]->(candidate)`). |
 | Suspensión en curso o reciente (P8) | En P8 (`AccountProcessor`), MongoDB marca `account_status = 'suspended'` antes de actualizar Neo4j. La doble verificación (`is_suspended` para los extremos y `active_ids` por lote para los resultados) evita filtrar o recomendar cuentas recién suspendidas. |
-| Candidatos del top 10 recién suspendidos en MongoDB | `recommendations` solicita un pool de hasta 30 candidatos a Neo4j (`_CANDIDATE_POOL_LIMIT = 30`), filtra con `active_ids` en MongoDB conservando el orden de ranking y recorta a los primeros 10 (`_SUGGESTIONS_LIMIT = 10`). |
+| Candidatos recién suspendidos en MongoDB | Los perfiles por lote y la búsqueda por intereses excluyen suspendidos antes del ranking; se procesan lotes hasta agotar candidatos sin corte fijo de 30. |
 | Intermediario (`middle`) suspendido o bloqueado | Excluido en Cypher (`coalesce(middle.account_status, 'active') = 'active'` y `NOT (u)-[:BLOCKS]-(middle)`): un nodo suspendido o bloqueado nunca actúa como puente de recomendación. |
 | Dependencia caída (MongoDB o Neo4j no disponibles) | Propaga el error de infraestructura y devuelve **503 Service Unavailable**, sin simular respuestas vacías ni usar datos demo. |
 
-Al ser operaciones exclusivamente de lectura, no requieren claves de idempotencia, bloqueos de
-escritura ni pasos de compensación.
+Las consultas no requieren claves de idempotencia, bloqueos de escritura ni compensaciones.
+La edición es una escritura atómica e idempotente de un documento MongoDB.
 
 ## API, prueba manual con Swagger y frontend
 
@@ -137,6 +176,8 @@ escritura ni pasos de compensación.
 2. **`GET /api/v1/problems/4/mutual-friends?user_id={u1}&other_user_id={u2}`**
    - Parámetros de query validados por `MutualFriendsRequest`: `user_id` (UUID) y `other_user_id` (UUID).
    - Respuesta `200 OK`: lista JSON de UUIDs de amigos en común ordenados por identificador.
+3. **`PUT /api/v1/users/me/interests`**: edición autenticada de preferencias; también se
+   devuelven intereses en `GET /users/me` y perfiles públicos.
 
 ### Paso a paso en Swagger (`http://localhost:8000/docs`)
 
@@ -153,6 +194,10 @@ escritura ni pasos de compensación.
 La SPA incorpora el módulo `frontend/src/features/recommendations/` accesible desde la barra de
 navegación lateral/inferior bajo **Sugerencias** (`/recomendaciones`, ruta protegida por sesión):
 
+- **Mis intereses:** permite agregar/quitar etiquetas, guardar, vaciar preferencias y reintentar
+  errores conservando la edición. Tras guardar refresca el perfil y las recomendaciones. Las
+  tarjetas muestran intereses compartidos. La prueba E2E `recommendations.spec.ts` verifica
+  ranking, complemento, recarga y borrado en escritorio y móvil usando la API real.
 - **Sección Cuentas sugeridas:** consulta `GET /api/v1/problems/4/recommendations/{user.id}`,
   renderiza cada candidato mediante `UserCard` (que carga `GET /api/v1/users/{id}` con caché
   compartida de 5 minutos en TanStack Query y oculta cuentas no disponibles con `404`), permite
@@ -240,8 +285,8 @@ El script `scripts/validar_problema4.py` crea cinco usuarios QA aislados (`usera
 - **Inyección de dependencias:** `app/api/dependencies/use_cases.py` (`get_recommendations_use_case`)
 - **Caso de uso:** `app/application/use_cases/problem_04_social_recommendations.py` (`SocialRecommendationsUseCase`)
 - **Puertos de dominio:** `app/domain/repositories/social_graph_repository.py` y `app/domain/repositories/user_repository.py`
-- **Repositorio Neo4j:** `app/infrastructure/persistence/neo4j/repositories/social_graph_repository.py` (`get_mutual_friends`, `get_suggested_accounts`)
-- **Repositorio MongoDB:** `app/infrastructure/persistence/mongodb/repositories/identity.py` (`is_suspended`, `active_ids`)
+- **Repositorio Neo4j:** `app/infrastructure/persistence/neo4j/repositories/social_graph_repository.py` (`get_mutual_friends`, `suggestion_candidates`, `eligible_suggestions`)
+- **Repositorio MongoDB:** `app/infrastructure/persistence/mongodb/repositories/identity.py` (`update_interests`, `interest_profiles`, `interest_candidates`, `is_suspended`, `active_ids`)
 - **Frontend React:** `frontend/src/features/recommendations/RecommendationsPage.tsx`, `UserCard.tsx`, `api.ts`, `contracts.ts` y `frontend/src/styles/recommendations.css`
 - **Script HTTP reproducible:** `scripts/validar_problema4.py`
 - **Pruebas unitarias Backend:** `tests/unit/test_problem_04_recommendations.py`
@@ -253,7 +298,7 @@ El script `scripts/validar_problema4.py` crea cinco usuarios QA aislados (`usera
 - **Tests unitarios Python (`tests/unit/test_problem_04_recommendations.py`):** 8 pruebas aprobadas
   (cortocircuito mismo usuario, solicitante suspendido, objetivo suspendido, filtrado de candidatos
   suspendidos en amigos en común y sugerencias, cortocircuito sin candidatos en Neo4j y
-  sobremuestreo de 30 candidatos con recorte a 10 activos).
+  procesamiento por lotes con recorte final a 10 activos).
 - **Tests de integración real (`tests/integration/test_problem_04_recommendations.py`):** 4 pruebas
   contra MongoDB y Neo4j reales (orden determinista, exclusión de solicitudes `pending` y bloqueos
   directos o entre consultados, ranking por `score DESC` excluyendo ya seguidos/puentes bloqueados,
@@ -264,3 +309,9 @@ El script `scripts/validar_problema4.py` crea cinco usuarios QA aislados (`usera
   de UUID inválido y búsqueda de amigos en común).
 - **Calidad estática y smoke HTTP:** `ruff check` sin errores en todos los módulos modificados y
   validación end-to-end exitosa con `scripts/validar_problema4.py`.
+- **Intereses:** `test_profile_interests.py` y `test_problem_04_interests.py` cubren normalización,
+  edición autenticada, documentos antiguos, suspensión concurrente, plan de índice, cambio de orden,
+  candidatos fuera de los primeros 30, paginación y complemento sin nodos Neo4j, con bloqueos y pendientes.
+- **Editor y navegador:** `InterestsEditor.test.tsx` cubre guardado, vaciado, límites, duplicados y
+  error con edición conservada. `recommendations.spec.ts` comprueba el flujo contra Compose
+  real, incluyendo etiquetas compartidas y persistencia después de recargar.

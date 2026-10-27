@@ -1,5 +1,16 @@
 import { z } from 'zod'
 
+export const ownReactionSchema = z.object({ kind: z.string().nullable() })
+
+export const commentPageSchema = z.object({
+  items: z.array(z.object({
+    id: z.uuid(), post_id: z.uuid(), user_id: z.uuid(), text: z.string(),
+    created_at: z.string(), author_name: z.string(), author_username: z.string().nullable(),
+  })),
+  next_cursor: z.string().nullable(),
+})
+export type CommentPage = z.infer<typeof commentPageSchema>
+
 export const PRESET_REACTIONS = [
   { kind: 'like', label: '👍 Me gusta' },
   { kind: 'love', label: '❤️ Me encanta' },

@@ -1,3 +1,5 @@
+from datetime import UTC, datetime
+from typing import Any, cast
 from uuid import UUID
 
 from pymongo import ASCENDING, DESCENDING, ReturnDocument
@@ -5,6 +7,7 @@ from pymongo.asynchronous.database import AsyncDatabase
 from pymongo.errors import DuplicateKeyError
 
 from app.core.exceptions import FeatureNotImplementedError
+from app.domain.comments import VisibleComment
 from app.domain.entities import Comment, Post, Reaction
 from app.infrastructure.persistence.mongodb.collections import MongoCollection
 from app.infrastructure.persistence.mongodb.mappers.comment_mapper import (
@@ -113,6 +116,96 @@ class MongoCommentRepository:
         await self._collection.create_index(
             [("post_id", ASCENDING), ("created_at", DESCENDING)],
             name="ix_comment_post_created",
+        )
+        await self._collection.create_index(
+            [("post_id", ASCENDING), ("created_at", DESCENDING), ("_id", DESCENDING)],
+            name="ix_comment_post_created_id",
+        )
+        await self._database["operations"].create_index(
+            [
+                ("metadata.comment_id", ASCENDING),
+                ("operation_type", ASCENDING),
+                ("updated_at", DESCENDING),
+            ],
+            name="ix_comment_operation_visibility",
+        )
+
+    async def visible_page(
+        self, post_id: UUID, before: tuple[datetime, UUID] | None, limit: int
+    ) -> tuple[VisibleComment, ...]:
+        match: dict[str, object] = {"post_id": str(post_id)}
+        if before is not None:
+            timestamp, identifier = before
+            match["$or"] = [
+                {"created_at": {"$lt": timestamp}},
+                {"created_at": timestamp, "_id": {"$lt": str(identifier)}},
+            ]
+        pipeline: list[dict[str, Any]] = [
+            {"$match": match},
+            {"$sort": {"created_at": -1, "_id": -1}},
+            {
+                "$lookup": {
+                    "from": "users",
+                    "localField": "user_id",
+                    "foreignField": "_id",
+                    "pipeline": [
+                        {"$match": {"account_status": {"$ne": "suspended"}}},
+                        {"$project": {"full_name": 1, "username": 1}},
+                    ],
+                    "as": "author",
+                }
+            },
+            {"$unwind": "$author"},
+            {
+                "$lookup": {
+                    "from": "operations",
+                    "localField": "_id",
+                    "foreignField": "metadata.comment_id",
+                    "pipeline": [
+                        {"$match": {"operation_type": "problem_05_comment"}},
+                        {"$sort": {"updated_at": -1}},
+                        {"$limit": 1},
+                        {"$project": {"status": 1}},
+                    ],
+                    "as": "write_operation",
+                }
+            },
+            {
+                "$match": {
+                    "$or": [
+                        {"write_operation": {"$size": 0}},
+                        {"write_operation.status": "completed"},
+                    ]
+                }
+            },
+            {"$limit": limit},
+            {
+                "$project": {
+                    "post_id": 1,
+                    "user_id": 1,
+                    "text": 1,
+                    "created_at": 1,
+                    "author_name": {"$ifNull": ["$author.full_name", "Cuenta"]},
+                    "author_username": {"$ifNull": ["$author.username", None]},
+                }
+            },
+        ]
+        cursor = await self._collection.aggregate(pipeline)
+        return tuple(self._visible_comment(doc) for doc in await cursor.to_list())
+
+    @staticmethod
+    def _visible_comment(doc: dict[str, Any]) -> VisibleComment:
+        created = cast(datetime, doc["created_at"])
+        if created.tzinfo is None:
+            created = created.replace(tzinfo=UTC)
+        return VisibleComment(
+            id=UUID(doc["_id"]),
+            post_id=UUID(doc["post_id"]),
+            user_id=UUID(doc["user_id"]),
+            text=doc["text"],
+            created_at=created,
+            author_name=doc["author_name"],
+            author_username=doc["author_username"],
         )
 
     async def create(self, comment: Comment) -> Comment:

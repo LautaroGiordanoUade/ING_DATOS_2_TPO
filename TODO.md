@@ -59,11 +59,15 @@ rutas en Swagger o respuestas en modo demo.
 - [x] Orden determinista por `score DESC, id ASC` en sugerencias y `id ASC` en amigos en común.
 - [x] UI en `/recomendaciones` (`RecommendationsPage`, `UserCard`), tests unitarios/integración y smoke HTTP en `scripts/validar_problema4.py`.
 - [x] Guía, secuencia y contratos en `docs/problems/problem_04.md`.
+- [x] Intereses declarados MongoDB, edición autenticada y normalización; usuarios antiguos sin cambios destructivos.
+- [x] Ranking por intereses comunes y conexiones, lectura por lotes sin corte a 30, complemento por intereses con filtros Neo4j.
+- [x] Editor «Mis intereses», etiquetas compartidas y pruebas de guardado/recarga/ranking en escritorio y móvil.
 
 ## Problema 5: reacciones y comentarios
 
 - [x] Alta, cambio y baja de reacción única por usuario/publicación en MongoDB.
 - [x] Comentarios persistidos y contadores Redis.
+- [x] Lectura autenticada y paginada de comentarios, autor/fecha/texto, filtros de visibilidad y actualización de la lista al comentar/recargar.
 - [x] Notificaciones almacenadas y publicación Pub/Sub.
 - [x] Idempotency-Key para comentarios y replay concurrente.
 - [x] Bloqueo Redis por publicación para cambios de reacción y sus compensaciones.
@@ -79,13 +83,23 @@ rutas en Swagger o respuestas en modo demo.
 
 ## Problema 6: mensajería grupal
 
-- [ ] Conversaciones/historial MongoDB y validación de participantes.
-- [ ] Presencia y entrega Redis, unread y lectura por participante.
-- [ ] Idempotencia, concurrencia, compensaciones y recuperación.
+- [x] Grupos de 2–20 participantes activos, autenticación y búsqueda por nombre de usuario.
+- [x] Historial MongoDB paginado por secuencia y lectura monotónica por participante.
+- [x] Presencia P8, avisos Redis y unread por conversación/participante, reconstruible desde MongoDB.
+- [x] Claves únicas durables para grupos y mensajes; replay y conflicto de contenido.
+- [x] Coordinación API/worker por conversación y volumen compartido; recuperación hacia adelante.
+- [x] Outbox en el propio mensaje: nunca borrar un mensaje persistido después de intentar entregarlo.
+- [x] Interfaz `/mensajes`, grupos, selección de participantes, historial, envío y marcado de lectura.
+- Pruebas y límites: `docs/problems/problem_06.md`. Un host/volumen compartido,
+  participantes fijos; avisos Pub/Sub sin confirmación de recepción. La interfaz consulta
+  historial cada 3 segundos; `completed` significa distribución procesada, no lectura del receptor.
 
 ## Problema 7: moderación — IMPLEMENTADO
 
 - [x] Reportes y decisiones reales en MongoDB; roles user/moderator/admin y bearer firmado.
+- [x] Hide resuelve todos los reportes pendientes asociados; revert actúa sobre ese mismo grupo.
+- [x] Origen de resolución, fecha estable y cantidad afectada en auditoría; recuperación parcial.
+- [x] Coordinación de reportes en curso con ocultamiento y revalidación al encolar decisiones.
 - [x] Ocultamiento global; retiro físico del feed; preservación/ocultamiento de contadores P5.
 - [x] Snapshot durable; revert del estado, pertenencia y scores anteriores; auditoría.
 - [x] Workflow compensable y recuperable después de reiniciar el consumidor.
@@ -93,7 +107,7 @@ rutas en Swagger o respuestas en modo demo.
 - [x] Idempotencia, exclusión atómica por post, decisiones/reintentos concurrentes.
 - [x] Tests unitarios, API e integración con MongoDB/Redis reales, incluidos crashes entre pasos.
 - [x] Swagger/OpenAPI con ejemplos, seed de desarrollo y smoke HTTP reproducible.
-- Validación: suite completa 94 passed / 0 failed; smoke HTTP sobre Compose exitoso.
+- Validación actualizada: suite completa 316 aprobados; smoke HTTP de tres reportes sobre Compose exitoso.
 - Despliegue soportado: Docker Linux, un host, consumidores P7 con volumen de flock compartido.
   No cubre pérdida de volúmenes ni consumidores independientes en múltiples hosts.
 - Guía: docs/problem_7_moderation_test_guide.md; diseño: docs/problems/problem_07.md.

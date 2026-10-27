@@ -8,6 +8,7 @@ import './styles/p1.css'
 import './styles/feed.css'
 import './styles/interactions.css'
 import './styles/recommendations.css'
+import './styles/messages.css'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

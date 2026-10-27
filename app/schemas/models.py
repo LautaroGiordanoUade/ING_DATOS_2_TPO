@@ -2,19 +2,41 @@ from datetime import datetime
 from typing import Literal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
+
+from app.domain.interests import normalize_interests
 
 
 class ApiModel(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class OwnReactionResponse(ApiModel):
+    kind: str | None
+
+
 class UserCreate(ApiModel):
+    interests: list[str] = Field(default_factory=list, max_length=20)
     account_type: Literal["public", "private"] = "public"
     username: str = Field(min_length=3, max_length=50)
     full_name: str = Field(min_length=1, max_length=150)
     email: str
     password: str = Field(min_length=8, max_length=128)
+
+    @field_validator("interests")
+    @classmethod
+    def clean_interests(cls, values: list[str]) -> list[str]:
+        return list(normalize_interests(values))
+
+
+class UserInterestsUpdate(ApiModel):
+    model_config = ConfigDict(extra="forbid")
+    interests: list[str] = Field(max_length=20)
+
+    @field_validator("interests")
+    @classmethod
+    def clean_interests(cls, values: list[str]) -> list[str]:
+        return list(normalize_interests(values))
 
 
 class UserUpdate(ApiModel):
@@ -23,6 +45,7 @@ class UserUpdate(ApiModel):
 
 
 class UserResponse(ApiModel):
+    interests: list[str] = Field(default_factory=list)
     id: UUID
     username: str
     full_name: str
@@ -50,6 +73,21 @@ class PostResponse(ApiModel):
     published_at: datetime
     reaction_count: int = 0
     comment_count: int = 0
+
+
+class CommentResponse(ApiModel):
+    id: UUID
+    post_id: UUID
+    user_id: UUID
+    text: str
+    created_at: datetime
+    author_name: str
+    author_username: str | None
+
+
+class CommentPageResponse(ApiModel):
+    items: list[CommentResponse]
+    next_cursor: str | None
 
 
 class FollowRequest(ApiModel):

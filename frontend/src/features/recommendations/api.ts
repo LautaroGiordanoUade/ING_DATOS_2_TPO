@@ -2,6 +2,12 @@ import type { AuthRequest } from '../auth/api'
 import { userSchema, type User } from '../auth/contracts'
 import { uuidListSchema, type UuidList } from './contracts'
 
+export async function saveInterests(request: AuthRequest, interests: string[]): Promise<User> {
+  return userSchema.parse(await request('/api/v1/users/me/interests', {
+    method: 'PUT', body: JSON.stringify({ interests }),
+  }))
+}
+
 export async function getRecommendations(
   request: AuthRequest,
   userId: string,

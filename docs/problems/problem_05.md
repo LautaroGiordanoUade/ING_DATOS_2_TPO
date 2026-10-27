@@ -2,6 +2,59 @@
 
 ## Qué está implementado
 
+### Lectura de comentarios y lista en la interfaz
+
+`GET /api/v1/posts/{post_id}/comments` requiere una cuenta activa autenticada y devuelve
+`items` (autor, username, texto, fecha UTC e identificadores) y `next_cursor`. El tamaño por
+defecto es 10, ajustable entre 1 y 50. Ordena por fecha descendente y UUID descendente para
+resolver empates; el cursor firmado está ligado al post. Un cursor inválido o de otro post
+devuelve 422, sin credencial devuelve 401 y un post no disponible devuelve 404.
+
+`CommentQueries` valida la disponibilidad pública del post antes y después de consultar MongoDB.
+`MongoCommentRepository.visible_page` combina contenido, autores activos y el estado durable
+de la escritura con una agregación. Excluye autores suspendidos o ausentes, y comentarios con
+operación P5 pendiente, compensándose o fallida; los datos anteriores sin operación registrada
+se admiten si su autor existe y está activo. Una operación recuperada pasa a verse cuando queda
+completada. No expone email ni credenciales de autores.
+
+Los índices `ix_comment_post_created_id` (post/fecha/UUID) e `ix_comment_operation_visibility`
+apoyan recorrido y lookup. La visibilidad se filtra antes del límite, por lo que MongoDB puede
+examinar más filas que las devueltas; se debe medir con el dataset final. No se crea un worker
+adicional ni se modifica el workflow de escritura/recuperación.
+
+La tarjeta muestra la primera página cuando tiene comentarios y ofrece `Ver comentarios` si
+el contador es cero. Después de comentar, abre la lista y reinicia la paginación para mostrar
+el más reciente. Permite cargar anteriores, refrescar y reintentar fallas conservando páginas
+previas; si la API informa 404 oculta también la lista cacheada. La UI elimina IDs repetidos.
+Las fechas de comentarios llevan UTC explícito y la UI interpreta también como UTC las fechas
+históricas de publicaciones sin offset, para no mostrar un comentario anterior a su post por
+una diferencia de huso. Los offsets explícitos existentes se conservan.
+
+No hay snapshot transaccional de toda la navegación ni actualización en tiempo real: las
+nuevas escrituras aparecen al refrescar y cada consulta aplica el estado actual. Los contadores
+P5 cuentan documentos persistidos; pueden superar los comentarios visibles si sus autores no
+están disponibles. Las pruebas de esta lectura no afirman entrega Pub/Sub exactamente una vez.
+
+`tests/integration/test_comment_pages.py`, `CommentList.test.tsx` y el E2E `comments.spec.ts`
+cubren empates, inserciones entre páginas, eliminación de la frontera, cursor, roles/estados,
+compensaciones pendientes, recuperación de lectura y comentario enviado/recargado/paginado.
+
+### Reacciones y escritura
+
+La interfaz consulta `GET /api/v1/interactions/reactions/{post_id}/me` con bearer para
+restaurar la reacción propia al abrir una publicación, recargar o iniciar una nueva sesión.
+La identidad sale del token: no se admite elegir otro usuario. Devuelve `{"kind": null}`
+cuando no hay reacción y `{"kind": "like"}` (o el tipo guardado) cuando existe. Requiere
+cuenta activa y publicación disponible; devuelve 401 sin credencial válida y 404 si la
+publicación no está disponible. No escribe datos ni modifica contadores.
+
+`PostInteractions` mantiene esta lectura en una caché separada por usuario/publicación,
+la actualiza tras alta/cambio/baja y permite quitar una reacción restaurada sin volver a
+reaccionar. Mientras carga o falla la lectura, bloquea los cambios de reacción y ofrece
+reintentar. Los comentarios siguen disponibles. El tipo personalizado también se muestra.
+Las pruebas E2E de `frontend/tests/e2e/interactions.spec.ts` cubren recarga, cambio,
+nueva sesión sin almacenamiento compartido y borrado persistido, en escritorio y móvil.
+
 Implementado en `InteractWithPostUseCase` combinando **MongoDB** como fuente de verdad documental
 (`posts`, `reactions`, `comments` y `operations`) y **Redis** para los contadores atómicos
 (`post_reactions:{post_id}:count`, `post_comments:{post_id}:count`), las notificaciones persistidas y en

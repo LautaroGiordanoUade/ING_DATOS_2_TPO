@@ -5,6 +5,7 @@ import { ErrorMessage } from '../../components/common/ErrorMessage'
 import { getMutualFriends, getRecommendations } from './api'
 import { mutualFriendsQuerySchema } from './contracts'
 import { UserCard } from './UserCard'
+import { InterestsEditor } from './InterestsEditor'
 
 export function RecommendationsPage() {
   const { user, request } = useAuth()
@@ -68,7 +69,7 @@ export function RecommendationsPage() {
           <p className="eyebrow">AMPLIÁ TU RED</p>
           <h1>Sugerencias y conexiones</h1>
           <p className="muted">
-            Descubrí cuentas recomendadas por segundo grado y consultá amigos en común.
+            Descubrí cuentas por tus conexiones e intereses y consultá amigos en común.
           </p>
         </div>
         <button
@@ -80,11 +81,12 @@ export function RecommendationsPage() {
         </button>
       </div>
 
+      <InterestsEditor key={user!.id} />
       {/* Sección 1: Cuentas sugeridas */}
       <section className="recommendations-section">
         <div className="list-heading">
           <h2>Cuentas sugeridas para vos</h2>
-          <span className="section-badge">Segundo grado</span>
+          <span className="section-badge">Conexiones e intereses</span>
         </div>
 
         {recommendationsQuery.isPending && <p role="status">Buscando recomendaciones en tu red…</p>}
@@ -99,8 +101,8 @@ export function RecommendationsPage() {
               <span aria-hidden="true">✳</span>
               <h2>No encontramos sugerencias por el momento.</h2>
               <p>
-                A medida que sigas a más cuentas y interactúes con la red, aparecerán
-                recomendaciones de personas seguidas por tus contactos.
+                Agregá intereses o seguí más cuentas para encontrar personas con temas
+                compartidos y conexiones de segundo grado.
               </p>
             </div>
           )}

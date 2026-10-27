@@ -4,8 +4,7 @@ from uuid import UUID
 
 from pymongo.asynchronous.database import AsyncDatabase
 
-from app.core.exceptions import FeatureNotImplementedError
-from app.domain.entities import Conversation, Message
+from app.domain.entities import Conversation
 
 
 class MongoConversationRepository:
@@ -35,20 +34,3 @@ class MongoConversationRepository:
             .to_list()
         )
         return tuple(self._conversation(doc) for doc in docs)
-
-
-class MongoMessageRepository:
-    def __init__(self, database: AsyncDatabase[dict[str, object]]) -> None:
-        self._database = database
-
-    async def create(self, message: Message) -> Message:
-        # TODO(TP): Persistir mensaje antes de entrega y definir idempotencia.
-        raise FeatureNotImplementedError("MongoMessageRepository.create")
-
-    async def delete(self, message_id: UUID) -> None:
-        # TODO(TP): Implementar compensación según la política elegida.
-        raise FeatureNotImplementedError("MongoMessageRepository.delete")
-
-    async def mark_read(self, message_id: UUID, participant_id: UUID) -> None:
-        # TODO(TP): Actualizar read_by por participante de forma concurrentemente segura.
-        raise FeatureNotImplementedError("MongoMessageRepository.mark_read")

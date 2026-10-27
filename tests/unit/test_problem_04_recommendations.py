@@ -6,6 +6,9 @@ import pytest
 from app.application.use_cases.problem_04_social_recommendations import (
     SocialRecommendationsUseCase,
 )
+from app.domain.entities import User
+from app.domain.entities.models import AccountStatus
+from app.domain.recommendations import InterestProfile, SuggestionCandidate
 
 
 class FakeGraphRepository:
@@ -33,6 +36,19 @@ class FakeGraphRepository:
     async def trace_relationships(self, user_id: UUID) -> dict[str, object]:
         return {}
 
+    async def suggestion_candidates(
+        self, user_id: UUID, after: UUID | None, limit: int
+    ) -> tuple[SuggestionCandidate, ...]:
+        self.last_limit = limit
+        ids = sorted((i for i in self.suggested if after is None or str(i) > str(after)), key=str)
+        return tuple(
+            SuggestionCandidate(i, len(self.suggested) - self.suggested.index(i))
+            for i in ids[:limit]
+        )
+
+    async def eligible_suggestions(self, user_id: UUID, ids: tuple[UUID, ...]) -> set[UUID]:
+        return set(ids) - {user_id}
+
 
 class FakeUserRepository:
     def __init__(self) -> None:
@@ -50,13 +66,33 @@ class FakeUserRepository:
         return None
 
     async def get(self, user_id: UUID) -> Any:
-        return None
+        return User(
+            id=user_id,
+            username="qa",
+            full_name="QA",
+            email="qa@test",
+            password_hash="hash",
+            account_status=AccountStatus.SUSPENDED
+            if user_id in self.suspended_ids
+            else AccountStatus.ACTIVE,
+        )
 
     async def create(self, user: Any) -> Any:
         return user
 
     async def update_account_status(self, user_id: UUID, status: str) -> None:
         pass
+
+    async def update_interests(self, user_id: UUID, interests: tuple[str, ...]) -> User:
+        return User(username="qa", full_name="QA", email="qa@test", password_hash="hash")
+
+    async def interest_profiles(self, ids: tuple[UUID, ...]) -> tuple[InterestProfile, ...]:
+        return tuple(InterestProfile(i, ()) for i in await self.active_ids(ids))
+
+    async def interest_candidates(
+        self, interests: tuple[str, ...], after: UUID | None, limit: int
+    ) -> tuple[InterestProfile, ...]:
+        return ()
 
 
 @pytest.mark.asyncio
@@ -161,6 +197,6 @@ async def test_recommendations_oversamples_and_caps_at_ten_after_filtering() -> 
     users.suspended_ids.update(candidates[:3])
 
     result = await use_case.recommendations(user_id)
-    assert graph.last_limit == 30
+    assert graph.last_limit == 250
     assert len(result) == 10
     assert result == candidates[3:13]
