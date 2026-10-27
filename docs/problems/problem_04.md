@@ -218,7 +218,6 @@ contraseña de la cuenta personal y de todos los lotes de prueba `qa-p4-*` en **
 | Username | Contraseña | User UUID (`_id`) | Email | Rol / Estado |
 |---|---|---|---|---|
 | `rosariobonata` | `123456789` | `aaf5a730-8863-444a-a551-bd8325bd308d` | `rosariobonata@gmail.com` | `user` / `active` |
-| `Lautaro` | `12345678` | `11111111-1111-4111-8111-111111111111` | — | `user` / `active` |
 | `lautaro1` .. `lautaro10` | `12345678` | `a8debe19-def9-5b85-870e-13848e1ef956` (`lautaro1`), `1fe58082-d620-5806-af2e-ada98385fafa` (`lautaro2`) | `lautaroN.11111111@followers.example.test` | `user` / `active` |
 
 #### 2. Lote principal de validación Problema 4 con ranking de 2 candidatos (`qa-p4-832003b7-*`)
