@@ -1,4 +1,4 @@
-# Plan del frontend — estado después de P1 a P6
+# Plan del frontend — estado después de P1 a P7
 
 Inspección actualizada sobre la rama de trabajo. No se encontró un enunciado original separado
 (PDF/DOCX). El inventario se basa en `TODO.md`, `docs/problems/problem_01.md` a `problem_08.md`,
@@ -9,8 +9,8 @@ el enunciado original habrá que contrastarlo antes de ampliar el alcance.
 
 Los ocho números son los ocho casos de uso existentes. Autenticación es infraestructura
 compartida, no un noveno problema. El estado del backend distingue código/documentación
-de verificación ejecutada durante esta entrega. P1 a P6 UI están implementados; los
-restantes módulos de UI siguen pendientes.
+de verificación ejecutada durante esta entrega. P1 a P7 UI están implementados;
+la interfaz de P8 sigue pendiente.
 
 | Problema | Funcionalidad | UI mínima necesaria | Backend de esta rama | Frontend |
 |---|---|---|---|---|
@@ -20,7 +20,7 @@ restantes módulos de UI siguen pendientes.
 | 4 — Amigos en común y sugerencias | Segundo grado y amigos en común, hasta 10 sugerencias | Sugerencias y consulta de amigos en común en `/recomendaciones` | Implementado; Neo4j + filtro activo MongoDB | Completado y validado (`RecommendationsPage`, `UserCard`) |
 | 5 — Reacciones y comentarios | Reacción única, cambio/baja, comentarios y contadores | Controles en tarjeta y formulario de comentario | Implementado con recuperación durable | Completado y validado (`PostInteractions` en `PostCard`) |
 | 6 — Mensajería grupal | Historial, avisos, unread y lectura por participante | Crear grupos, buscar participantes, historial paginado, envío y lectura | Implementado; MongoDB/Redis, outbox y worker compartido | Implementado — ver problem_6.md |
-| 7 — Moderación | Reportar, decidir, consultar y revertir | Reportar desde post; lista/detalle de reportes, decisión/reversión e historial | Implementado; bearer y roles user/moderator/admin | Pendiente |
+| 7 — Moderación | Reportar, decidir, consultar y revertir | Reportar desde post; lista/detalle, decisión/reversión e historial | Implementado; lectura protegida y roles | Implementado — ver problem_7.md |
 | 8 — Suspensión y trazabilidad | Suspender/reactivar, revocar credenciales y consultar traza privada | Cuenta, motivo de suspensión/reactivación, historial y traza | Implementado; efectos MongoDB/Neo4j/Redis | Pendiente |
 
 ## Orden y dependencias
@@ -43,7 +43,7 @@ restantes módulos de UI siguen pendientes.
 4. P5: implementado en backend (`InteractWithPostUseCase` con recuperación durable) y en
    frontend (`features/interactions/` integrado en `PostCard`), refrescando los contadores del
    servidor después de cada mutación.
-5. P7: depende de identidad por rol y posts/P3/P5 para comprobar hide/revert y contadores.
+5. P7: implementado; depende de identidad por rol y posts/P3/P5 para comprobar hide/revert y contadores.
 6. P8: depende de identidad/P2/P3/P7 para verificar suspensión sin revivir contenido moderado.
 7. P4: implementado en backend (`SocialRecommendationsUseCase` y `Neo4jSocialGraphRepository`)
    y en frontend (`features/recommendations/` con ruta protegida `/recomendaciones`).
@@ -158,16 +158,17 @@ incluye rutas todavía pendientes: OpenAPI no prueba comportamiento.
 - Entidades: ModerationReport, ModerationJob, historial, Post; MongoDB/Redis y worker compartido.
 - POST/GET `/moderation/reports`, GET `/moderation/reports/{id}`, POST
   `/moderation/reports/{id}/decision` y `/revert`; GET `/moderation/operations/{id}`,
-  `/moderation/history/{post_id}`, `/moderation/posts/{post_id}/state`.
+  `/moderation/history/{post_id}`, `/moderation/posts/{post_id}/state` y lectura protegida
+  `/moderation/posts/{post_id}/content?report_id=UUID`.
 - Reporte para usuario autenticado; lista/decisión/reversión para moderator/admin según
   dependencias del servidor. Registrar no concede roles; seed de desarrollo existente.
 - Formularios: reason spam/abuse/hate/violence/other, description opcional hasta 2000;
-  decisión hide/reject y motivo 1–1000; reversión motivo 1–1000. ConfirmDialog para acciones.
-- UI: modal de reporte, bandeja con filtro de estado (la API limita a 100 reportes,
+  decisión hide/reject y motivo 1–1000; reversión motivo 1–1000. Confirmación contextual para acciones.
+- UI: formulario de reporte en la publicación, bandeja con filtro de estado (la API limita a 100 reportes,
   sin paginación pública), detalle/historial y job. No inventar limit/offset.
   Estados pendientes/resueltos/revertidos, lista vacía, 401/403/404/409/422/503.
-- Integrar invalidación de post/feed/contadores tras job completado; sin reintentos/compensaciones
-  administrativos en UI. Tests de permisos, formularios/estados y E2E reporte→hide/reject→revert
+- Integra invalidación de post/feed/contadores y consulta del trabajo tras recarga; retry del
+  trabajo cuando se informa compensación o recuperación fallida. Tests y E2E reporte→hide/reject→revert
   comprobando retiro/restauración y contadores reales. Dependencias P1/P3/P5/identidad.
 
 ### P8 — suspensión y trazabilidad
@@ -197,6 +198,7 @@ y tarjetas con autor para P3; `features/recommendations/` contiene sugerencias d
 grado y consulta de amigos en común para P4; `features/interactions/` contiene reacciones
 y comentarios para P5; `features/messages/` contiene grupos, historial y lectura para P6;
 `features/social/` contiene perfiles, seguimiento, solicitudes y seguimiento de operaciones P2;
+`features/moderation/` contiene reportes, bandeja, contenido protegido, decisiones e historial P7;
 `components/common/` mensajes reutilizables; `services/http/` cliente, errores y timeout;
 `services/api/` tipos OpenAPI; `styles/` diseño responsive; `tests/e2e/` arranque real.
 Cada funcionalidad futura tendrá su carpeta cuando se implemente.

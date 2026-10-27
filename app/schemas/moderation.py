@@ -67,6 +67,20 @@ class LoginRequest(BaseModel):
     password: str = Field(min_length=1, max_length=128)
 
 
+class ModerationContentResponse(BaseModel):
+    id: UUID
+    user_id: UUID
+    text: str
+    media: list[str]
+    interests: list[str]
+    published_at: datetime
+    visibility: str
+    moderation_status: str
+    moderation_owner: UUID | None
+    active_operation_id: UUID | None
+    report_operation_id: UUID | None
+
+
 class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"

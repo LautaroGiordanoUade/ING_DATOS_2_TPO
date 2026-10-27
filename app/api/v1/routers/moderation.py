@@ -8,7 +8,13 @@ from app.api.dependencies.use_cases import FailureInjectorDep, get_moderation_us
 from app.application.services.moderation_job import ModerationJob
 from app.application.use_cases import ModeratePostUseCase
 from app.schemas.models import ModerationRequest
-from app.schemas.moderation import DecisionRequest, ReportCreate, ReportResponse, RevertRequest
+from app.schemas.moderation import (
+    DecisionRequest,
+    ModerationContentResponse,
+    ReportCreate,
+    ReportResponse,
+    RevertRequest,
+)
 
 router = APIRouter(
     responses={
@@ -129,3 +135,14 @@ async def create_moderation_decision(
 async def inspect(post_id: UUID, actor: ModeratorDep, service: ModerationDep) -> dict[str, object]:
     """Inspect persisted visibility, real feed membership and the two existing P5 counters."""
     return await service.inspect(post_id)
+
+
+@router.get("/posts/{post_id}/content", response_model=ModerationContentResponse)
+async def review_content(
+    post_id: UUID,
+    actor: ModeratorDep,
+    service: ModerationDep,
+    report_id: UUID | None = None,
+) -> dict[str, object]:
+    """Moderator-only published content, including hidden posts. No public visibility changes."""
+    return await service.content(post_id, report_id)

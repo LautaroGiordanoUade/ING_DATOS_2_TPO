@@ -129,6 +129,11 @@ siguen documentadas en docs/problem_05_consistency.md; no se sustituyeron todas 
 
 ## Evidencia
 
+La interfaz está documentada en [frontend/problem_7.md](../frontend/problem_7.md). Agrega una
+lectura publicada protegida para moderator/admin en `/moderation/posts/{post_id}/content`,
+con referencia opcional al reporte y sus operaciones para recuperar la revisión tras recarga.
+Las lecturas públicas y los efectos de las decisiones mantienen sus reglas anteriores.
+
 Corrección de reportes asociados: 10 escenarios nuevos en
 `tests/integration/test_problem_07_report_groups.py`. Cubren resolución/reversión del grupo,
 rechazos previos, otros posts, fallas parciales y compensaciones, reportes/decisiones en curso,

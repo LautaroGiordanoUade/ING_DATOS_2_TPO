@@ -110,6 +110,8 @@ rutas en Swagger o respuestas en modo demo.
 - [x] Idempotencia, exclusión atómica por post, decisiones/reintentos concurrentes.
 - [x] Tests unitarios, API e integración con MongoDB/Redis reales, incluidos crashes entre pasos.
 - [x] Swagger/OpenAPI con ejemplos, seed de desarrollo y smoke HTTP reproducible.
+- [x] Interfaz para reportar, consultar reporte propio, filtrar/revisar reportes y decidir/revertir por rol.
+- [x] Lectura protegida del contenido oculto, historial y seguimiento/recuperación de operaciones tras recarga.
 - Validación actualizada: suite completa 316 aprobados; smoke HTTP de tres reportes sobre Compose exitoso.
 - Despliegue soportado: Docker Linux, un host, consumidores P7 con volumen de flock compartido.
   No cubre pérdida de volúmenes ni consumidores independientes en múltiples hosts.

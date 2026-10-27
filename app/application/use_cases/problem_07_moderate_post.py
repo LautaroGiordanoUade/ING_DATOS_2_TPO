@@ -115,3 +115,31 @@ class ModeratePostUseCase:
             "feeds": views.feeds,
             "counters": views.counters,
         }
+
+    async def content(self, post_id: UUID, report_id: UUID | None = None) -> dict[str, object]:
+        """Published content for moderator review, independent of public visibility/Redis."""
+        post = await self._moderation.post(post_id)
+        snapshot = await self._moderation.snapshot(post_id)
+        report_operation_id = None
+        if report_id is not None:
+            report = await self._moderation.report(report_id)
+            if str(report["post_id"]) != str(post_id):
+                raise ConflictError("Report belongs to a different post")
+            canonical = UUID(str(report.get("resolution_report_id") or report_id))
+            operation = await self._moderation.get_job(uuid5(canonical, "revert"))
+            if operation is None:
+                operation = await self._moderation.get_job(uuid5(canonical, "decision"))
+            report_operation_id = operation.operation_id if operation else None
+        return {
+            "id": post.id,
+            "user_id": post.user_id,
+            "text": post.text,
+            "media": post.media,
+            "interests": post.interests,
+            "published_at": post.published_at,
+            "visibility": post.visibility,
+            "moderation_status": snapshot.moderation_status,
+            "moderation_owner": snapshot.owner,
+            "active_operation_id": await self._moderation.active_operation_id(post_id),
+            "report_operation_id": report_operation_id,
+        }

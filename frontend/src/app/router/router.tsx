@@ -3,8 +3,11 @@ import { lazy } from 'react'
 import { AppLayout } from '../layouts/AppLayout'
 import { HomePage } from '../../features/posts/HomePage'
 import { RequireAuth } from '../../features/auth/RequireAuth'
+import { RequireModerator } from '../../features/moderation/RequireModerator'
 
 const LoginPage = lazy(() => import('../../features/auth/AuthPage').then((module) => ({ default: module.LoginPage })))
+const ModerationPage = lazy(() => import('../../features/moderation/ModerationPage').then((module) => ({ default: module.ModerationPage })))
+const ReportPage = lazy(() => import('../../features/moderation/ReportPage').then((module) => ({ default: module.ReportPage })))
 const ProfilePage = lazy(() => import('../../features/social/ProfilePage').then((module) => ({ default: module.ProfilePage })))
 const RequestsPage = lazy(() => import('../../features/social/RequestsPage').then((module) => ({ default: module.RequestsPage })))
 const MessagesPage = lazy(() => import('../../features/messages/MessagesPage').then((module) => ({ default: module.MessagesPage })))
@@ -35,6 +38,8 @@ export const router = createBrowserRouter([
           { path: '/mensajes/:conversationId?', element: <MessagesPage /> },
           { path: '/perfiles/:userId', element: <ProfilePage /> },
           { path: '/solicitudes', element: <RequestsPage /> },
+          { path: '/reportes/:reportId', element: <ReportPage /> },
+          { element: <RequireModerator />, children: [{ path: '/moderacion', element: <ModerationPage /> }] },
         ],
       },
       {

@@ -943,6 +943,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/moderation/posts/{post_id}/content": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Review Content
+         * @description Moderator-only published content, including hidden posts. No public visibility changes.
+         */
+        get: operations["review_content_api_v1_moderation_posts__post_id__content_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/accounts/{user_id}/suspend": {
         parameters: {
             query?: never;
@@ -1475,6 +1495,40 @@ export interface components {
         MessageText: {
             /** Text */
             text: string;
+        };
+        /** ModerationContentResponse */
+        ModerationContentResponse: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * User Id
+             * Format: uuid
+             */
+            user_id: string;
+            /** Text */
+            text: string;
+            /** Media */
+            media: string[];
+            /** Interests */
+            interests: string[];
+            /**
+             * Published At
+             * Format: date-time
+             */
+            published_at: string;
+            /** Visibility */
+            visibility: string;
+            /** Moderation Status */
+            moderation_status: string;
+            /** Moderation Owner */
+            moderation_owner: string | null;
+            /** Active Operation Id */
+            active_operation_id: string | null;
+            /** Report Operation Id */
+            report_operation_id: string | null;
         };
         /** ModerationJob */
         ModerationJob: {
@@ -4374,6 +4428,67 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     };
+                };
+            };
+            /** @description Missing, invalid or expired bearer */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Moderator/admin role required */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Closed report, conflicting decision or concurrent operation */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Invalid request */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    review_content_api_v1_moderation_posts__post_id__content_get: {
+        parameters: {
+            query?: {
+                report_id?: string | null;
+            };
+            header?: {
+                "x-fail-at-step"?: string | null;
+            };
+            path: {
+                post_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModerationContentResponse"];
                 };
             };
             /** @description Missing, invalid or expired bearer */

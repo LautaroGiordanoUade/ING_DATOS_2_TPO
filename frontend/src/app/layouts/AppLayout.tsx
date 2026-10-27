@@ -39,6 +39,10 @@ export function AppLayout() {
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true"><circle cx="9" cy="7" r="4" /><path d="M2 21v-2a7 7 0 0 1 14 0v2M17 8l2 2 4-4" /></svg>
                 <span className="nav-label">Solicitudes</span>
               </NavLink>
+              {(auth.user.role === 'moderator' || auth.user.role === 'admin') && <NavLink to="/moderacion" className="nav-item" aria-label="Moderación">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true"><path d="m12 2 8 4v6c0 5-8 10-8 10S4 17 4 12V6Z" /><path d="m8 11 3 3 5-6" /></svg>
+                <span className="nav-label">Moderación</span>
+              </NavLink>}
             </>
           )}
         </nav>
