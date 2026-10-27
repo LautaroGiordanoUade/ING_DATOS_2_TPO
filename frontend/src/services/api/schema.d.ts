@@ -1530,6 +1530,8 @@ export interface components {
             resume_phase: string;
             /** Fail At */
             fail_at?: string | null;
+            /** Decision At */
+            decision_at?: string | null;
             /**
              * Created At
              * Format: date-time
@@ -1812,6 +1814,10 @@ export interface components {
             decision_reason?: string | null;
             /** Operation Id */
             operation_id?: string | null;
+            /** Resolution Operation Id */
+            resolution_operation_id?: string | null;
+            /** Resolution Report Id */
+            resolution_report_id?: string | null;
         };
         /**
          * RevertRequest

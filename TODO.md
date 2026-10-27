@@ -97,6 +97,9 @@ rutas en Swagger o respuestas en modo demo.
 ## Problema 7: moderación — IMPLEMENTADO
 
 - [x] Reportes y decisiones reales en MongoDB; roles user/moderator/admin y bearer firmado.
+- [x] Hide resuelve todos los reportes pendientes asociados; revert actúa sobre ese mismo grupo.
+- [x] Origen de resolución, fecha estable y cantidad afectada en auditoría; recuperación parcial.
+- [x] Coordinación de reportes en curso con ocultamiento y revalidación al encolar decisiones.
 - [x] Ocultamiento global; retiro físico del feed; preservación/ocultamiento de contadores P5.
 - [x] Snapshot durable; revert del estado, pertenencia y scores anteriores; auditoría.
 - [x] Workflow compensable y recuperable después de reiniciar el consumidor.
@@ -104,7 +107,7 @@ rutas en Swagger o respuestas en modo demo.
 - [x] Idempotencia, exclusión atómica por post, decisiones/reintentos concurrentes.
 - [x] Tests unitarios, API e integración con MongoDB/Redis reales, incluidos crashes entre pasos.
 - [x] Swagger/OpenAPI con ejemplos, seed de desarrollo y smoke HTTP reproducible.
-- Validación: suite completa 94 passed / 0 failed; smoke HTTP sobre Compose exitoso.
+- Validación actualizada: suite completa 316 aprobados; smoke HTTP de tres reportes sobre Compose exitoso.
 - Despliegue soportado: Docker Linux, un host, consumidores P7 con volumen de flock compartido.
   No cubre pérdida de volúmenes ni consumidores independientes en múltiples hosts.
 - Guía: docs/problem_7_moderation_test_guide.md; diseño: docs/problems/problem_07.md.

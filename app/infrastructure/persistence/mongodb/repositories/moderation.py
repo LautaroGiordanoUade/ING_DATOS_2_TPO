@@ -1,7 +1,7 @@
 from dataclasses import asdict
 from datetime import UTC, datetime
 from typing import cast
-from uuid import UUID
+from uuid import UUID, uuid5
 
 from pymongo.asynchronous.database import AsyncDatabase
 from pymongo.errors import DuplicateKeyError
@@ -10,6 +10,7 @@ from app.application.services.moderation_job import ModerationJob, ModerationSna
 from app.core.exceptions import ConflictError, ResourceNotFoundError
 from app.domain.entities import ModerationReport, Post
 from app.infrastructure.persistence.mongodb.mappers.post_mapper import document_to_post
+from app.infrastructure.persistence.mongodb.moderation_lock import ModerationPostLock
 
 
 class MongoModerationRepository:
@@ -17,11 +18,13 @@ class MongoModerationRepository:
         self._database = database
         self._reports = database["moderation_reports"]
         self._jobs = database["moderation_jobs"]
+        self._post_lock = ModerationPostLock()
 
     async def ensure_indexes(self) -> None:
         await self._reports.create_index([("post_id", 1), ("reporter_id", 1)], unique=True)
         await self._reports.create_index([("resolution_status", 1), ("reported_at", -1)])
         await self._reports.create_index("moderator_id")
+        await self._reports.create_index([("post_id", 1), ("resolution_operation_id", 1)])
         await self._jobs.create_index(
             "post_id", unique=True, partialFilterExpression={"active": True}
         )
@@ -34,10 +37,15 @@ class MongoModerationRepository:
         doc["_id"] = str(doc.pop("id"))
         doc["post_id"], doc["reporter_id"] = str(report.post_id), str(report.reporter_id)
         doc["target_type"] = "post"
-        try:
-            await self._reports.insert_one(doc)
-        except DuplicateKeyError as exc:
-            raise ConflictError("This user already reported this post") from exc
+        async with self._post_lock.hold(report.post_id):
+            # The use case's earlier check may race with a worker hiding the post.
+            post = await self.post(report.post_id)
+            if post.moderation_status == "hidden":
+                raise ConflictError("Post is already hidden")
+            try:
+                await self._reports.insert_one(doc)
+            except DuplicateKeyError as exc:
+                raise ConflictError("This user already reported this post") from exc
         return report
 
     async def report(self, report_id: UUID) -> dict[str, object]:
@@ -90,12 +98,13 @@ class MongoModerationRepository:
         )
 
     async def set_post(self, post_id: UUID, status: str, owner: str | None) -> None:
-        result = await self._database["posts"].update_one(
-            {"_id": str(post_id)},
-            {"$set": {"moderation_status": status, "moderation_owner": owner}},
-        )
-        if not result.matched_count:
-            raise ResourceNotFoundError("Post disappeared during moderation")
+        async with self._post_lock.hold(post_id):
+            result = await self._database["posts"].update_one(
+                {"_id": str(post_id)},
+                {"$set": {"moderation_status": status, "moderation_owner": owner}},
+            )
+            if not result.matched_count:
+                raise ResourceNotFoundError("Post disappeared during moderation")
 
     async def get_job(self, operation_id: UUID) -> ModerationJob | None:
         doc = await self._jobs.find_one({"_id": str(operation_id)})
@@ -103,6 +112,16 @@ class MongoModerationRepository:
 
     async def enqueue(self, job: ModerationJob) -> ModerationJob:
         await self.ensure_indexes()
+        async with self._post_lock.hold(job.post_id):
+            previous = await self.get_job(job.operation_id)
+            if previous is None:
+                report = await self.report(job.report_id)
+                expected = "approved" if job.action == "revert" else "pending"
+                if report["resolution_status"] != expected:
+                    raise ConflictError("Report changed before the operation could be queued")
+            return await self._enqueue(job)
+
+    async def _enqueue(self, job: ModerationJob) -> ModerationJob:
         doc = job.model_dump(mode="json")
         doc["_id"] = str(job.operation_id)
         try:
@@ -140,19 +159,46 @@ class MongoModerationRepository:
         return [ModerationJob.model_validate(doc) for doc in docs]
 
     async def finalize(self, job: ModerationJob) -> None:
+        async with self._post_lock.hold(job.post_id):
+            await self._finalize(job)
+
+    async def _finalize(self, job: ModerationJob) -> None:
         status = {"hide": "approved", "reject": "rejected", "revert": "reverted"}[job.action]
-        await self._reports.update_one(
-            {"_id": str(job.report_id)},
+        source = uuid5(job.report_id, "decision") if job.action == "revert" else job.operation_id
+        decided_at = job.decision_at or job.updated_at
+        query: dict[str, object]
+        if job.action == "hide":
+            query = {"post_id": str(job.post_id), "resolution_status": "pending"}
+        elif job.action == "revert":
+            query = {
+                "post_id": str(job.post_id),
+                "resolution_status": "approved",
+                "$or": [
+                    {"resolution_operation_id": str(source)},
+                    # Compatible with completed hides written before cohort metadata existed.
+                    {"_id": str(job.report_id), "operation_id": str(source)},
+                ],
+            }
+        else:
+            # Rejecting one report does not invalidate other reporters' reasons.
+            query = {"_id": str(job.report_id), "resolution_status": "pending"}
+        await self._reports.update_many(
+            query,
             {
                 "$set": {
                     "resolution_status": status,
                     "moderator_id": str(job.moderator_id),
-                    "resolved_at": job.updated_at,
+                    "resolved_at": decided_at,
                     "decision": job.action,
                     "decision_reason": job.reason,
                     "operation_id": str(job.operation_id),
+                    "resolution_operation_id": str(source),
+                    "resolution_report_id": str(job.report_id),
                 }
             },
+        )
+        affected = await self._reports.count_documents(
+            {"post_id": str(job.post_id), "operation_id": str(job.operation_id)}
         )
         await self._database["moderation_history"].update_one(
             {"_id": str(job.operation_id)},
@@ -163,11 +209,13 @@ class MongoModerationRepository:
                     "moderator_id": str(job.moderator_id),
                     "action": job.action,
                     "reason": job.reason,
-                    "created_at": job.updated_at,
+                    "created_at": decided_at,
                     "previous_state": (
                         job.snapshot.model_dump(mode="json") if job.snapshot else None
                     ),
                     "new_status": status,
+                    "affected_report_count": affected,
+                    "resolution_operation_id": str(source),
                 }
             },
             upsert=True,
@@ -183,7 +231,12 @@ class MongoModerationRepository:
         if job.status == "compensated":
             # Explicit new attempt of the same durable command, after full rollback.
             changes.update(
-                status="pending", snapshot=None, completed_steps=[], fail_at=None, error=None
+                status="pending",
+                snapshot=None,
+                completed_steps=[],
+                fail_at=None,
+                error=None,
+                decision_at=None,
             )
         try:
             result = await self._jobs.update_one(

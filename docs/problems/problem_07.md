@@ -17,12 +17,16 @@ un rol privilegiado por registro; el seed de desarrollo crea los actores de demo
 - `users`: UUID, identidad/hash, estado y rol; índices únicos username/email.
 - `moderation_reports`: UUID, post_id, target_type=post, reporter_id, reason, description,
   resolution_status (pending/approved/rejected/reverted), fechas, moderador y última decisión.
-  Único (post_id, reporter_id); índices por estado/fecha y moderador.
+  Único (post_id, reporter_id); índices por estado/fecha, moderador y post/operación de resolución.
+  `resolution_operation_id` identifica el hide original; `resolution_report_id`, su reporte
+  principal. `operation_id` conserva la última decisión aplicada a cada reporte.
 - `moderation_jobs`: UUID determinista por reporte y tipo decision/revert, actor, acción, motivo,
   status, active, snapshot/restore, completed_steps, failures, error, resume_phase y fechas.
+  `decision_at` fija la fecha de resolución al decidir el commit; los reintentos la conservan.
   Índice único parcial post_id donde active=true; índice de cola status/created_at.
 - `moderation_history`: evento por operation_id (upsert idempotente), post/reporte/actor,
-  acción, motivo, fecha, snapshot anterior y estado resultante del reporte.
+  acción, motivo, fecha, snapshot anterior, estado resultante, cantidad de reportes afectados
+  y operación original de resolución. Un grupo de reportes produce un evento por decisión.
 - `posts`: conserva moderation_status y moderation_owner para validar qué reporte puede revertir.
 - Redis: `moderation:<post>:hidden`; contadores públicos y sufijo `:moderation_saved`;
   `feed:<user>` conserva el mismo sorted set del P1. No se crea un contador ajeno al modelo.
@@ -45,12 +49,30 @@ stateDiagram-v2
 ```
 
 Hide: persistir snapshot → ocultar en Mongo → gate/contadores Redis atómicos → ZREM por lotes
-→ decidir commit durable → actualizar reporte/auditoría → liberar exclusión.
+→ decidir commit durable → cerrar todos los reportes pendientes del post/auditoría → liberar exclusión.
 Revert: preservar snapshot oculto → ZADD de los feeds anteriores y restaurar contadores
 → restaurar moderation_status/owner Mongo → commit/auditoría.
 Rechazo no modifica contenido ni derivados. Las fallas previas a committing compensan;
 una vez en committing se completa la decisión sin rollback. Los jobs conservan evidencia
 asimismo de fallas, compensaciones y reintentos, aunque no generen una resolución exitosa.
+
+### Reportes asociados
+
+Ocultar una publicación aprueba todos sus reportes pendientes, con el mismo moderador,
+motivo, fecha y operación. Reportes rechazados previamente y reportes de otros posts se conservan.
+Rechazar un reporte es una decisión individual: no invalida los motivos de los otros reportantes.
+
+La reversión puede solicitarse desde cualquiera de los reportes aprobados por el mismo hide.
+Todos apuntan a una única operación de reversión, derivada del reporte principal. Sólo ese
+grupo pasa a reverted; un reporte nuevo creado después de restaurar la publicación permanece
+pending para una futura decisión. El origen de la resolución sigue disponible después de revertir.
+
+El commit actualiza por estado y post; cada documento registra su origen en la misma escritura.
+Si update_many se interrumpe después de actualizar algunos reportes, el worker retoma committing
+y actualiza los restantes. El conteo de auditoría se calcula desde las operaciones persistidas,
+no desde modified_count del último reintento. La fecha durable evita diferencias entre lotes.
+Un hide antiguo sin metadatos de grupo puede revertirse por su reporte original; no se atribuyen
+retroactivamente reportes a decisiones históricas cuyo alcance no quedó registrado.
 
 Compensar hide restaura Redis antes de abrir Mongo. Compensar revert oculta Mongo primero,
 reaplica gate/contadores y elimina los feeds de su hide original. Un fallo de compensación
@@ -63,6 +85,10 @@ retiene active=true para impedir que otra decisión pise el estado recuperable.
 | Dos decisiones iguales | Mismo UUID de job; se devuelve el original |
 | Dos decisiones distintas del mismo reporte | UUID único + comparación de payload: 409 |
 | Dos reportes del mismo post | Índice único parcial de operación activa |
+| Un reporte llega mientras se oculta | Bloqueo de post compartido por inserción y cambio de visibilidad; entra antes del hide o recibe 409 |
+| Una decisión validada llega después del cierre | Revalidación del reporte al encolar bajo el mismo bloqueo |
+| Revert desde distintos reportes asociados | Mismo reporte principal y UUID de reversión |
+| Caída a mitad de resolver/revertir reportes | Origen por documento y filtros de estado; completa el mismo grupo |
 | Revert durante hide | 409 hasta que hide esté completed |
 | Replay de hide durante revert | Devuelve hide completed, no repite efectos |
 | Dos retries | Compare-and-set del estado terminal; uno recibe 409 |
@@ -77,6 +103,10 @@ de detalle, lote, autor y ambos feeds filtran Mongo. El preview P1 verifica Mong
 del gate Redis. No existen búsquedas públicas reales fuera de esas lecturas.
 Los contadores no se decrementan acumulativamente: se ocultan y restauran de forma atómica.
 Las actualizaciones P5 en vuelo se preservan, por lo que un revert no destruye cambios legítimos.
+API y worker comparten además `interaction_locks` para las secciones Mongo de creación de
+reportes, cambio de visibilidad, encolado y commit. El bloqueo P7 usa archivos con prefijo propio,
+funciona sin Redis y se libera al terminar el proceso. No se mantiene durante el workflow entero;
+el índice de operación activa conserva la exclusión entre pasos.
 
 ## Retry y recuperación
 
@@ -99,6 +129,15 @@ siguen documentadas en docs/problem_05_consistency.md; no se sustituyeron todas 
 
 ## Evidencia
 
+Corrección de reportes asociados: 10 escenarios nuevos en
+`tests/integration/test_problem_07_report_groups.py`. Cubren resolución/reversión del grupo,
+rechazos previos, otros posts, fallas parciales y compensaciones, reportes/decisiones en curso,
+reporte nuevo durante la reversión y compatibilidad con hides anteriores sin metadatos de grupo.
+Suite completa: 316 aprobados, incluidas las regresiones P6/P7/P8; Ruff y mypy sobre 201 archivos.
+Contrato OpenAPI regenerado; lint, TypeScript y build del frontend aprobados.
+Smoke contra API y worker reales: tres reportes, un hide que cierra los tres, revert desde
+un reporte asociado que restaura los tres, un evento por decisión y replay sin duplicación.
+
 57 pruebas P7 de integración real, 12 unitarias nuevas de seguridad, suite completa de 94 tests
-exitosa y smoke HTTP real con API/worker de Compose. Guía, payloads, datos y escenarios:
+exitosa y smoke HTTP real con API/worker de Compose fueron la validación inicial. Guía, payloads, datos y escenarios:
 [Guía de Swagger](../problem_7_moderation_test_guide.md).
