@@ -43,6 +43,7 @@ class User:
     registered_at: datetime = field(default_factory=utc_now)
     role: str = "user"
     auth_version: int = 0
+    interests: tuple[str, ...] = ()
 
 
 @dataclass(slots=True)

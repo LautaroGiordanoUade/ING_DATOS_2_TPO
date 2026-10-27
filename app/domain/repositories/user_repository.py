@@ -2,6 +2,7 @@ from typing import Protocol
 from uuid import UUID
 
 from app.domain.entities import User
+from app.domain.recommendations import InterestProfile
 
 
 class UserRepository(Protocol):
@@ -16,3 +17,11 @@ class UserRepository(Protocol):
     async def active_ids(self, user_ids: tuple[UUID, ...]) -> tuple[UUID, ...]: ...
 
     async def is_suspended(self, user_id: UUID) -> bool: ...
+
+    async def update_interests(self, user_id: UUID, interests: tuple[str, ...]) -> User: ...
+
+    async def interest_profiles(self, ids: tuple[UUID, ...]) -> tuple[InterestProfile, ...]: ...
+
+    async def interest_candidates(
+        self, interests: tuple[str, ...], after: UUID | None, limit: int
+    ) -> tuple[InterestProfile, ...]: ...
