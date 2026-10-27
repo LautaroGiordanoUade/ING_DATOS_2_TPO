@@ -192,8 +192,9 @@ docker compose logs --tail 100 mongo redis neo4j
 ```
 
 `/health` comprueba la API; `/health/ready` comprueba conectividad con los tres motores
-y devuelve 503 cuando alguno no responde. La reconstrucción frente a pérdida de Redis
-es un pendiente distinto de reiniciar contenedores con sus volúmenes conservados.
+y devuelve 503 cuando alguno no responde. Para una pérdida del volumen Redis, seguir la
+[guía de respaldo, restauración y reconstrucción](docs/redis_recovery.md). Reiniciar con
+volúmenes conservados usa el AOF existente y no requiere reconstruir.
 
 ## Desarrollo, arquitectura y pruebas
 
@@ -210,8 +211,8 @@ La guía de ejecución completa y defensa es la de Compose, con `APP_DEMO_MODE=f
 
 Últimas validaciones registradas, no ejecutadas automáticamente por el arranque:
 
-- Backend integrado: **337 pruebas aprobadas**, Ruff y mypy sobre 176 archivos de `app`.
-  Evidencia más reciente: [índices y mediciones](docs/index_audit.md).
+- Backend integrado: **348 pruebas aprobadas**, Ruff y mypy sobre 177 archivos de `app`.
+  Evidencia más reciente: [recuperación Redis](docs/redis_recovery_validation.json).
 - Frontend: **203 pruebas** y **46 recorridos Playwright** de escritorio/móvil en la última
   integración de interfaces. Evidencia: [P7/P8](docs/frontend/integration_p7_p8.md).
 - Carga real de 50.000 publicaciones, replay y verificación entre motores;
@@ -225,6 +226,6 @@ aparte. Instrucciones reproducibles: [pruebas backend en Docker](docs/testing.md
 
 P1–P8, el dataset y la mejora de rendimiento P8 están implementados. La
 [auditoría de índices y mediciones locales](docs/index_audit.md) registra planes y resultados
-sobre el dataset. Quedan por cerrar el procedimiento de reconstrucción de Redis,
-la actualización del DER y el informe con evidencia, contrafactuales y anexo,
+sobre el dataset. La recuperación Redis tiene [procedimiento y pruebas](docs/redis_recovery.md).
+Quedan por cerrar la actualización del DER y el informe con evidencia, contrafactuales y anexo,
 además del ensayo final del grupo. El detalle está en [TODO.md](TODO.md).

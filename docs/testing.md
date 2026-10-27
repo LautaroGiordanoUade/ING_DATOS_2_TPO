@@ -29,6 +29,9 @@ Los motores y volúmenes pertenecen a `niche-tests`. Las integraciones crean UUI
 prueba; algunas conservan fixtures sintéticos. El dataset de la demostración permanece en el
 proyecto principal. No hace falta levantar frontend, API HTTP ni workers para esta suite: los
 tests usan clientes ASGI y procesadores reales dentro del proceso de prueba.
+Las pruebas de reconstrucción Redis reservan DB14 y DB15 de esos motores aislados; exigen
+que estén vacías al empezar y limpian únicamente sus propios datos al terminar. Si contienen
+datos anteriores, fallan sin eliminarlos. No usar motores compartidos con otras aplicaciones.
 
 ## Ejecutar la suite
 
@@ -48,8 +51,9 @@ Para una selección, agregar un path, por ejemplo `tests/integration/test_redis_
 Sin `RUN_INTEGRATION_TESTS=1`, las pruebas que requieren motores se omiten: un resultado con
 integraciones omitidas no equivale a la suite completa.
 
-La validación registrada tras la auditoría de índices es **337 pruebas aprobadas**;
-Ruff y mypy sobre 176 archivos de aplicación también aprobados. Ver [auditoría](index_audit.md).
+La validación registrada tras la recuperación Redis es **348 pruebas aprobadas**;
+Ruff y mypy sobre 177 archivos de aplicación también aprobados.
+Ver [recuperación](redis_recovery.md) y [auditoría de índices](index_audit.md).
 Los recorridos HTTP sobre volumen son una verificación adicional: ver [dataset](dataset.md)
 y [mediciones P8](problem_8_performance.md). Las pruebas de interfaz se describen en el
 [README del frontend](../frontend/README.md#validación).

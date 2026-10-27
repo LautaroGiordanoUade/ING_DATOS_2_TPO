@@ -1,0 +1,48 @@
+{
+  "date": "2026-10-27",
+  "base_commit": "833129f",
+  "branch": "feature/reconstruccion-redis",
+  "environment": "Docker Linux/WSL2, isolated tpo-seed-qa-20261027; primary project unchanged",
+  "logical_rebuild": {
+    "source_mongodb": "niche_social in QA, including prior exercise fixtures",
+    "source_redis_db0_untouched": true,
+    "target_redis_db": 4,
+    "initial_target_keys": 0,
+    "fingerprint": "9956acd13962acd1e66baaab0a4568a1ee446d397b26cb42a32fcce2a28eb899",
+    "users": 1278,
+    "posts": 50241,
+    "accepted_follows": 11806,
+    "conversations": 144,
+    "feed_references": 472590,
+    "commands": 1162816,
+    "verified_commands": 1162816,
+    "target_keys": 269150,
+    "write_and_verification_seconds": 22.124,
+    "timing_excludes_source_loading_and_plan": true,
+    "notifications_or_historical_pubsub_replayed": false,
+    "exact_historical_feed_membership_restored": false
+  },
+  "volume_backup_restore": {
+    "redis_version": "7.4.11",
+    "source_redis_stopped_for_copy": true,
+    "archive_bytes": 168763900,
+    "restored_into_new_disposable_volume": true,
+    "source_and_restored_db0_keys": 256806,
+    "notification_hashes_verified": 1260,
+    "notification_events_verified": 45502,
+    "post_counters_verified": 100402,
+    "reader_feed_members_verified": 46584,
+    "restored_aof_started": true,
+    "comparison_scope": "DB0 key count, every notification hash and post counter found, one large ordered feed; not a comparison of every value in every Redis DB"
+  },
+  "validation": {
+    "new_integration_tests": 11,
+    "backend_passed": 348,
+    "backend_elapsed_seconds": 105.48,
+    "ruff": "passed",
+    "mypy_app_files": 177,
+    "frontend": "unchanged; not rerun",
+    "powershell_blocks_parsed": 6,
+    "external_volume_compose_override": "validated"
+  }
+}
