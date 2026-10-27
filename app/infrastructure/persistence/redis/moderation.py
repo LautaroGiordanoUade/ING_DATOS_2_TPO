@@ -1,4 +1,5 @@
 import json
+from collections.abc import AsyncIterator
 from typing import Any, cast
 from uuid import UUID
 
@@ -62,6 +63,38 @@ class RedisModerationViews:
     def __init__(self, client: Redis) -> None:
         self._client = client
 
+    async def _score_batch(
+        self, keys: list[bytes | str], post_id: UUID, hash_values: bool
+    ) -> dict[str, float]:
+        pipe = self._client.pipeline(transaction=False)
+        for key in keys:
+            if hash_values:
+                pipe.hget(key.decode() if isinstance(key, bytes) else key, str(post_id))
+            else:
+                pipe.zscore(key, str(post_id))
+        scores = await pipe.execute()
+        return {
+            key.decode() if isinstance(key, bytes) else key: float(score)
+            for key, score in zip(keys, scores, strict=True)
+            if score is not None
+        }
+
+    async def _membership_scores(
+        self, pattern: str, post_id: UUID, *, hash_values: bool = False
+    ) -> AsyncIterator[tuple[str, float]]:
+        # SCAN's count is a hint, not a bound. Bound the read pipeline separately.
+        # Keep full discovery: historical feeds can lack P1 recipient bookkeeping.
+        keys: list[bytes | str] = []
+        async for key in self._client.scan_iter(match=pattern, count=1000):
+            keys.append(key)
+            if len(keys) == 250:
+                for item in (await self._score_batch(keys, post_id, hash_values)).items():
+                    yield item
+                keys = []
+        if keys:
+            for item in (await self._score_batch(keys, post_id, hash_values)).items():
+                yield item
+
     @staticmethod
     def keys(post_id: UUID) -> list[str]:
         return [
@@ -75,23 +108,20 @@ class RedisModerationViews:
 
     async def snapshot(self, post_id: UUID) -> ModerationSnapshot:
         client = cast(Any, self._client)
-        # No production writer mutates the audience after the P1 job completes.
+        # Discover current memberships, including historical feeds and deferred deliveries.
         feeds: dict[str, float] = {}
-        async for key in self._client.scan_iter(match="feed:*"):
-            score = await client.zscore(key, str(post_id))
-            if score is not None:
-                feeds[key.decode() if isinstance(key, bytes) else str(key)] = float(score)
-                if len(feeds) > 100_000:
-                    raise InvalidOperationError("Moderation supports up to 100000 feed memberships")
+        async for key, score in self._membership_scores("feed:*", post_id):
+            feeds[key] = score
+            if len(feeds) > 100_000:
+                raise InvalidOperationError("Moderation supports up to 100000 feed memberships")
         # A suspended recipient/author may have deferred P1 deliveries. P7 must
         # preserve those references too, even though they are not public feed rows yet.
-        async for key in self._client.scan_iter(match="account:*:deferred_in"):
-            score = await client.hget(key, str(post_id))
-            if score is not None:
-                text = key.decode() if isinstance(key, bytes) else str(key)
-                feeds[f"feed:{text.split(':')[1]}"] = float(score)
-        async for key in self._client.scan_iter(match="account:*:deferred_out"):
-            async for field, score in client.hscan_iter(key, match=f"{post_id}|*"):
+        async for key, score in self._membership_scores(
+            "account:*:deferred_in", post_id, hash_values=True
+        ):
+            feeds[f"feed:{key.split(':')[1]}"] = score
+        async for key in self._client.scan_iter(match="account:*:deferred_out", count=1000):
+            async for field, score in client.hscan_iter(key, match=f"{post_id}|*", count=1000):
                 text = field.decode() if isinstance(field, bytes) else str(field)
                 feeds[f"feed:{text.split('|')[1]}"] = float(score)
         if len(feeds) > 100_000:
