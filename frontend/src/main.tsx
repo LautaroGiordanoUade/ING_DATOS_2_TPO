@@ -7,6 +7,7 @@ import './styles/index.css'
 import './styles/p1.css'
 import './styles/feed.css'
 import './styles/moderation.css'
+import './styles/accounts.css'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

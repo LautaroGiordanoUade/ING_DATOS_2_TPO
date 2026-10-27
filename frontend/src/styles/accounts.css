@@ -1,0 +1,18 @@
+.accounts-page { max-width: 1040px; }
+.account-card { padding: 28px; margin-bottom: 20px; min-width: 0; }
+.account-card h2 { font-size: 20px; font-weight: 650; margin-bottom: 16px; }
+.account-card h3 { font-size: 16px; font-weight: 600; }
+.account-card summary { cursor: pointer; font-size: 13px; margin: 14px 0; }
+.account-card code { overflow-wrap: anywhere; font-size: 12px; }
+.account-card p, .account-reference-list li { overflow-wrap: anywhere; }
+.account-reference-list { padding: 0; list-style: none; }
+.account-reference-list > li { display: flex; flex-direction: column; align-items: start; gap: 10px; padding: 16px 0; border-top: 1px solid #e9e9e4; font-size: 13px; }
+.account-reference-list ul { padding-left: 16px; }
+.account-reference-list ul li { margin: 8px 0; }
+.account-summary { display: flex; flex-wrap: wrap; gap: 24px; margin: 20px 0; }
+.account-summary dt { font-size: 12px; color: #727b6e; }
+.account-summary dd { font-size: 25px; font-weight: 650; margin: 5px 0; }
+.trace-post { padding: 20px 0; border-top: 1px solid #e9e9e4; }
+.trace-post time, .account-reference-list time { color: #727b6e; font-size: 12px; }
+.account-card textarea, .account-card input { width: 100%; }
+@media (max-width: 700px) { .account-card { padding: 20px; }.sidebar:has(.accounts-nav) nav { flex-wrap: wrap; justify-content: flex-end; }.sidebar:has(.accounts-nav) { height: auto; min-height: 73px; }.account-summary { gap: 18px; } }

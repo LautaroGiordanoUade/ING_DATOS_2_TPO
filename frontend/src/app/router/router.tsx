@@ -14,6 +14,9 @@ const ReportPage = lazy(() => import('../../features/moderation/ReportPage').the
 const ReportDetailPage = lazy(() => import('../../features/moderation/ReportDetailPage').then((module) => ({ default: module.ReportDetailPage })))
 const ModerationPage = lazy(() => import('../../features/moderation/ModerationPage').then((module) => ({ default: module.ModerationPage })))
 const ModerationOperationPage = lazy(() => import('../../features/moderation/ModerationOperationPage').then((module) => ({ default: module.ModerationOperationPage })))
+const AccountsPage = lazy(() => import('../../features/accounts/AccountsPage').then((module) => ({ default: module.AccountsPage })))
+const AccountTracePage = lazy(() => import('../../features/accounts/AccountTracePage').then((module) => ({ default: module.AccountTracePage })))
+const AccountOperationPage = lazy(() => import('../../features/accounts/AccountOperationPage').then((module) => ({ default: module.AccountOperationPage })))
 
 export const router = createBrowserRouter([
   {
@@ -28,9 +31,12 @@ export const router = createBrowserRouter([
         { path: '/operaciones/:operationId', element: <OperationPage /> },
         { path: '/reportar/:postId', element: <ReportPage /> },
         { path: '/reportes/:reportId', element: <ReportDetailPage /> },
+        { path: '/cuentas', element: <AccountsPage /> },
+        { path: '/cuentas/:userId', element: <AccountTracePage /> },
         { element: <RequireModerator />, children: [
           { path: '/moderacion', element: <ModerationPage /> },
           { path: '/moderacion/operaciones/:operationId', element: <ModerationOperationPage /> },
+          { path: '/cuentas/operaciones/:operationId', element: <AccountOperationPage /> },
         ] },
       ] },
       { path: '*', element: <section className="card empty-page"><h1>Página no encontrada</h1><p>Esta dirección no está disponible.</p><Link to="/">Volver al inicio</Link></section> },
