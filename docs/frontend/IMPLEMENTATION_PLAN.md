@@ -1,4 +1,4 @@
-# Plan del frontend — estado después de P1, P3 y P7
+# Plan del frontend — estado después de P1, P3, P7 y P8
 
 Inspección del 21/10/2026 sobre `main` actualizado, commit `0d0f734`.
 Rama de trabajo: `feature/frontend-react-ui`. No existía frontend ni AGENTS.md aplicable.
@@ -11,7 +11,7 @@ enunciado original habrá que contrastarlo antes de ampliar el alcance.
 
 Los ocho números son los ocho casos de uso existentes. Autenticación es infraestructura
 compartida, no un noveno problema. El estado del backend distingue código/documentación
-de verificación ejecutada durante esta entrega. P1, P3 y P7 UI están terminados y documentados;
+de verificación ejecutada durante esta entrega. P1, P3, P7 y P8 UI están terminados y documentados;
 los restantes problemas de UI siguen pendientes.
 
 | Problema | Funcionalidad | UI mínima necesaria | Backend en main | Frontend |
@@ -23,7 +23,7 @@ los restantes problemas de UI siguen pendientes.
 | 5 — Reacciones y comentarios | Reacción única, cambio/baja, comentarios y contadores | Controles en tarjeta y formulario de comentario | Implementado con límites de recuperación durable documentados | Pendiente |
 | 6 — Mensajería grupal | Historial, entrega, unread y lectura por participante | Conversación grupal, historial y envío, solo cuando existan contratos reales | Pendiente; envío lanza 501, faltan lecturas públicas completas | Bloqueado por backend incompleto |
 | 7 — Moderación | Reportar, decidir, consultar y revertir | Reportar desde post; lista/detalle de reportes, decisión/reversión e historial | Implementado; bearer y roles user/moderator/admin | Completado y validado — ver problem_7.md |
-| 8 — Suspensión y trazabilidad | Suspender/reactivar, revocar credenciales y consultar traza privada | Cuenta, motivo de suspensión/reactivación, historial y traza | Implementado; efectos MongoDB/Neo4j/Redis | Pendiente |
+| 8 — Suspensión y trazabilidad | Suspender/reactivar, revocar credenciales y consultar traza privada | Cuenta, motivo de suspensión/reactivación, historial y traza | Implementado; efectos MongoDB/Neo4j/Redis | Completado y validado — ver problem_8.md |
 
 ## Orden y dependencias
 
@@ -44,7 +44,9 @@ los restantes problemas de UI siguen pendientes.
 4. P5: depende de posts/P3 e identidad. Refrescar datos del servidor después de mutaciones.
 5. P7: completo por pedido explícito de priorización. Usa identidad por rol y posts/P3;
    verifica contadores con preparación API P5, sin construir su UI. Ver problem_7.md.
-6. P8: depende de identidad/P2/P3/P7 para verificar suspensión sin revivir contenido moderado.
+6. P8: completo por pedido explícito. Usa identidad/P3/P7 y preparación API P2/P4/P6
+   para verificar trazabilidad, suspensión y reactivación sin revivir contenido moderado.
+   No implementa las UI pendientes de esos problemas. Ver problem_8.md.
 7. P4: después de completar backend de intereses/amigos en común y probar su contrato.
 8. P6: después de completar backend de conversación/historial/participantes/unread.
 
@@ -185,7 +187,8 @@ Vitest + Testing Library y Playwright desde la base. Sin Redux, SSR ni carpetas 
 `features/auth/` contiene identidad y sesión; `features/posts/` publicación, operaciones,
 contenido propio y preview de distribución P1; `features/feed/` contiene API, paginación
 y tarjetas con autor para P3; `features/moderation/` agrega reportes, bandeja por rol,
-decisiones, historial y seguimiento P7;
+decisiones, historial y seguimiento P7; `features/accounts/` agrega trazabilidad en una petición,
+suspensión/reactivación, presencia del titular y seguimiento P8;
 `components/common/` mensajes reutilizables; `services/http/` cliente, errores y timeout;
 `services/api/` tipos OpenAPI; `styles/` diseño responsive; `tests/e2e/` arranque real.
 Cada funcionalidad futura tendrá su carpeta cuando se implemente.
@@ -228,3 +231,7 @@ P7: `problem_7.md`, 114 tests frontend y 24 E2E contra Docker/Nginx, seis nuevos
 moderación. Reportar, ocultar/rechazar/restaurar, permisos por rol, historial y operación;
 compatibilidad con UUID históricos del backend. Capturas en `screenshots/p7/`.
 Siguiente pendiente: P2; requiere autorización antes de comenzar.
+
+P8: `problem_8.md`, 139 tests frontend y 30 E2E contra Docker/Nginx, seis nuevos de cuentas.
+Se verifican feed, sugerencias, presencia, revocación, privacidad, compensación y conservación
+de moderaciones P7. Sin cambios backend. Capturas en `screenshots/p8/`; QA P8 limpiado al terminar.

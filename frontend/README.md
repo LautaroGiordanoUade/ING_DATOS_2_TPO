@@ -5,6 +5,9 @@ publicación real, borrador recuperable, seguimiento de operación y preview de 
 P3 agrega el feed real de cuentas seguidas en Inicio, con paginación y refresco.
 P7 agrega reportes desde las tarjetas y una bandeja de moderación por rol, con decisiones,
 restauración, historial y seguimiento de operaciones. Guía: [P7 UI](../docs/frontend/problem_7.md).
+P8 agrega **Cuentas** para moderator/admin y **Mi cuenta** para el titular: trazabilidad por
+UUID, suspensión/reactivación con confirmación e historial, y presencia real. Guía:
+[P8 UI](../docs/frontend/problem_8.md).
 
 ## Iniciar con Docker
 
@@ -119,6 +122,7 @@ Los tipos estáticos no validan respuestas en ejecución: readiness se valida co
 - `src/features/posts`: borradores, envío idempotente, operación, contenido y distribución P1.
 - `src/features/feed`: feed autenticado, cursor opaco, refresco y perfiles de autores con caché.
 - `src/features/moderation`: reportes, bandeja por rol, decisiones confirmadas e historial P7.
+- `src/features/accounts`: consulta agregada, suspensión/reactivación, presencia e historial P8.
 - `src/services/http`: fetch centralizado, cancelación, timeout y errores.
 - `src/services/api`: contrato generado.
 - `src/components/common`: mensajes comunes.
