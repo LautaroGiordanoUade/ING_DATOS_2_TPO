@@ -148,3 +148,7 @@ integraciones P2; mypy y Ruff sin errores en el código revisado. Compose recons
 saludable; smoke HTTP P2 exitoso. Regresiones HTTP: P1 con 2000 seguidores, replay y cinco
 fallas compensadas; P5 con 18 comprobaciones y sus dos regresiones de falla/concurrencia.
 
+Interfaz P2: perfiles y solicitudes implementados sobre estos contratos, con estados de
+operación, claves idempotentes por intento y actualización de contadores/feed. Guía y pruebas
+de esta iteración en [frontend/problem_2.md](../frontend/problem_2.md).
+

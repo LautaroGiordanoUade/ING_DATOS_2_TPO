@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { isMediaUrl, type Post } from './contracts'
 import { PostInteractions } from '../interactions/PostInteractions'
 
@@ -18,7 +19,7 @@ export function PostCard({ post, author, username }: { post: Post; author: strin
       <div className="author-line">
         <span className="avatar" aria-hidden="true">{Array.from(author)[0]?.toUpperCase()}</span>
         <div>
-          <strong>{author}</strong>
+          <strong><Link className="profile-link" to={`/perfiles/${post.user_id}`}>{author}</Link></strong>
           {username && <span>@{username}</span>}
           <time dateTime={post.published_at}>{new Date(post.published_at).toLocaleString('es-AR')}</time>
         </div>

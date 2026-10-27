@@ -1,0 +1,27 @@
+.profile-page, .requests-page { max-width: 940px; }
+.profile-card { padding: 30px; margin-top: 22px; }
+.profile-heading { display: flex; gap: 16px; align-items: center; }
+.profile-heading > div { flex: 1; min-width: 0; }
+.profile-heading h1 { font-size: 30px; line-height: 1.2; margin: 0; overflow-wrap: anywhere; }
+.profile-heading p { font-size: 13px; color: #627961; overflow-wrap: anywhere; }
+.profile-heading .eyebrow { font-size: 10px; }
+.profile-bio { line-height: 1.7; white-space: pre-wrap; overflow-wrap: anywhere; margin: 20px 0; }
+.follow-counts { display: flex; gap: 36px; margin: 26px 0; }
+.follow-counts dt { font-size: 13px; color: #627961; }.follow-counts dd { margin: 8px 0 0; font-size: 26px; font-weight: 650; }
+.follow-control { display: grid; gap: 10px; justify-items: start; }
+.follow-control p { font-size: 13px; line-height: 1.6; margin: 0; }
+.follow-control > div { display: grid; gap: 10px; justify-items: start; }
+.follow-state { color: #42664e; font-weight: 650; }
+.profile-links { display: flex; flex-wrap: wrap; gap: 10px; }
+.request-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 16px; }
+.request-card { padding: 24px; display: flex; justify-content: space-between; gap: 20px; align-items: center; }
+.request-card > div { min-width: 0; }.request-card h2 { font-size: 18px; margin: 0 0 8px; overflow-wrap: anywhere; }.request-card p { font-size: 13px; color: #627961; overflow-wrap: anywhere; }
+.profile-link { color: inherit; text-decoration: none; }.profile-link:hover, .request-card h2 a:hover { text-decoration: underline; text-underline-offset: 3px; }
+@media (max-width: 700px) {
+  .sidebar { height: auto; min-height: 73px; flex-wrap: wrap; gap: 8px; }
+  .sidebar > nav { width: 100%; display: flex; justify-content: space-between; }
+  .sidebar nav .nav-item { min-width: 44px; }
+  .profile-card { padding: 22px; }.profile-heading { flex-wrap: wrap; gap: 12px; }.profile-heading h1 { font-size: 25px; }
+  .requests-page .title-actions { align-items: flex-start; flex-direction: column; }
+  .request-card { align-items: flex-start; flex-direction: column; padding: 20px; }
+}
