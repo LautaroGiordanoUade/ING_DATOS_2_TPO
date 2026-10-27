@@ -1,4 +1,4 @@
-# Plan del frontend — estado después de P1 a P6
+# Plan del frontend — integración de P1 a P8
 
 Inspección actualizada sobre la rama de trabajo. No se encontró un enunciado original separado
 (PDF/DOCX). El inventario se basa en `TODO.md`, `docs/problems/problem_01.md` a `problem_08.md`,
@@ -9,8 +9,8 @@ el enunciado original habrá que contrastarlo antes de ampliar el alcance.
 
 Los ocho números son los ocho casos de uso existentes. Autenticación es infraestructura
 compartida, no un noveno problema. El estado del backend distingue código/documentación
-de verificación ejecutada durante esta entrega. P1 a P6 UI están implementados; los
-restantes módulos de UI siguen pendientes.
+de verificación ejecutada durante cada entrega. Las UI de P1 a P6 de main se integran
+con P7 y P8 en esta rama; su validación conjunta se documenta en integration_p7_p8.md.
 
 | Problema | Funcionalidad | UI mínima necesaria | Backend de esta rama | Frontend |
 |---|---|---|---|---|
@@ -20,8 +20,8 @@ restantes módulos de UI siguen pendientes.
 | 4 — Amigos en común y sugerencias | Segundo grado y amigos en común, hasta 10 sugerencias | Sugerencias y consulta de amigos en común en `/recomendaciones` | Implementado; Neo4j + filtro activo MongoDB | Completado y validado (`RecommendationsPage`, `UserCard`) |
 | 5 — Reacciones y comentarios | Reacción única, cambio/baja, comentarios y contadores | Controles en tarjeta y formulario de comentario | Implementado con recuperación durable | Completado y validado (`PostInteractions` en `PostCard`) |
 | 6 — Mensajería grupal | Historial, avisos, unread y lectura por participante | Crear grupos, buscar participantes, historial paginado, envío y lectura | Implementado; MongoDB/Redis, outbox y worker compartido | Implementado — ver problem_6.md |
-| 7 — Moderación | Reportar, decidir, consultar y revertir | Reportar desde post; lista/detalle de reportes, decisión/reversión e historial | Implementado; bearer y roles user/moderator/admin | Pendiente |
-| 8 — Suspensión y trazabilidad | Suspender/reactivar, revocar credenciales y consultar traza privada | Cuenta, motivo de suspensión/reactivación, historial y traza | Implementado; efectos MongoDB/Neo4j/Redis | Pendiente |
+| 7 — Moderación | Reportar, decidir, consultar y revertir | Reportar desde post; lista/detalle de reportes, decisión/reversión e historial | Implementado; bearer y roles user/moderator/admin | Completado y validado — ver problem_7.md |
+| 8 — Suspensión y trazabilidad | Suspender/reactivar, revocar credenciales y consultar traza privada | Cuenta, motivo de suspensión/reactivación, historial y traza | Implementado; efectos MongoDB/Neo4j/Redis | Completado y validado — ver problem_8.md |
 
 ## Orden y dependencias
 
@@ -43,8 +43,9 @@ restantes módulos de UI siguen pendientes.
 4. P5: implementado en backend (`InteractWithPostUseCase` con recuperación durable) y en
    frontend (`features/interactions/` integrado en `PostCard`), refrescando los contadores del
    servidor después de cada mutación.
-5. P7: depende de identidad por rol y posts/P3/P5 para comprobar hide/revert y contadores.
-6. P8: depende de identidad/P2/P3/P7 para verificar suspensión sin revivir contenido moderado.
+5. P7: completo; reportes, decisiones, reversión, permisos e historial. Ver problem_7.md.
+6. P8: completo; suspensión/reactivación, consulta agregada y revocación de sesión.
+   Ver problem_8.md e integration_p7_p8.md para la integración con el resto de los módulos.
 7. P4: implementado en backend (`SocialRecommendationsUseCase` y `Neo4jSocialGraphRepository`)
    y en frontend (`features/recommendations/` con ruta protegida `/recomendaciones`).
 8. P6: implementado con backend de grupos/historial/participantes/unread y recuperación;
@@ -241,3 +242,10 @@ P5: `docs/problems/problem_05.md` y `docs/problem_05_consistency.md`, módulo `f
 con 7 tests de componente en Vitest, 14 tests unitarios Python en `test_problem_05_regressions.py`,
 11 tests de integración real en `test_problem_05_consistency.py` y scripts `scripts/validar_problema5.py`
 y `scripts/validar_problema5_fallas.py`.
+
+## Integración de moderación y cuentas
+
+P7 y P8 UI completos: reportes, decisiones, reversión, trazabilidad agregada y
+suspensión/reactivación. Ver problem_7.md y problem_8.md para las validaciones originales.
+Se conserva la navegación, perfiles/seguimiento, sugerencias, interacciones y mensajería
+de main. Ver integration_p7_p8.md para los resultados sobre la combinación final.

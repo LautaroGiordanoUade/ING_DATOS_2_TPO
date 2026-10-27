@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { isMediaUrl, type Post } from './contracts'
+import { useAuth } from '../auth/context'
 import { PostInteractions } from '../interactions/PostInteractions'
 
 export function PostCard({ post, author, username }: { post: Post; author: string; username?: string | undefined }) {
+  const { user } = useAuth()
   const [counts, setCounts] = useState({ reactions: post.reaction_count, comments: post.comment_count })
 
   useEffect(() => {
@@ -34,6 +36,7 @@ export function PostCard({ post, author, username }: { post: Post; author: strin
       </ul>
       <p className="post-counts">{counts.reactions} reacciones · {counts.comments} comentarios</p>
       <PostInteractions postId={post.id} commentCount={counts.comments} onCountsChange={handleCountsChange} />
+      {user && user.id !== post.user_id && <Link className="report-link" to={`/reportar/${post.id}`}>Reportar publicación</Link>}
       <details className="post-identifiers">
         <summary>Identificador de publicación</summary>
         <code>{post.id}</code>

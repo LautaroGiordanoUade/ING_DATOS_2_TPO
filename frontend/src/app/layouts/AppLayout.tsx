@@ -1,6 +1,7 @@
 import { NavLink, Outlet } from 'react-router-dom'
 import { Suspense } from 'react'
 import { useAuth } from '../../features/auth/context'
+import { canModerate } from '../../features/moderation/contracts'
 
 export function AppLayout() {
   const auth = useAuth()
@@ -41,6 +42,8 @@ export function AppLayout() {
               </NavLink>
             </>
           )}
+          {canModerate(auth.user?.role) && <NavLink to="/moderacion" className="nav-item moderation-nav" aria-label="Moderación"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true"><path d="M12 3 4 6v6c0 5 8 9 8 9s8-4 8-9V6Z" /><path d="m8 12 3 3 5-6" /></svg><span className="nav-label">Moderación</span></NavLink>}
+          {auth.user && <NavLink to="/cuentas" className="nav-item accounts-nav" aria-label={canModerate(auth.user.role) ? 'Cuentas' : 'Mi cuenta'}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true"><circle cx="12" cy="7" r="4" /><path d="M4 21v-2a8 8 0 0 1 16 0v2" /></svg><span className="nav-label">{canModerate(auth.user.role) ? 'Cuentas' : 'Mi cuenta'}</span></NavLink>}
         </nav>
         <div className="sidebar-note">
           <span className="small-dot" aria-hidden="true" />
