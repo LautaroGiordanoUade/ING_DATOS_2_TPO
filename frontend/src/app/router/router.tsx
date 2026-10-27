@@ -6,8 +6,6 @@ import { RequireAuth } from '../../features/auth/RequireAuth'
 import { RequireModerator } from '../../features/moderation/RequireModerator'
 
 const LoginPage = lazy(() => import('../../features/auth/AuthPage').then((module) => ({ default: module.LoginPage })))
-const ModerationPage = lazy(() => import('../../features/moderation/ModerationPage').then((module) => ({ default: module.ModerationPage })))
-const ReportPage = lazy(() => import('../../features/moderation/ReportPage').then((module) => ({ default: module.ReportPage })))
 const ProfilePage = lazy(() => import('../../features/social/ProfilePage').then((module) => ({ default: module.ProfilePage })))
 const RequestsPage = lazy(() => import('../../features/social/RequestsPage').then((module) => ({ default: module.RequestsPage })))
 const MessagesPage = lazy(() => import('../../features/messages/MessagesPage').then((module) => ({ default: module.MessagesPage })))
@@ -15,6 +13,13 @@ const RegisterPage = lazy(() => import('../../features/auth/AuthPage').then((mod
 const ComposerPage = lazy(() => import('../../features/posts/ComposerPage').then((module) => ({ default: module.ComposerPage })))
 const OperationPage = lazy(() => import('../../features/posts/OperationPage').then((module) => ({ default: module.OperationPage })))
 const MyPostsPage = lazy(() => import('../../features/posts/MyPostsPage').then((module) => ({ default: module.MyPostsPage })))
+const ReportPage = lazy(() => import('../../features/moderation/ReportPage').then((module) => ({ default: module.ReportPage })))
+const ReportDetailPage = lazy(() => import('../../features/moderation/ReportDetailPage').then((module) => ({ default: module.ReportDetailPage })))
+const ModerationPage = lazy(() => import('../../features/moderation/ModerationPage').then((module) => ({ default: module.ModerationPage })))
+const ModerationOperationPage = lazy(() => import('../../features/moderation/ModerationOperationPage').then((module) => ({ default: module.ModerationOperationPage })))
+const AccountsPage = lazy(() => import('../../features/accounts/AccountsPage').then((module) => ({ default: module.AccountsPage })))
+const AccountTracePage = lazy(() => import('../../features/accounts/AccountTracePage').then((module) => ({ default: module.AccountTracePage })))
+const AccountOperationPage = lazy(() => import('../../features/accounts/AccountOperationPage').then((module) => ({ default: module.AccountOperationPage })))
 const RecommendationsPage = lazy(() =>
   import('../../features/recommendations/RecommendationsPage').then((module) => ({
     default: module.RecommendationsPage,
@@ -28,30 +33,25 @@ export const router = createBrowserRouter([
       { path: '/', element: <HomePage /> },
       { path: '/login', element: <LoginPage /> },
       { path: '/registro', element: <RegisterPage /> },
-      {
-        element: <RequireAuth />,
-        children: [
-          { path: '/mis-publicaciones', element: <MyPostsPage /> },
-          { path: '/publicar', element: <ComposerPage /> },
-          { path: '/operaciones/:operationId', element: <OperationPage /> },
-          { path: '/recomendaciones', element: <RecommendationsPage /> },
-          { path: '/mensajes/:conversationId?', element: <MessagesPage /> },
-          { path: '/perfiles/:userId', element: <ProfilePage /> },
-          { path: '/solicitudes', element: <RequestsPage /> },
-          { path: '/reportes/:reportId', element: <ReportPage /> },
-          { element: <RequireModerator />, children: [{ path: '/moderacion', element: <ModerationPage /> }] },
-        ],
-      },
-      {
-        path: '*',
-        element: (
-          <section className="card empty-page">
-            <h1>Página no encontrada</h1>
-            <p>Esta dirección no está disponible.</p>
-            <Link to="/">Volver al inicio</Link>
-          </section>
-        ),
-      },
+      { element: <RequireAuth />, children: [
+        { path: '/recomendaciones', element: <RecommendationsPage /> },
+        { path: '/mensajes/:conversationId?', element: <MessagesPage /> },
+        { path: '/perfiles/:userId', element: <ProfilePage /> },
+        { path: '/solicitudes', element: <RequestsPage /> },
+        { path: '/mis-publicaciones', element: <MyPostsPage /> },
+        { path: '/publicar', element: <ComposerPage /> },
+        { path: '/operaciones/:operationId', element: <OperationPage /> },
+        { path: '/reportar/:postId', element: <ReportPage /> },
+        { path: '/reportes/:reportId', element: <ReportDetailPage /> },
+        { path: '/cuentas', element: <AccountsPage /> },
+        { path: '/cuentas/:userId', element: <AccountTracePage /> },
+        { element: <RequireModerator />, children: [
+          { path: '/moderacion', element: <ModerationPage /> },
+          { path: '/moderacion/operaciones/:operationId', element: <ModerationOperationPage /> },
+          { path: '/cuentas/operaciones/:operationId', element: <AccountOperationPage /> },
+        ] },
+      ] },
+      { path: '*', element: <section className="card empty-page"><h1>Página no encontrada</h1><p>Esta dirección no está disponible.</p><Link to="/">Volver al inicio</Link></section> },
     ],
   },
 ])

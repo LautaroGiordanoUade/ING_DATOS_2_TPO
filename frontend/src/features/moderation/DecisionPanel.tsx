@@ -67,7 +67,7 @@ export function DecisionPanel({ report, content, onForbidden }: { report: Report
   if (forbidden) return null
   const working = command.isPending || retry.isPending || !!operationId && (job.isPending || job.isError || !!job.data && !terminal(job.data.status))
   const recoverable = job.data?.status === 'failed' || job.data?.status === 'compensated'
-  const uncertain = !!attempt && !attempt.operation_id && !operationId
+  const uncertain = !!attempt && !attempt.operation_id && (!job.data || job.data.action !== attempt.action || job.data.reason !== attempt.reason || job.data.moderator_id !== viewer)
   const blocked = working || recoverable || uncertain
   const owner = report.resolution_report_id ?? report.id
   const canRevert = report.resolution_status === 'approved' && content.moderation_status === 'hidden' && content.moderation_owner === owner
@@ -75,7 +75,7 @@ export function DecisionPanel({ report, content, onForbidden }: { report: Report
     <h2>Decisión</h2>
     {working && <p role="status">Procesando decisión de moderación…</p>}
     {job.isError && <div role="alert">No pudimos consultar el resultado.<button className="button-secondary" onClick={() => void job.refetch()}>Consultar operación</button></div>}
-    {job.data && <div className="moderation-operation" aria-live="polite"><strong>{jobLabels[job.data.status]}</strong><p>{actionLabels[job.data.action]} · {job.data.reason}</p>
+    {job.data && !uncertain && !command.isPending && <div className="moderation-operation" aria-live="polite"><strong>{jobLabels[job.data.status]}</strong><p>{actionLabels[job.data.action]} · {job.data.reason}</p>
       {job.data.status === 'completed' && <p>La operación terminó y su resultado fue confirmado.</p>}
       {job.data.status === 'compensated' && <p>El cambio se revirtió y se restauró el estado anterior.</p>}
       {job.data.error && <p role="alert">{job.data.error}</p>}

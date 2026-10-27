@@ -6,7 +6,7 @@ import { ModerationPage } from './ModerationPage'
 import { RequireModerator } from './RequireModerator'
 import type { AuthRequest } from '../auth/api'
 import { sessionWrapper, user } from '../../../tests/fixtures/session'
-import { report, moderator } from '../../../tests/fixtures/moderation'
+import { report, moderator } from '../../../tests/fixtures/moderation-recovery'
 
 it('el usuario común no puede abrir la bandeja ni siquiera mediante URL directa', async () => {
   const request = vi.fn<AuthRequest>()
@@ -18,9 +18,9 @@ it('muestra el límite de consulta y filtros sin inventar una cantidad total de 
   const request = vi.fn<AuthRequest>(async (path) => path.includes('/users/') ? user : path.endsWith('status=rejected') ? [] : [report])
   render(<MemoryRouter><ModerationPage /></MemoryRouter>, { wrapper: sessionWrapper(request, { user: moderator }) })
   expect(await screen.findByRole('link', { name: 'Revisar reporte' })).toHaveAttribute('href', `/reportes/${report.id}`)
-  expect(screen.getByText(/Hasta 100 reportes por consulta/)).toBeVisible()
+  expect(screen.getByText(/Hasta 100 reportes por filtro/)).toBeVisible()
   await userEvent.selectOptions(screen.getByLabelText('Estado de los reportes'), 'rejected')
-  expect(await screen.findByText('No hay reportes en este estado.')).toBeVisible()
+  expect(await screen.findByText('No hay reportes para este estado.')).toBeVisible()
 })
 
 it('acepta los identificadores históricos que admite UUID en el backend sin bloquear toda la bandeja', async () => {

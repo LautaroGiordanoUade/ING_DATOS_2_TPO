@@ -1,74 +1,59 @@
-import { useCallback, useEffect, useState } from 'react'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { Link, useParams } from 'react-router-dom'
+import { useMutation, useQuery } from '@tanstack/react-query'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { useForm } from 'react-hook-form'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { z } from 'zod'
 import { useAuth } from '../auth/context'
-import { isMediaUrl } from '../posts/contracts'
-import { canModerate, contentSchema, denied, historySchema, queryRoot, reasonLabels, reportLabels, reportSchema, root, actionLabels } from './api'
-import { ModerationDenied } from './RequireModerator'
-import { DecisionPanel } from './DecisionPanel'
-import { Person } from './Person'
+import { postSchema } from '../posts/contracts'
+import { ErrorMessage } from '../../components/common/ErrorMessage'
+import { FormField } from '../../components/common/FormField'
+import { reasons, reportSchema, reportValuesSchema } from './contracts'
+import { moderationError } from './errors'
+import { storage } from '../../lib/storage'
+import { ApiError } from '../../services/http/client'
 
 export function ReportPage() {
-  const { reportId: rawReportId = '' } = useParams()
-  const reportId = rawReportId.toLowerCase()
-  const { user, request } = useAuth()
-  const client = useQueryClient()
-  const moderator = canModerate(user!.role)
-  const prefix = queryRoot(user!.id, user!.role)
-  const valid = z.guid().safeParse(reportId).success
-  const [operationDenied, setOperationDenied] = useState(false)
-  const onForbidden = useCallback(() => setOperationDenied(true), [])
-  const report = useQuery({ queryKey: [...prefix, 'report', reportId], enabled: valid,
-    queryFn: async ({ signal }) => {
-      const data = reportSchema.parse(await request(`${root}/reports/${reportId}`, { signal }))
-      if (data.id !== reportId) throw new Error('La respuesta no corresponde a este reporte.')
-      return data
-    }, retry: false, networkMode: 'always', refetchInterval: () => document.visibilityState === 'visible' ? 5000 : false })
-  const postId = report.data?.post_id
-  const content = useQuery({ queryKey: [...prefix, 'content', postId, reportId], enabled: moderator && !!postId && !report.isError,
-    queryFn: async ({ signal }) => {
-      const data = contentSchema.parse(await request(`${root}/posts/${postId}/content?report_id=${reportId}`, { signal }))
-      if (data.id !== postId) throw new Error('El contenido no corresponde a este reporte.')
-      return data
-    }, retry: false, networkMode: 'always', refetchInterval: () => document.visibilityState === 'visible' ? 4000 : false })
-  const history = useQuery({ queryKey: [...prefix, 'history', postId], enabled: moderator && !!postId && !report.isError,
-    queryFn: async ({ signal }) => historySchema.parse(await request(`${root}/history/${postId}`, { signal })), retry: false, networkMode: 'always' })
-  const forbidden = denied(report.error) || moderator && (denied(content.error) || denied(history.error) || operationDenied)
-  useEffect(() => { if (forbidden && moderator) void client.invalidateQueries({ queryKey: ['auth', 'me'] }) }, [forbidden, moderator, client])
-  if (!valid) return <div className="page-content"><h1>Reporte no válido</h1><Link to="/">Volver al inicio</Link></div>
-  if (forbidden) return <ModerationDenied />
-  if (report.isPending) return <p className="page-content" role="status">Cargando reporte…</p>
-  if (report.isError) return <section className="page-content"><h1>No pudimos consultar el reporte</h1><p role="alert">{report.error.message}</p><button className="button-secondary" onClick={() => void report.refetch()}>Reintentar reporte</button></section>
-  const data = report.data
+  const { postId = '' } = useParams()
+  const valid = z.guid().safeParse(postId).success
+  const { request, user } = useAuth()
+  const navigate = useNavigate()
+  const post = useQuery({
+    queryKey: ['posts', 'detail', postId], enabled: valid,
+    queryFn: async ({ signal }) => postSchema.parse(await request(`/api/v1/posts/${postId}`, { signal })),
+    networkMode: 'always', retry: false,
+  })
+  const { register, handleSubmit, formState: { errors } } = useForm<z.infer<typeof reportValuesSchema>>({
+    resolver: zodResolver(reportValuesSchema), defaultValues: { reason: 'spam', description: '' },
+  })
+  const mutation = useMutation({
+    mutationFn: async (values: z.infer<typeof reportValuesSchema>) => reportSchema.parse(await request('/api/v1/moderation/reports', {
+      method: 'POST', body: JSON.stringify({ post_id: postId, ...values, description: values.description || null }),
+    })),
+    retry: false,
+    onSuccess: (report) => {
+      storage.set(`niche.p7.report.${user!.id}.${postId}`, report.id)
+      navigate(`/reportes/${report.id}`, { replace: true })
+    },
+  })
+  if (!valid) return <div className="page-content"><ErrorMessage message="El identificador de publicación no es válido." /></div>
+  const receipt = z.guid().safeParse(storage.get(`niche.p7.report.${user!.id}.${postId}`))
+  if (receipt.success) return <section className="page-content"><h1>Reporte recibido</h1><Link to={`/reportes/${receipt.data}`}>Ver mi reporte</Link></section>
   return <div className="page-content moderation-page">
-    <Link className="back-link" to={moderator ? '/moderacion' : '/'}>← {moderator ? 'Reportes' : 'Inicio'}</Link>
-    <header className="page-title"><p className="eyebrow">{moderator ? 'REVISIÓN DE CONTENIDO' : 'MI REPORTE'}</p><h1>Detalle del reporte</h1></header>
-    <section className="card report-detail"><span className="pill">{reportLabels[data.resolution_status]}</span><h2>{reasonLabels[data.reason]}</h2>
-      <p>Reportado por <Person id={data.reporter_id} /></p><time dateTime={data.reported_at}>{new Date(data.reported_at).toLocaleString('es-AR')}</time>
-      {data.description && <p className="moderation-text">{data.description}</p>}
-      {data.decision_reason && <p>Motivo de resolución: {data.decision_reason}</p>}
-      {!moderator && data.resolution_status === 'pending' && <p>Tu reporte fue recibido y está pendiente de revisión.</p>}
-      <button className="button-secondary" onClick={() => void report.refetch()} disabled={report.isFetching}>Actualizar reporte</button>
-    </section>
-    {moderator && <>
-      {content.isPending && <p role="status">Cargando publicación para revisión…</p>}
-      {content.isError && <div role="alert">No pudimos cargar el contenido.<button className="button-secondary" onClick={() => void content.refetch()}>Reintentar contenido</button></div>}
-      {content.data && !content.isError && <section className="card moderation-content" aria-label="Publicación en revisión">
-        <h2>Publicación en revisión</h2><p>Autor: <Person id={content.data.user_id} /></p><p>Estado de moderación: {content.data.moderation_status === 'hidden' ? 'Oculta' : content.data.moderation_status === 'approved' ? 'Aprobada' : content.data.moderation_status === 'pending' ? 'Pendiente de revisión' : content.data.moderation_status}</p>
-        <p className="moderation-text">{content.data.text}</p>
-        {content.data.media.filter(isMediaUrl).map((url, index) => <img key={`${index}:${url}`} src={url} className="post-image" alt={`Imagen ${index + 1} en revisión`} referrerPolicy="no-referrer" />)}
-        <DecisionPanel key={`${user!.id}:${reportId}`} report={data} content={content.data} onForbidden={onForbidden} />
-      </section>}
-      <section className="card moderation-history"><h2>Historial de decisiones</h2>
-        {history.isPending && <p role="status">Cargando historial…</p>}
-        {history.isError && <div role="alert">No pudimos cargar el historial.<button className="button-secondary" onClick={() => void history.refetch()}>Reintentar historial</button></div>}
-        {history.data?.length === 0 && <p>Todavía no hay decisiones registradas.</p>}
-        {!history.isError && <ol>{history.data?.map((event) => <li key={event.operation_id}><strong>{actionLabels[event.action]}</strong><p>{event.reason}</p>
-          <p>{event.affected_report_count === undefined ? 'Cantidad de reportes no registrada en esta decisión anterior.' : event.affected_report_count === 1 ? '1 reporte afectado' : `${event.affected_report_count} reportes afectados`}</p>
-          <time dateTime={event.created_at}>{new Date(event.created_at).toLocaleString('es-AR')}</time>
-        </li>)}</ol>}
-      </section>
-    </>}
+    <Link className="back-link" to="/">← Volver al feed</Link>
+    <div className="page-title"><p className="eyebrow">CUIDEMOS LA COMUNIDAD</p><h1>Reportar publicación</h1><p className="muted">El equipo de moderación revisará tu reporte. Enviarlo no oculta la publicación automáticamente.</p></div>
+    {post.isPending && <p role="status">Cargando publicación…</p>}
+    {post.isError && <><ErrorMessage message={moderationError(post.error)} /><button className="button-secondary" onClick={() => void post.refetch()}>Volver a cargar</button></>}
+    {post.data && !post.isError && <section className="card moderation-card">
+      <blockquote className="reported-text">{post.data.text}</blockquote>
+      <form noValidate onSubmit={handleSubmit((values) => mutation.mutate(values))}>
+        <fieldset disabled={mutation.isPending}>
+          <FormField id="report-reason" label="Motivo del reporte"><select id="report-reason" {...register('reason')}>{Object.entries(reasons).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></FormField>
+          <FormField id="report-description" label="Contanos qué pasó (opcional)" error={errors.description?.message}><textarea id="report-description" rows={5} {...register('description')} aria-invalid={!!errors.description} aria-describedby={errors.description ? 'report-description-error' : undefined} /></FormField>
+          <p className="field-hint">Se registra con tu cuenta @{user!.username}. Podés reportar una vez cada publicación.</p>
+          {mutation.isError && <ErrorMessage message={mutation.error instanceof ApiError && mutation.error.status === 409 && /already reported/i.test(mutation.error.message) ? 'Ya enviaste un reporte sobre esta publicación.' : moderationError(mutation.error)} />}
+          <div className="moderation-actions"><button className="button-primary" type="submit">{mutation.isPending ? 'Enviando reporte…' : 'Enviar reporte'}</button><Link to="/" className="button-secondary">Cancelar</Link></div>
+        </fieldset>
+      </form>
+    </section>}
   </div>
 }

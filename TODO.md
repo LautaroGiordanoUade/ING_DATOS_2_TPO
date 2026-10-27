@@ -128,6 +128,7 @@ rutas en Swagger o respuestas en modo demo.
 - [x] 67 tests nuevos: 57 integraciones con MongoDB/Neo4j/Redis reales y 10 unitarios.
 - [x] Suite completa: 161 passed / 0 failed; smoke HTTP real exitoso.
 - [x] Datos reales de desarrollo, ejemplos Swagger y guía paso a paso.
+- [x] Interfaz de cuentas y trazabilidad integrada; recuperación de operaciones fallidas desde su pantalla.
 - Diseño: docs/problems/problem_08.md; guía: docs/problem_8_suspension_test_guide.md.
 - Límites: Docker Linux, un host y volumen compartido; sin garantía ante pérdida de volúmenes.
 

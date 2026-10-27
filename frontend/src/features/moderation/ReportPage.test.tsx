@@ -2,15 +2,15 @@ import { expect, it, vi } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { ReportPage } from './ReportPage'
+import { ReportDetailPage } from './ReportDetailPage'
 import { AuthContext } from '../auth/context'
 import type { AuthRequest } from '../auth/api'
 import { ApiError } from '../../services/http/client'
 import { sessionWrapper, user } from '../../../tests/fixtures/session'
-import { report, content, moderator } from '../../../tests/fixtures/moderation'
+import { report, content, moderator } from '../../../tests/fixtures/moderation-recovery'
 import { queryRoot } from './api'
 
-function page() { return <MemoryRouter initialEntries={[`/reportes/${report.id}`]}><Routes><Route path="/reportes/:reportId" element={<ReportPage />} /></Routes></MemoryRouter> }
+function page() { return <MemoryRouter initialEntries={[`/reportes/${report.id}`]}><Routes><Route path="/reportes/:reportId" element={<ReportDetailPage />} /></Routes></MemoryRouter> }
 it('el reportante consulta su reporte sin cargar contenido protegido ni historial de moderadores', async () => {
   const request = vi.fn<AuthRequest>(async (path) => path.includes('/users/') ? user : report)
   render(page(), { wrapper: sessionWrapper(request) })

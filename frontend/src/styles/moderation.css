@@ -1,27 +1,25 @@
-.moderation-page { max-width: 1000px; }
-.moderation-toolbar { display: flex; align-items: end; justify-content: space-between; flex-wrap: wrap; gap: 16px; margin: 24px 0; }
-.moderation-toolbar label, .moderation-decisions label, .report-form label { display: grid; gap: 8px; font-size: 13px; margin: 14px 0; }
-.moderation-toolbar select { min-width: 180px; }
-.moderation-report-list { list-style: none; padding: 0; display: grid; gap: 14px; }
-.moderation-report { padding: 24px; display: flex; justify-content: space-between; align-items: center; gap: 16px; }
-.moderation-report h2 { font-size: 19px; margin: 14px 0 10px; }.moderation-report p { font-size: 13px; }
-.moderation-report time, .report-detail time, .moderation-history time { font-size: 12px; color: #627961; }
-.report-detail, .moderation-content, .moderation-history { padding: 26px; margin: 22px 0; }
-.report-detail h2, .moderation-content h2, .moderation-history h2 { font-size: 21px; margin: 12px 0 18px; }
-.report-detail p, .moderation-content p, .moderation-history p { font-size: 14px; line-height: 1.7; overflow-wrap: anywhere; }
-.moderation-text { white-space: pre-wrap; overflow-wrap: anywhere; }
-.moderation-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-block: 16px; }
-.moderation-decisions { border-top: 1px solid #dce4d8; padding-top: 14px; margin-top: 22px; }
-.moderation-decisions form, .moderation-operation { border: 1px solid #dce4d8; background: #f7f9f4; border-radius: 10px; padding: 20px; margin: 16px 0; }
-.moderation-decisions h3 { font-size: 17px; margin: 0; }
-.moderation-history ol { padding-left: 22px; }.moderation-history li { margin: 18px 0; padding-bottom: 16px; border-bottom: 1px solid #e4e7df; }
-.report-toggle { min-height: 44px; color: #686f62; font-size: 12px; text-decoration: underline; text-underline-offset: 3px; }
-.report-form form { padding: 18px; border: 1px solid #e4e7df; border-radius: 10px; margin: 12px 0; }.report-form h3 { font-size: 16px; margin: 0; }.report-form p, .report-receipt { font-size: 13px; line-height: 1.7; }
-.report-receipt a { color: #42664e; text-decoration: underline; }.report-form textarea, .moderation-decisions textarea { min-height: 100px; resize: vertical; }
-@media (max-width: 700px) {
-  .sidebar > nav { overflow-x: auto; }
-  .moderation-report { align-items: flex-start; flex-direction: column; padding: 20px; }
-  .report-detail, .moderation-content, .moderation-history { padding: 20px; }
-  .moderation-decisions form, .moderation-operation { padding: 15px; }
-  .moderation-actions button { white-space: normal; }
-}
+.moderation-page { max-width: 940px; }
+.moderation-card { padding: 28px; margin-bottom: 20px; min-width: 0; }
+.moderation-card h2 { font-size: 19px; font-weight: 650; margin: 15px 0; }
+.moderation-card h3 { font-size: 15px; font-weight: 600; }
+.moderation-page select { width: 100%; padding: 12px; border: 1px solid #dbe2d5; border-radius: 8px; background: white; min-height: 44px; font: inherit; font-size: 13px; }
+.moderation-page select:focus-visible { outline: 3px solid #426e57; outline-offset: 2px; }
+.moderation-toolbar { display: flex; align-items: end; justify-content: space-between; gap: 20px; padding: 20px; margin-bottom: 20px; }
+.moderation-toolbar label { display: block; font-size: 12px; font-weight: 600; margin-bottom: 8px; }
+.moderation-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 20px; }
+.reported-text, .resolution-note p { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 14px; line-height: 1.8; }
+.reported-text { background: #f6f7f2; padding: 18px; border-radius: 8px; margin: 16px 0; max-height: 320px; overflow: auto; }
+.report-row { display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 24px; margin-bottom: 14px; }
+.report-row > div { min-width: 0; }
+.report-row h2 { font-size: 18px; font-weight: 600; margin-top: 14px; }
+.report-excerpt { overflow-wrap: anywhere; font-size: 13px; line-height: 1.7; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.moderation-identifiers { margin: 20px 0; font-size: 12px; color: #727b6e; }
+.moderation-identifiers summary { cursor: pointer; margin-bottom: 12px; }
+.moderation-identifiers code, .moderation-history code { overflow-wrap: anywhere; }
+.moderation-identifiers dd { margin: 4px 0 12px; }
+.moderation-history { list-style: none; padding: 0; }
+.moderation-history li { border-top: 1px solid #e9e9e4; padding: 18px 0; }
+.moderation-history p { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 13px; }
+.moderation-history time { font-size: 11px; color: #727b6e; }
+.report-link { display: inline-block; font-size: 12px; margin-top: 14px; padding: 10px 0; color: #65705e; }
+@media (max-width: 700px) { .moderation-card { padding: 20px; }.report-row { align-items: start; flex-direction: column; padding: 20px; }.moderation-toolbar { align-items: stretch; flex-direction: column; }.sidebar:has(.moderation-nav) { height: auto; min-height: 73px; }.sidebar:has(.moderation-nav) nav { flex-wrap: wrap; justify-content: flex-end; } }

@@ -12,6 +12,10 @@ publicaciones propias se consultan en `/mis-publicaciones`. P4 agrega en `/recom
 las cuentas sugeridas por segundo grado y el buscador de amigos en común. P5 integra en cada
 tarjeta de publicación (`PostCard`) la barra de reacciones y el formulario de comentarios con
 `Idempotency-Key` (`PostInteractions`). Guía: [P3 UI](docs/frontend/problem_3.md).
+P7 permite reportar publicaciones y ofrece una bandeja para moderator/admin con ocultación,
+rechazo, restauración e historial. Guía: [P7 UI](docs/frontend/problem_7.md).
+P8 agrega trazabilidad por UUID, suspensión/reactivación y presencia: **Cuentas** para
+moderator/admin y **Mi cuenta** para el titular. Guía: [P8 UI](docs/frontend/problem_8.md).
 Instrucciones: [frontend/README.md](frontend/README.md) y [guía P1 UI](docs/frontend/problem_1.md).
 Inventario, dependencias y próximas iteraciones: [plan del frontend](docs/frontend/IMPLEMENTATION_PLAN.md).
 

@@ -1,79 +1,126 @@
-# P7 — interfaz de reportes y moderación
+# P7 UI — Reportes y moderación
 
-## Navegación y permisos
+Esta guía conserva la evidencia de la entrega original de P7. Para el estado combinado
+con las UI P2/P4/P5/P6 de main y P8, ver [integración final](integration_p7_p8.md).
 
-- En cada publicación, **Reportar publicación** abre un formulario con motivo obligatorio
-  (spam, abuso, odio, violencia u otro) y descripción opcional de hasta 2000 caracteres.
-- Un reporte recibido ofrece **Ver mi reporte** en `/reportes/:reportId`. El reportante puede
-  consultar su estado; sólo su titular o un moderador/admin tiene acceso a ese reporte.
-- Moderadores/admin ven **Moderación** en el menú y la bandeja `/moderacion`. Usuarios comunes
-  no acceden ni mediante URL directa. El servidor revalida identidad/rol en cada endpoint.
-- La bandeja permite filtrar por pendiente, aceptado, rechazado y revertido. Devuelve hasta
-  100 reportes por consulta; la interfaz no inventa paginación ni muestra ese lote como total global.
-- El detalle incluye motivo, descripción, reportante y fecha. Sólo moderadores/admin consultan
-  el contenido publicado, incluso oculto, y el historial de decisiones.
+Implementado sobre el backend P7 existente, sin cambios de API ni de workers.
+Se priorizó P7 por pedido del usuario; P2/P5 UI continúan pendientes. P5 se usa solo
+como preparación API de las pruebas de contadores. La aplicación sigue en Docker/Nginx,
+en http://127.0.0.1:8080.
 
-## Decisiones
+## Flujo y permisos
 
-**Ocultar publicación**, **Rechazar reporte** y **Revertir ocultamiento** abren una confirmación
-en el detalle, con motivo obligatorio de 1–1000 caracteres. Ocultar resuelve todos los reportes
-pendientes asociados; rechazar afecta sólo al elegido; revertir actúa sobre el mismo grupo del hide.
-Los reportes rechazados previamente y los reportes nuevos posteriores a la restauración se conservan.
+- Las tarjetas de otras cuentas ofrecen **Reportar publicación**. `/reportar/{postId}`
+  carga el contenido real, permite elegir spam/abuse/hate/violence/other y descripción
+  opcional de hasta 2000 caracteres. La identidad se obtiene del bearer, sin reporter_id
+  editable. El reporte no oculta contenido por sí mismo.
+- El alta lleva a `/reportes/{reportId}`. El reportante puede guardar ese enlace y consultar
+  estado y motivo de resolución. No obtiene historial privado ni acciones de moderación.
+- **Moderación** y `/moderacion` requieren moderator/admin. La bandeja filtra por estado,
+  permite actualizar y muestra hasta 100 reportes, según el límite real de la API.
+- El detalle muestra estado, motivo, descripción, contenido todavía público e historial
+  autorizado. Permite ocultar o rechazar un pendiente; restaurar solo una ocultación aprobada.
+  Requiere motivo de 1–1000 caracteres y confirmación explícita antes de enviar.
+- `/moderacion/operaciones/{operationId}` conserva un enlace durable. Consulta cada segundo
+  hasta completed/compensated/failed; committing sigue siendo transitorio. Un 202 no confirma
+  una decisión. Error de red detiene polling y ofrece consulta manual. Salir cancela lecturas.
+- Al confirmar o compensar se reinicia la navegación de feed e invalidan posts, preview,
+  reportes e historial. Las mutaciones no aplican cambios optimistas de visibilidad/contadores.
+- La sesión sigue verificándose mediante `/users/me`; el servidor decide permisos en cada
+  request. Ocultar enlaces no sustituye la autorización. No hay controles de inyección de
+  fallas, retry técnico ni asignación de roles en la UI.
 
-La interfaz espera el estado de la operación del worker; 202 no confirma efectos terminados.
-Bloquea controles mientras se procesa o se desconoce el resultado y actualiza reporte, contenido,
-historial, feed, publicaciones y comentarios cuando llega a un estado terminal. El historial
-muestra la cantidad real de reportes afectados cuando ese dato existe; no inventa cantidades
-para eventos anteriores sin ese metadato.
+Los formularios usan RHF/Zod, labels asociados, errores accesibles, fieldsets deshabilitados
+al enviar y confirmación revisable. El reporte usa una página dedicada que admite enlaces
+directos, en lugar de superponer un modal al feed. Se mantiene el diseño responsive existente.
 
-Una compensación informa que se restauró el estado anterior y ofrece **Reintentar decisión**.
-Una recuperación fallida ofrece **Reintentar recuperación**. Ambos usan el trabajo existente;
-no generan una decisión diferente con otro motivo. Una reversión conserva las demás restricciones
-del contenido: volver al estado anterior de moderación no elimina una suspensión P8.
+## Contratos y compatibilidad
 
-## Lectura protegida agregada
+Se consumen POST/GET `/moderation/reports`, GET `/reports/{id}`, POST
+`/reports/{id}/decision`, POST `/reports/{id}/revert`, GET `/operations/{id}` y
+GET `/history/{post_id}`, todos bajo `/api/v1/moderation`. Se reutiliza GET `/posts/{id}`.
+Zod valida respuestas; las operaciones omiten snapshots internos en el modelo de UI.
+El servidor controla unicidad e idempotencia; no se inventan claves ni IDs de operaciones.
 
-GET `/api/v1/moderation/posts/{post_id}/content?report_id=UUID` requiere moderator/admin y devuelve
-sólo contenido publicado (UUID, autor, texto, medios, intereses, fecha, visibilidad y moderación),
-dueño de la decisión, operación activa y operación relacionada con el reporte consultado.
-Valida que reporte y publicación correspondan. No devuelve credenciales, feeds ni snapshots.
-No modifica las lecturas públicas: una publicación oculta sigue devolviendo 404 allí.
+Los fixtures P7 incluyen UUID hexadecimales sin variante/version RFC. Python UUID los admite;
+`z.uuid()` los rechazaba y bloqueaba toda la bandeja. Los contratos de moderación y las lecturas
+compartidas de usuario/post usan `z.guid()` para mantener el formato UUID sin imponer una
+restricción ajena a la API. Una regresión prueba los IDs históricos y rechaza IDs malformados.
 
-La referencia a la operación permite retomar una decisión después de recargar incluso sin datos
-locales del navegador, incluidas decisiones compensadas. API y workers existentes conservan
-la persistencia, exclusión, recuperación y límites de P7. No se agregan motores ni contenedores.
+## Pruebas ejecutadas
 
-## Reintentos y caché
+- Lint, TypeScript y build de Docker aprobados.
+- **114 pruebas frontend**: 55 unitarias y 59 de componentes; 33 nuevas en P7.
+- **24 E2E aprobados** contra Docker/Nginx, API, worker y motores reales. Seis nuevos P7
+  (tres escenarios en escritorio/móvil) y 18 regresiones P1/P3/base.
 
-Cada decisión conserva post/reporte, acción, motivo y operación en sessionStorage por moderador.
-Un envío incierto se confirma con el mismo payload. La idempotencia de P7 sigue en el servidor,
-con UUID determinista por reporte/acción. Un 409 refresca el estado antes de permitir otra decisión.
-Un reporte duplicado se distingue de una publicación ya oculta: ambos pueden responder 409,
-pero solamente el error específico de duplicado informa que ya existe un reporte del usuario.
+Los escenarios P7 verifican:
 
-El recibo de reporte exitoso guarda únicamente su UUID. Si la respuesta de creación se pierde,
-el reintento no duplica el reporte, aunque un duplicado sin recibo conocido no ofrece un enlace
-inventado. Los motivos de decisiones se guardan para reintentar; no se guardan bearer, contraseña
-ni texto del contenido protegido. Se conservan trabajos abiertos y hasta 20 decisiones terminales.
+1. Reporte desde feed con seguidor real; ocultar, confirmar operación, recargar su URL,
+   comprobar 404 público, feed vacío y contadores públicos en cero; restaurar, consultar
+   historial y volver al feed del lector con una reacción y un comentario preservados.
+2. Admin rechaza sin retirar el post; filtro de rechazados; duplicado 409; usuario común
+   sin bandeja ni permiso de decisión y tercero sin acceso al reporte.
+3. Falla inyectada por API de desarrollo, compensación real y pantalla sin falso éxito.
 
-Consultas de caché separadas por usuario y rol; un 403 retira también contenido protegido ya cacheado
-y vuelve a validar la sesión. Reportes y contenido se actualizan periódicamente con pestaña visible.
-La interfaz no se considera una barrera de autorización: las verificaciones efectivas son del backend.
+Las pruebas crean únicamente cuentas/posts QA nuevos. Como el registro siempre crea users,
+la preparación asigna moderator/admin directamente en Mongo solo al UUID y username aleatorios
+recién creados, con guard APP_ENV=development. Necesita Docker CLI. No cambia cuentas previas,
+roles de Lautaro ni sus publicaciones/seguimientos. No se usa el seed fijo P7 ni sus resets.
+No hay mocks/interceptores E2E; los mocks se limitan a unit/componentes.
 
-Los identificadores conservan compatibilidad con los GUID históricos aceptados por el backend,
-incluidos los que no declaran versión RFC. No se regeneran UUID ni se migran datos para abrir la bandeja.
+La primera ejecución de Vitest detectó una espera de test que observaba loading en lugar
+de pending; se corrigió la espera. La preparación E2E inicialmente importaba un módulo de
+HTTP dependiente de Vite: se separaron contratos puros y errores. La siguiente corrida dio
+20/24 por una expectativa de login que ignoraba el retorno a rutas protegidas; esa inspección
+también reveló los UUID históricos rechazados en bandeja. Se corrigieron ambas causas;
+la corrida final fue 24/24, sin retries para ocultar fallos.
 
-## Pruebas
+Comandos desde `frontend/`, con Docker iniciado:
 
-Backend: `tests/integration/test_moderation_content.py` cubre permisos, lectura oculta, origen de
-operación/reversión, revocación de rol con el mismo token y rechazo de contenido inexistente o
-no publicado. Frontend: pruebas de formulario, bandeja, detalle, caché/permisos y decisión pendiente.
-`frontend/tests/e2e/moderation.spec.ts` usa cuentas QA nuevas, API, worker y motores reales en
-escritorio/móvil. Los roles de esas cuentas se preparan sólo para la prueba; registro no concede roles.
-Incluye reporte propio, varios reportes, hide/revert, contadores/comentarios preservados, rechazo,
-duplicado y pérdida de rol administrativo. Los datos previos y volúmenes se conservan.
+```powershell
+npm run lint
+npm run typecheck
+npm run test
+# Desde la raíz: docker compose up -d --build frontend
+$env:PLAYWRIGHT_BASE_URL = "http://127.0.0.1:8080"
+$env:PLAYWRIGHT_CHANNEL = "msedge"
+npx playwright test
+Remove-Item Env:PLAYWRIGHT_BASE_URL
+Remove-Item Env:PLAYWRIGHT_CHANNEL
+```
 
-Validación local del 27/10/2026: 319 pruebas de backend, Ruff y mypy (202 archivos),
-142 pruebas de frontend, ESLint, TypeScript y build de producción correctos.
-La regresión completa de navegador terminó con 34 pruebas correctas entre escritorio y móvil,
-incluidas las cuatro ejecuciones de P7 y los recorridos existentes de P1–P6.
+No se repitió la suite Python: no se modificó backend. El build conserva los avisos PURE
+de Zod documentados previamente.
+
+## Evidencia visual y límites
+
+Capturas reales en `screenshots/p7/`: reporte, bandeja, ocultación, restauración y compensación,
+en escritorio/móvil. Se revisaron formulario, foco visible, jerarquía, historial, referencias
+largas y navegación con cuatro accesos en móvil. El E2E comprueba ausencia de desbordamiento
+en el detalle moderado. Los errores 404 al consultar un post oculto son esperados y se manejan;
+se comprueba que no haya otros errores de consola ni pageerror en el circuito principal.
+
+- [Reporte móvil](screenshots/p7/p7-report-mobile.png)
+- [Bandeja escritorio](screenshots/p7/p7-queue-desktop.png)
+- [Ocultación móvil](screenshots/p7/p7-hidden-mobile.png)
+- [Restauración escritorio](screenshots/p7/p7-restored-desktop.png)
+- [Compensación móvil](screenshots/p7/p7-compensated-mobile.png)
+
+El backend no ofrece listado de reportes propios ni contenido oculto para revisión: el titular
+guarda su enlace individual y el moderador ve metadata/historial cuando el post ya no es público.
+Un alta cuya respuesta se pierde puede devolver 409 al repetir, sin recuperar automáticamente
+el ID del reporte; la UI conserva el texto y explica el conflicto. No fabrica comprobantes.
+La bandeja no pagina más allá de los 100 registros que devuelve el backend. Los reportes
+pendientes se consultan cada cinco segundos; no hay notificaciones push. Las garantías de
+recuperación, concurrencia y restauración son las del backend P7.
+
+Para pruebas manuales con rol privilegiado, usar una cuenta de moderación existente o el
+seed de desarrollo descrito en [guía P7](../problem_7_moderation_test_guide.md). El registro
+normal no eleva privilegios. P7 UI completo; no se inicia otro problema automáticamente.
+# Actualización de integración
+
+El detalle de moderación incorpora lectura protegida del contenido oculto, recuperación
+de decisiones y caché separada por rol. Ver [problem_7_recovery.md](problem_7_recovery.md).
+Las capturas y los resultados del resto de esta guía describen la implementación original;
+los resultados de la integración se registran en [integration_p7_p8.md](integration_p7_p8.md).

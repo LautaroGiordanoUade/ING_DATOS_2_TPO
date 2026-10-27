@@ -4,7 +4,7 @@ import { ApiError } from '../../services/http/client'
 
 const date = z.string().transform((v) => /(?:Z|[+-]\d{2}:\d{2})$/i.test(v) ? v : `${v}Z`)
 export const reasonLabels = { spam: 'Spam', abuse: 'Abuso', hate: 'Odio', violence: 'Violencia', other: 'Otro motivo' } as const
-export const reportLabels = { pending: 'Pendiente', approved: 'Aceptado', rejected: 'Rechazado', reverted: 'Revertido' } as const
+export const reportLabels = { pending: 'Pendiente', approved: 'Ocultado', rejected: 'Reporte rechazado', reverted: 'Restaurado' } as const
 export const actionLabels = { hide: 'Ocultar publicación', reject: 'Rechazar reporte', revert: 'Revertir ocultamiento' } as const
 export const jobLabels = { pending: 'En espera', running: 'Procesando', committing: 'Confirmando', compensating: 'Restaurando estado anterior', completed: 'Completado', compensated: 'Cambio revertido', failed: 'Requiere recuperación' } as const
 export const jobStatus = z.enum(['pending', 'running', 'committing', 'compensating', 'completed', 'compensated', 'failed'])
@@ -14,7 +14,7 @@ export const reportSchema = z.object({ id: z.guid(), post_id: z.guid(), reporter
   resolution_status: z.enum(['pending', 'approved', 'rejected', 'reverted']), reported_at: date,
   moderator_id: z.guid().nullable(), resolved_at: date.nullable(), decision: actionSchema.nullable(),
   decision_reason: z.string().nullable(), operation_id: z.guid().nullable(),
-  resolution_operation_id: z.guid().nullable(), resolution_report_id: z.guid().nullable(),
+  resolution_operation_id: z.guid().nullable().default(null), resolution_report_id: z.guid().nullable().default(null),
 })
 export const contentSchema = z.object({ id: z.guid(), user_id: z.guid(), text: z.string(), media: z.array(z.string()),
   interests: z.array(z.string()), published_at: date, visibility: z.string(), moderation_status: z.string(),

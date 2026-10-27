@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event'
 import { DecisionPanel } from './DecisionPanel'
 import type { AuthRequest } from '../auth/api'
 import { sessionWrapper } from '../../../tests/fixtures/session'
-import { report, content, job, moderator } from '../../../tests/fixtures/moderation'
+import { report, content, job, moderator } from '../../../tests/fixtures/moderation-recovery'
 
 beforeEach(() => sessionStorage.clear())
 function mount(request: AuthRequest, context = content, item = report, onForbidden = vi.fn()) {
@@ -60,4 +60,19 @@ it('rechaza un resultado de otra publicación y mantiene los controles bloqueado
   mount(request, { ...content, active_operation_id: job.operation_id })
   expect(await screen.findByText('No pudimos consultar el resultado.')).toBeVisible()
   expect(screen.getByRole('button', { name: 'Ocultar publicación' })).toBeDisabled()
+})
+
+it('un hide anterior no confirma ni desbloquea una reversión cuyo envío se perdió', async () => {
+  sessionStorage.setItem(`niche.p7.decisions.${moderator.id}`, JSON.stringify([{ post_id: report.post_id, report_id: report.id,
+    action: 'revert', reason: 'Nueva revisión', operation_id: null, status: null }]))
+  const request = vi.fn<AuthRequest>(async (_path, options) => options?.method === 'POST'
+    ? { ...job, action: 'revert', reason: 'Nueva revisión', status: 'completed' }
+    : { ...job, status: 'completed' })
+  mount(request, { ...content, moderation_status: 'hidden', moderation_owner: report.id, report_operation_id: job.operation_id }, { ...report, resolution_status: 'approved' })
+  const confirm = await screen.findByRole('button', { name: 'Confirmar envío pendiente' })
+  await waitFor(() => expect(confirm).toBeEnabled())
+  expect(screen.queryByText('La operación terminó y su resultado fue confirmado.')).not.toBeInTheDocument()
+  expect(screen.getByRole('button', { name: 'Revertir ocultamiento' })).toBeDisabled()
+  await userEvent.click(confirm)
+  expect(JSON.parse(String(request.mock.calls.find(([, options]) => options?.method === 'POST')?.[1]?.body))).toEqual({ reason: 'Nueva revisión' })
 })

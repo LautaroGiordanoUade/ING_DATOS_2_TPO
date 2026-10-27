@@ -1,37 +1,35 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { z } from 'zod'
 import { useAuth } from '../auth/context'
-import { denied, queryRoot, reasonLabels, reportLabels, reportSchema, root } from './api'
+import { ErrorMessage } from '../../components/common/ErrorMessage'
+import { reasons, reportSchema, resolutions } from './contracts'
+import { moderationError } from './errors'
+import { denied } from './api'
 import { ModerationDenied } from './RequireModerator'
-import { Person } from './Person'
-import { useDecisionAttempts } from './attempts'
 
 export function ModerationPage() {
-  const { user, request } = useAuth()
+  const { request, user } = useAuth()
   const client = useQueryClient()
   const [status, setStatus] = useState('pending')
-  const attempts = useDecisionAttempts(user!.id)
-  const reports = useQuery({ queryKey: [...queryRoot(user!.id, user!.role), 'reports', status],
-    queryFn: async ({ signal }) => z.array(reportSchema).parse(await request(`${root}/reports${status ? `?status=${status}` : ''}`, { signal })),
-    retry: false, networkMode: 'always', refetchInterval: () => document.visibilityState === 'visible' ? 5000 : false })
+  const reports = useQuery({
+    queryKey: ['moderation', user!.id, user!.role, 'reports', status],
+    queryFn: async ({ signal }) => z.array(reportSchema).parse(await request(`/api/v1/moderation/reports${status ? `?status=${status}` : ''}`, { signal })),
+    networkMode: 'always', retry: false,
+    refetchInterval: () => document.visibilityState === 'visible' ? 5000 : false,
+  })
   const forbidden = denied(reports.error)
   useEffect(() => { if (forbidden) void client.invalidateQueries({ queryKey: ['auth', 'me'] }) }, [forbidden, client])
   if (forbidden) return <ModerationDenied />
   return <div className="page-content moderation-page">
-    <header className="page-title"><p className="eyebrow">REVISIÓN DE CONTENIDO</p><h1>Moderación</h1><p className="muted">Hasta 100 reportes por consulta, ordenados del más reciente al más antiguo.</p></header>
-    <div className="moderation-toolbar"><label>Estado de los reportes<select value={status} onChange={(e) => setStatus(e.target.value)}>
-      <option value="">Todos</option>{Object.entries(reportLabels).map(([value, label]) => <option value={value} key={value}>{label}</option>)}
-    </select></label><button className="button-secondary" disabled={reports.isFetching} onClick={() => void reports.refetch()}>Actualizar reportes</button></div>
+    <div className="page-title"><p className="eyebrow">CUIDAR LO QUE COMPARTIMOS</p><h1>Moderación</h1><p className="muted">Revisá los reportes de la comunidad y dejá constancia de cada decisión.</p></div>
+    <div className="card moderation-toolbar"><div><label htmlFor="report-filter">Estado de los reportes</label><select id="report-filter" value={status} onChange={(event) => setStatus(event.target.value)}><option value="">Todos</option>{Object.entries(resolutions).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></div><button className="button-secondary" disabled={reports.isFetching} onClick={() => void reports.refetch()}>Actualizar reportes</button></div>
     {reports.isPending && <p role="status">Cargando reportes…</p>}
-    {reports.isError && <div role="alert">No pudimos cargar los reportes.<button className="button-secondary" onClick={() => void reports.refetch()}>Reintentar reportes</button></div>}
-    {!reports.isPending && !reports.isError && !reports.data.length && <section className="card empty-state"><h2>No hay reportes en este estado.</h2></section>}
-    {!reports.isError && <ul className="moderation-report-list">{reports.data?.map((report) => <li className="card moderation-report" key={report.id}>
-      <div><span className="pill">{reportLabels[report.resolution_status]}</span><h2>Reporte por {reasonLabels[report.reason].toLowerCase()}</h2>
-        <p>Reportado por <Person id={report.reporter_id} /></p><time dateTime={report.reported_at}>{new Date(report.reported_at).toLocaleString('es-AR')}</time>
-        {attempts.some((a) => a.post_id === report.post_id && !['completed', 'compensated'].includes(a.status ?? '')) && <p className="muted">Hay una decisión pendiente de confirmación.</p>}</div>
-      <Link className="button-secondary" to={`/reportes/${report.id}`}>Revisar reporte</Link>
-    </li>)}</ul>}
+    {reports.isError && <ErrorMessage message={moderationError(reports.error)} />}
+    {!reports.isError && reports.data?.length === 0 && <section className="card empty-state"><h2>No hay reportes para este estado.</h2><p>Podés elegir otro filtro o volver a actualizar.</p></section>}
+    {!reports.isError && reports.data?.map((report) => <article key={report.id} className="card report-row"><div><span className="status-badge">{resolutions[report.resolution_status]}</span><h2>{reasons[report.reason as keyof typeof reasons] || report.reason}</h2><p className="muted">{new Date(report.reported_at).toLocaleString('es-AR')}</p><p className="report-excerpt">{report.description || 'Sin descripción adicional.'}</p></div><Link className="button-secondary" to={`/reportes/${report.id}`}>Revisar reporte</Link></article>)}
+    <p className="preparation-note">Hasta 100 reportes por filtro, del más reciente al más antiguo.</p>
   </div>
 }
