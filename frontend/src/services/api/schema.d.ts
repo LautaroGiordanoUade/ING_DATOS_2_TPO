@@ -358,6 +358,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/users/me/interests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Update Interests
+         * @description Atomically replace only the authenticated active user's declared interests.
+         */
+        put: operations["update_interests_api_v1_users_me_interests_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/users/{user_id}": {
         parameters: {
             query?: never;
@@ -1592,6 +1612,8 @@ export interface components {
         };
         /** UserCreate */
         UserCreate: {
+            /** Interests */
+            interests?: string[];
             /**
              * Account Type
              * @default public
@@ -1607,8 +1629,15 @@ export interface components {
             /** Password */
             password: string;
         };
+        /** UserInterestsUpdate */
+        UserInterestsUpdate: {
+            /** Interests */
+            interests: string[];
+        };
         /** UserResponse */
         UserResponse: {
+            /** Interests */
+            interests?: string[];
             /**
              * Id
              * Format: uuid
@@ -2393,6 +2422,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["UserResponse"];
+                };
+            };
+        };
+    };
+    update_interests_api_v1_users_me_interests_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UserInterestsUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

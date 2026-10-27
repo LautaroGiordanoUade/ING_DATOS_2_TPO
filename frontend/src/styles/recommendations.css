@@ -5,6 +5,14 @@
   margin-top: 15px;
 }
 
+.interests-editor { margin-bottom: 28px; padding: 24px; }
+.interests-editor form { display: grid; gap: 14px; }
+.interests-editor .inline-form { display: flex; flex-direction: row; flex-wrap: wrap; gap: 10px; }
+.interests-editor input { min-width: 0; flex: 1 1 180px; height: 44px; }
+.interests-editor .interest-tags { flex-wrap: wrap; }
+.interests-editor .interest-tags li { overflow-wrap: anywhere; max-width: 100%; }
+.interests-editor .interest-tags button { border: 0; background: transparent; cursor: pointer; padding: 4px 8px; }
+
 .user-card {
   padding: 20px;
   display: flex;

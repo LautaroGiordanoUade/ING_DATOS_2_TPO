@@ -1202,6 +1202,53 @@
         ]
       }
     },
+    "/api/v1/users/me/interests": {
+      "put": {
+        "tags": [
+          "users"
+        ],
+        "summary": "Update Interests",
+        "description": "Atomically replace only the authenticated active user's declared interests.",
+        "operationId": "update_interests_api_v1_users_me_interests_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserInterestsUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
     "/api/v1/users/{user_id}": {
       "get": {
         "tags": [
@@ -4939,6 +4986,14 @@
       },
       "UserCreate": {
         "properties": {
+          "interests": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 20,
+            "title": "Interests"
+          },
           "account_type": {
             "type": "string",
             "enum": [
@@ -4980,8 +5035,33 @@
         ],
         "title": "UserCreate"
       },
+      "UserInterestsUpdate": {
+        "properties": {
+          "interests": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 20,
+            "title": "Interests"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "interests"
+        ],
+        "title": "UserInterestsUpdate"
+      },
       "UserResponse": {
         "properties": {
+          "interests": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Interests"
+          },
           "id": {
             "type": "string",
             "format": "uuid",

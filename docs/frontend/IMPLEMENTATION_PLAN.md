@@ -109,8 +109,10 @@ incluye rutas todavía pendientes: OpenAPI no prueba comportamiento.
 
 ### P4 — amigos en común y sugerencias
 
-- Entidades: User, FOLLOWS/BLOCKS; Neo4j y MongoDB para estado activo.
-- GET `/problems/4/recommendations/{user_id}` devuelve hasta 10 UUIDs reales de segundo grado;
+- Entidades: User.interests en MongoDB, FOLLOWS/BLOCKS en Neo4j y validación de estado activo.
+- «Mis intereses» edita preferencias con PUT `/users/me/interests`, refresca sugerencias y
+  muestra etiquetas compartidas. Usuarios antiguos sin el campo conservan sus datos.
+- GET `/problems/4/recommendations/{user_id}` devuelve hasta 10 UUIDs por segundo grado e intereses;
   GET `/problems/4/mutual-friends?user_id=...&other_user_id=...` devuelve UUIDs reales de amigos
   en común ordenados por identificador.
 - UI implementada en `/recomendaciones` (`RecommendationsPage` y `UserCard`): muestra sugerencias

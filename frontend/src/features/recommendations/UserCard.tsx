@@ -9,7 +9,7 @@ interface UserCardProps {
 }
 
 export function UserCard({ userId, onSelectMutual }: UserCardProps) {
-  const { request } = useAuth()
+  const { request, user: viewer } = useAuth()
   const profile = useQuery({
     queryKey: ['users', 'profile', userId],
     queryFn: ({ signal }) => getUserProfile(request, userId, signal),
@@ -28,6 +28,7 @@ export function UserCard({ userId, onSelectMutual }: UserCardProps) {
   const user = profile.data
   const fullName = user?.full_name || `Cuenta ${userId.slice(0, 8)}`
   const initial = Array.from(fullName)[0]?.toUpperCase() ?? 'U'
+  const shared = (user?.interests ?? []).filter((tag) => viewer?.interests?.includes(tag))
 
   return (
     <article className="card user-card" aria-label={`Perfil de ${fullName}`}>
@@ -41,6 +42,9 @@ export function UserCard({ userId, onSelectMutual }: UserCardProps) {
       </div>
 
       {user?.biography && <p className="user-bio">{user.biography}</p>}
+      {shared.length > 0 && <ul className="interest-tags" aria-label="Intereses compartidos">
+        {shared.map((tag) => <li key={tag}>#{tag}</li>)}
+      </ul>}
 
       <div className="user-card-actions">
         {onSelectMutual && (

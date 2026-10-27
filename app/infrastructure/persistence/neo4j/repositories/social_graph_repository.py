@@ -5,6 +5,7 @@ from neo4j import AsyncDriver
 
 from app.application.services.follow_job import FollowJob
 from app.core.exceptions import ConflictError
+from app.domain.recommendations import SuggestionCandidate
 
 
 class Neo4jSocialGraphRepository:
@@ -201,6 +202,58 @@ class Neo4jSocialGraphRepository:
                 limit=limit,
             )
             return tuple([UUID(record["id"]) async for record in result])
+
+    async def suggestion_candidates(
+        self, user_id: UUID, after: UUID | None, limit: int
+    ) -> tuple[SuggestionCandidate, ...]:
+        async with self._driver.session() as session:
+            result = await session.run(
+                """
+                MATCH (u:User {id:$id})-[r1:FOLLOWS]->(middle:User)
+                      -[r2:FOLLOWS]->(candidate:User)
+                WHERE candidate <> u
+                  AND ($after IS NULL OR candidate.id > $after)
+                  AND coalesce(r1.status,'accepted')='accepted'
+                  AND coalesce(r2.status,'accepted')='accepted'
+                  AND coalesce(u.account_status,'active')='active'
+                  AND coalesce(middle.account_status,'active')='active'
+                  AND coalesce(candidate.account_status,'active')='active'
+                  AND NOT (u)-[:FOLLOWS]->(candidate)
+                  AND NOT (u)-[:BLOCKS]-(middle)
+                  AND NOT (middle)-[:BLOCKS]-(candidate)
+                  AND NOT (u)-[:BLOCKS]-(candidate)
+                RETURN candidate.id AS id, count(DISTINCT middle) AS score
+                ORDER BY id LIMIT $limit
+                """,
+                id=str(user_id),
+                after=None if after is None else str(after),
+                limit=limit,
+            )
+            return tuple(
+                [SuggestionCandidate(UUID(row["id"]), int(row["score"])) async for row in result]
+            )
+
+    async def eligible_suggestions(self, user_id: UUID, ids: tuple[UUID, ...]) -> set[UUID]:
+        if not ids:
+            return set()
+        async with self._driver.session() as session:
+            result = await session.run(
+                """
+                UNWIND $ids AS id
+                OPTIONAL MATCH (u:User {id:$user})
+                OPTIONAL MATCH (candidate:User {id:id})
+                WITH u,candidate,id
+                WHERE id <> $user
+                  AND coalesce(u.account_status,'active')='active'
+                  AND coalesce(candidate.account_status,'active')='active'
+                  AND NOT EXISTS { MATCH (:User {id:$user})-[:FOLLOWS]->(:User {id:id}) }
+                  AND NOT EXISTS { MATCH (:User {id:$user})-[:BLOCKS]-(:User {id:id}) }
+                RETURN DISTINCT id ORDER BY id
+                """,
+                user=str(user_id),
+                ids=[str(i) for i in ids],
+            )
+            return {UUID(row["id"]) async for row in result}
 
     async def trace_relationships(self, user_id: UUID) -> dict[str, object]:
         async with self._driver.session() as session:

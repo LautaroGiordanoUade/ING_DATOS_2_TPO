@@ -134,6 +134,21 @@ def main() -> None:
         f"    PASS: Cuentas sugeridas y ordenadas por score ({ids['target']} -> {ids['target2']})"
     )
 
+    print("[*] Verificando intereses editables y cambio de ranking:")
+    for role in ("target2", "usera"):
+        code, profile = request(
+            "PUT", "/api/v1/users/me/interests", {"interests": [" Python ", "PYTHON"]}, tokens[role]
+        )
+        assert code == 200 and profile["interests"] == ["python"], profile
+    code, updated = request("GET", f"/api/v1/problems/4/recommendations/{ids['usera']}")
+    assert code == 200 and updated[:2] == [ids["target2"], ids["target"]], updated
+    code, profile = request("GET", "/api/v1/users/me", token=tokens["usera"])
+    assert code == 200 and profile["interests"] == ["python"], profile
+    print(
+        "    PASS: preferencias normalizadas y persistidas; intereses priorizados sobre conexiones"
+    )
+    print(json.dumps({"users": ids, "usera": f"qa-p4-{suffix}-usera", "recommendations": updated}))
+
     print("\n==============================================")
     print("  TODAS LAS PRUEBAS DEL PROBLEMA 4 PASARON OK ")
     print("==============================================")
