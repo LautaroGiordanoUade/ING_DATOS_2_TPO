@@ -236,4 +236,6 @@ test('P8 compensación real no informa suspensión completada', async ({ page, r
   const trace = await request.get(`/backend/api/v1/accounts/${target.id}/trace`, { headers: admin.headers })
   expect(traceSchema.parse(await trace.json()).profile?.account_status).toBe('active')
   await page.screenshot({ path: info.outputPath('p8-compensated.png'), fullPage: true })
+  await expect(page.getByRole('button', { name: 'Reintentar recuperación', exact: true })).toHaveCount(0)
+  await expect(page.getByText(/La compensación terminó/)).toBeVisible()
 })

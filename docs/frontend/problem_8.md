@@ -132,3 +132,9 @@ La presencia mostrada corresponde a la última lectura y puede renovarse/actuali
 interpreta una conversación conservada como presencia abierta. Las garantías de recuperación
 y restauración siguen siendo las de [P8 backend](../problems/problem_08.md).
 P8 UI completo; no se comienza otro problema automáticamente.
+# Recuperación de operaciones integrada
+
+La pantalla de operación ofrece **Reintentar recuperación** para trabajos fallidos,
+usando su identificador existente. Si la compensación ya terminó, se consulta la cuenta
+y se confirma una nueva solicitud: el backend exige una nueva clave de idempotencia.
+Los resultados originales de esta guía se complementan con [integration_p7_p8.md](integration_p7_p8.md).

@@ -1,11 +1,13 @@
 import { useEffect } from 'react'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useParams } from 'react-router-dom'
 import { z } from 'zod'
 import { useAuth } from '../auth/context'
 import { ErrorMessage } from '../../components/common/ErrorMessage'
 import { actions, isTerminal, jobLabels, jobSchema } from './contracts'
 import { moderationError } from './errors'
+import { denied } from './api'
+import { ModerationDenied } from './RequireModerator'
 
 export function ModerationOperationPage() {
   const { operationId = '' } = useParams()
@@ -13,11 +15,23 @@ export function ModerationOperationPage() {
   const valid = z.guid().safeParse(operationId).success
   const client = useQueryClient()
   const job = useQuery({
-    queryKey: ['moderation-operation', user!.id, operationId], enabled: valid,
-    queryFn: async ({ signal }) => jobSchema.parse(await request(`/api/v1/moderation/operations/${operationId}`, { signal })),
+    queryKey: ['moderation-operation', user!.id, user!.role, operationId], enabled: valid,
+    queryFn: async ({ signal }) => {
+      const data = jobSchema.parse(await request(`/api/v1/moderation/operations/${operationId}`, { signal }))
+      if (data.operation_id !== operationId) throw new Error('La operación recibida no corresponde a esta consulta.')
+      return data
+    },
     refetchInterval: (query) => query.state.error || (query.state.data && isTerminal(query.state.data.status)) ? false : 1000,
     networkMode: 'always', retry: false,
   })
+  const retry = useMutation({ mutationFn: async () => {
+    const data = jobSchema.parse(await request(`/api/v1/moderation/operations/${operationId}/retry`, { method: 'POST' }))
+    if (data.operation_id !== operationId || data.post_id !== job.data?.post_id) throw new Error('La recuperación no corresponde a esta publicación.')
+    return data
+  }, retry: false, onSuccess: (data) => client.setQueryData(['moderation-operation', user!.id, user!.role, operationId], data),
+    onError: () => { void job.refetch() } })
+  const forbidden = denied(job.error) || denied(retry.error)
+  useEffect(() => { if (forbidden) void client.invalidateQueries({ queryKey: ['auth', 'me'] }) }, [forbidden, client])
   const status = job.data?.status
   const postId = job.data?.post_id
   useEffect(() => {
@@ -29,6 +43,7 @@ export function ModerationOperationPage() {
     }
   }, [status, postId, client])
   if (!valid) return <div className="page-content"><ErrorMessage message="El identificador de operación no es válido." /></div>
+  if (forbidden) return <ModerationDenied />
   return <div className="page-content moderation-page">
     <Link className="back-link" to="/moderacion">← Volver a moderación</Link>
     <div className="page-title"><p className="eyebrow">UNA DECISIÓN CON SEGUIMIENTO</p><h1>Estado de moderación</h1></div>
@@ -39,6 +54,8 @@ export function ModerationOperationPage() {
         <span className={`status-badge ${status === 'completed' ? 'is-ready' : ''}`} role="status">{jobLabels[job.data.status]}</span><h2>{actions[job.data.action]}</h2><p className="reported-text">{job.data.reason}</p>
         <p className="muted">{status === 'completed' ? 'El servidor confirmó la decisión. El reporte y su historial ya están actualizados.' : status === 'compensated' ? 'La decisión no se aplicó: el servidor restauró el estado previo. El equipo administrador puede revisar la operación.' : status === 'failed' ? 'No se pudo confirmar la decisión. Requiere revisión del equipo administrador; no se asume que el contenido haya cambiado.' : 'Solicitud recibida. Esperando que el servidor confirme el resultado; podés volver a este enlace más tarde.'}</p>
         {job.data.error && <ErrorMessage message={job.data.error} />}
+        {(status === 'failed' || status === 'compensated') && <button className="button-secondary" disabled={retry.isPending} onClick={() => retry.mutate()}>{retry.isPending ? 'Solicitando recuperación…' : status === 'failed' ? 'Reintentar recuperación' : 'Reintentar decisión'}</button>}
+        {retry.isError && <ErrorMessage message={moderationError(retry.error)} />}
         <Link className="button-secondary" to={`/reportes/${job.data.report_id}`}>Consultar reporte</Link>
         <details className="moderation-identifiers"><summary>Referencia de la operación</summary><code>{operationId}</code></details>
       </>}

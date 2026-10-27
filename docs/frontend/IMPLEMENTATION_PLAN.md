@@ -43,9 +43,11 @@ con P7 y P8 en esta rama; su validación conjunta se documenta en integration_p7
 4. P5: implementado en backend (`InteractWithPostUseCase` con recuperación durable) y en
    frontend (`features/interactions/` integrado en `PostCard`), refrescando los contadores del
    servidor después de cada mutación.
-5. P7: completo; reportes, decisiones, reversión, permisos e historial. Ver problem_7.md.
+5. P7: completo; reportes, decisiones, reversión, permisos e historial. Lectura protegida
+   del contenido oculto y recuperación durable de envíos; ver problem_7.md y problem_7_recovery.md.
 6. P8: completo; suspensión/reactivación, consulta agregada y revocación de sesión.
-   Ver problem_8.md e integration_p7_p8.md para la integración con el resto de los módulos.
+   Recuperación explícita de operaciones fallidas; una compensación terminada requiere
+   una nueva solicitud. Ver problem_8.md e integration_p7_p8.md para la integración.
 7. P4: implementado en backend (`SocialRecommendationsUseCase` y `Neo4jSocialGraphRepository`)
    y en frontend (`features/recommendations/` con ruta protegida `/recomendaciones`).
 8. P6: implementado con backend de grupos/historial/participantes/unread y recuperación;

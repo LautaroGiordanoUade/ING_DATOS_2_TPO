@@ -3597,6 +3597,93 @@
         }
       }
     },
+    "/api/v1/moderation/posts/{post_id}/content": {
+      "get": {
+        "tags": [
+          "moderation"
+        ],
+        "summary": "Review Content",
+        "description": "Moderator-only published content, including hidden posts. No public visibility changes.",
+        "operationId": "review_content_api_v1_moderation_posts__post_id__content_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "post_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Post Id"
+            }
+          },
+          {
+            "name": "report_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Report Id"
+            }
+          },
+          {
+            "name": "x-fail-at-step",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Fail-At-Step"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModerationContentResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, invalid or expired bearer"
+          },
+          "403": {
+            "description": "Moderator/admin role required"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "409": {
+            "description": "Closed report, conflicting decision or concurrent operation"
+          },
+          "422": {
+            "description": "Invalid request"
+          }
+        }
+      }
+    },
     "/api/v1/accounts/{user_id}/suspend": {
       "post": {
         "tags": [
@@ -5046,6 +5133,102 @@
           "text"
         ],
         "title": "MessageText"
+      },
+      "ModerationContentResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "user_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "User Id"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text"
+          },
+          "media": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Media"
+          },
+          "interests": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Interests"
+          },
+          "published_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Published At"
+          },
+          "visibility": {
+            "type": "string",
+            "title": "Visibility"
+          },
+          "moderation_status": {
+            "type": "string",
+            "title": "Moderation Status"
+          },
+          "moderation_owner": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Moderation Owner"
+          },
+          "active_operation_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Active Operation Id"
+          },
+          "report_operation_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Report Operation Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "user_id",
+          "text",
+          "media",
+          "interests",
+          "published_at",
+          "visibility",
+          "moderation_status",
+          "moderation_owner",
+          "active_operation_id",
+          "report_operation_id"
+        ],
+        "title": "ModerationContentResponse"
       },
       "ModerationJob": {
         "properties": {

@@ -110,6 +110,10 @@ class MongoModerationRepository:
         doc = await self._jobs.find_one({"_id": str(operation_id)})
         return None if doc is None else ModerationJob.model_validate(doc)
 
+    async def active_operation_id(self, post_id: UUID) -> UUID | None:
+        doc = await self._jobs.find_one({"post_id": str(post_id), "active": True}, {"_id": 1})
+        return UUID(str(doc["_id"])) if doc else None
+
     async def enqueue(self, job: ModerationJob) -> ModerationJob:
         await self.ensure_indexes()
         async with self._post_lock.hold(job.post_id):

@@ -9,6 +9,8 @@ import { ErrorMessage } from '../../components/common/ErrorMessage'
 import { FormField } from '../../components/common/FormField'
 import { reasons, reportSchema, reportValuesSchema } from './contracts'
 import { moderationError } from './errors'
+import { storage } from '../../lib/storage'
+import { ApiError } from '../../services/http/client'
 
 export function ReportPage() {
   const { postId = '' } = useParams()
@@ -28,9 +30,14 @@ export function ReportPage() {
       method: 'POST', body: JSON.stringify({ post_id: postId, ...values, description: values.description || null }),
     })),
     retry: false,
-    onSuccess: (report) => navigate(`/reportes/${report.id}`, { replace: true }),
+    onSuccess: (report) => {
+      storage.set(`niche.p7.report.${user!.id}.${postId}`, report.id)
+      navigate(`/reportes/${report.id}`, { replace: true })
+    },
   })
   if (!valid) return <div className="page-content"><ErrorMessage message="El identificador de publicación no es válido." /></div>
+  const receipt = z.guid().safeParse(storage.get(`niche.p7.report.${user!.id}.${postId}`))
+  if (receipt.success) return <section className="page-content"><h1>Reporte recibido</h1><Link to={`/reportes/${receipt.data}`}>Ver mi reporte</Link></section>
   return <div className="page-content moderation-page">
     <Link className="back-link" to="/">← Volver al feed</Link>
     <div className="page-title"><p className="eyebrow">CUIDEMOS LA COMUNIDAD</p><h1>Reportar publicación</h1><p className="muted">El equipo de moderación revisará tu reporte. Enviarlo no oculta la publicación automáticamente.</p></div>
@@ -43,7 +50,7 @@ export function ReportPage() {
           <FormField id="report-reason" label="Motivo del reporte"><select id="report-reason" {...register('reason')}>{Object.entries(reasons).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></FormField>
           <FormField id="report-description" label="Contanos qué pasó (opcional)" error={errors.description?.message}><textarea id="report-description" rows={5} {...register('description')} aria-invalid={!!errors.description} aria-describedby={errors.description ? 'report-description-error' : undefined} /></FormField>
           <p className="field-hint">Se registra con tu cuenta @{user!.username}. Podés reportar una vez cada publicación.</p>
-          {mutation.isError && <ErrorMessage message={moderationError(mutation.error)} />}
+          {mutation.isError && <ErrorMessage message={mutation.error instanceof ApiError && mutation.error.status === 409 && /already reported/i.test(mutation.error.message) ? 'Ya enviaste un reporte sobre esta publicación.' : moderationError(mutation.error)} />}
           <div className="moderation-actions"><button className="button-primary" type="submit">{mutation.isPending ? 'Enviando reporte…' : 'Enviar reporte'}</button><Link to="/" className="button-secondary">Cancelar</Link></div>
         </fieldset>
       </form>

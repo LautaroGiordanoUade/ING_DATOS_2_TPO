@@ -1,5 +1,31 @@
 # Integración final de P7/P8 con main
 
+## Mejoras integradas sobre main 056cfcb (PR #30)
+
+Se conservan navegación, rutas, formulario de reporte, tarjetas y gestión de cuentas del PR #29.
+El detalle P7 incorpora lectura protegida de contenido oculto, origen de resolución y operación,
+cantidad de reportes afectados, reintento del envío incierto con el motivo original y recuperación
+de operaciones. Los datos privados en caché se separan por rol y se retiran ante un 403.
+La decisión anterior no se presenta como confirmación de un nuevo envío incierto.
+
+P7 permite recuperar trabajos fallidos o compensados con el mismo identificador. P8 permite
+recuperar trabajos fallidos; una compensación terminada exige confirmar una nueva solicitud
+con otra clave. La pantalla diferencia ambos casos y valida la identidad de las respuestas.
+
+Validación de la integración: 203 pruebas frontend correctas, ESLint y TypeScript correctos,
+build Docker correcto. El backend no cambió durante la resolución: conserva las 319 pruebas
+Python previamente aprobadas, Ruff y mypy (202 archivos). Los tests de lectura protegida
+son `tests/integration/test_moderation_content.py`.
+
+Regresión completa de navegador: **46 pruebas correctas en 2,3 minutos**, sin retries,
+en escritorio y móvil. Incluye ambas baterías P7, compensación real y reintento de la misma
+decisión P7, reportes asociados, retiro/restauración de contadores, permisos y revocación de rol;
+P8 conserva suspensión/reactivación, ocultamientos P7, privacidad y compensación sin falso éxito.
+No se repitió la suite Python porque los archivos de backend son idénticos a los ya validados.
+
+La guía complementaria es [problem_7_recovery.md](problem_7_recovery.md).
+Los resultados siguientes corresponden a la entrega original del PR #29.
+
 Validación del 27/10/2026 sobre `origin/main` en `7c6a18c`, que ya incorpora el PR #15
 y las interfaces de P2/P4/P5/P6. Esta entrega agrega P7/P8 y sus pruebas/documentación;
 no sustituye las UI que ya estaban mergeadas ni agrega cambios propios de backend.

@@ -12,6 +12,7 @@ import './styles/interactions.css'
 import './styles/recommendations.css'
 import './styles/messages.css'
 import './styles/social.css'
+import './styles/moderation-recovery.css'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

@@ -118,3 +118,9 @@ recuperación, concurrencia y restauración son las del backend P7.
 Para pruebas manuales con rol privilegiado, usar una cuenta de moderación existente o el
 seed de desarrollo descrito en [guía P7](../problem_7_moderation_test_guide.md). El registro
 normal no eleva privilegios. P7 UI completo; no se inicia otro problema automáticamente.
+# Actualización de integración
+
+El detalle de moderación incorpora lectura protegida del contenido oculto, recuperación
+de decisiones y caché separada por rol. Ver [problem_7_recovery.md](problem_7_recovery.md).
+Las capturas y los resultados del resto de esta guía describen la implementación original;
+los resultados de la integración se registran en [integration_p7_p8.md](integration_p7_p8.md).

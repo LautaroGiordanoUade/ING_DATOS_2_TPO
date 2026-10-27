@@ -154,3 +154,26 @@ it.each(['completed', 'compensated', 'failed'])('detiene polling en %s sin falso
   expect(request).toHaveBeenCalledTimes(1)
   if (status !== 'completed') expect(screen.queryByText('Cambio de cuenta completado')).not.toBeInTheDocument()
 })
+
+it('recupera una operación P8 fallida existente y espera su confirmación', async () => {
+  const request = vi.fn<AuthRequest>(async (_path, options) => ({ ...accountJob, status: options?.method === 'POST' ? 'completed' : 'failed' }))
+  mount(<AccountOperationPage />, request, `/cuentas/operaciones/${operationId}`, '/cuentas/operaciones/:operationId')
+  await userEvent.click(await screen.findByRole('button', { name: 'Reintentar recuperación' }))
+  expect(await screen.findByText('Cambio de cuenta completado')).toBeVisible()
+  expect(request.mock.calls.find(([, options]) => options?.method === 'POST')?.[0]).toBe(`/api/v1/accounts/operations/${operationId}/retry`)
+})
+
+it('rechaza una respuesta de recuperación de otra cuenta', async () => {
+  const request = vi.fn<AuthRequest>(async (_path, options) => ({ ...accountJob, user_id: options?.method === 'POST' ? user.id : target.id, status: 'failed' }))
+  mount(<AccountOperationPage />, request, `/cuentas/operaciones/${operationId}`, '/cuentas/operaciones/:operationId')
+  await userEvent.click(await screen.findByRole('button', { name: 'Reintentar recuperación' }))
+  expect(await screen.findByText('La recuperación no corresponde a esta cuenta.')).toBeVisible()
+  expect(screen.queryByText('Cambio de cuenta completado')).not.toBeInTheDocument()
+})
+
+it('una compensación P8 completa exige una solicitud nueva en lugar de retry', async () => {
+  const request = vi.fn<AuthRequest>().mockResolvedValue({ ...accountJob, status: 'compensated' })
+  mount(<AccountOperationPage />, request, `/cuentas/operaciones/${operationId}`, '/cuentas/operaciones/:operationId')
+  expect(await screen.findByText(/La compensación terminó/)).toBeVisible()
+  expect(screen.queryByRole('button', { name: 'Reintentar recuperación' })).not.toBeInTheDocument()
+})

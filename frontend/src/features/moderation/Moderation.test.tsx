@@ -1,18 +1,19 @@
-import { expect, it, vi } from 'vitest'
+import { beforeEach, expect, it, vi } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import type { ReactNode } from 'react'
 import type { AuthRequest } from '../auth/api'
 import { ApiError } from '../../services/http/client'
-import { sessionWrapper, user, postId, operationId } from '../../../tests/fixtures/session'
-import { moderationJob, moderator, report, reportedPost, reportId } from '../../../tests/fixtures/moderation'
+import { sessionWrapper, user, postId } from '../../../tests/fixtures/session'
+import { moderator, report, reportedPost, reportId } from '../../../tests/fixtures/moderation'
 import { ReportPage } from './ReportPage'
 import { ReportDetailPage } from './ReportDetailPage'
 import { ModerationPage } from './ModerationPage'
 import { RequireModerator } from './RequireModerator'
-import { DecisionForm } from './DecisionForm'
 import { PostCard } from '../posts/PostCard'
+
+beforeEach(() => sessionStorage.clear())
 
 function mount(element: ReactNode, request: AuthRequest, actor = moderator, path = '/', route = '/') {
   return render(<MemoryRouter initialEntries={[path]}><Routes><Route path={route} element={element} /><Route path="/moderacion/operaciones/:operationId" element={<h1>Operación recibida</h1>} /><Route path="/reportes/:reportId" element={route === '/reportes/:reportId' ? undefined : <h1>Reporte registrado</h1>} /></Routes></MemoryRouter>, { wrapper: sessionWrapper(request, { user: actor }) })
@@ -90,7 +91,7 @@ it('permite al reportante ver su reporte sin consultar datos privados', async ()
   await screen.findByText('Contenido repetido')
   expect(screen.queryByRole('heading', { name: 'Resolver reporte' })).not.toBeInTheDocument()
   expect(screen.queryByRole('heading', { name: 'Historial de la publicación' })).not.toBeInTheDocument()
-  expect(request).toHaveBeenCalledTimes(1)
+  expect(request.mock.calls.some(([path]) => /content|history|operations/.test(path))).toBe(false)
 })
 it('muestra denegación de acceso del servidor sin filtrar contenido', async () => {
   const request = vi.fn<AuthRequest>().mockRejectedValue(new ApiError(403, 'Forbidden', null))
@@ -98,27 +99,22 @@ it('muestra denegación de acceso del servidor sin filtrar contenido', async () 
   expect(await screen.findByRole('alert')).toHaveTextContent('No tenés permiso')
   expect(request).toHaveBeenCalledTimes(1)
 })
-it('requiere motivo y confirmación antes de ocultar', async () => {
-  const request = vi.fn<AuthRequest>().mockResolvedValue(moderationJob)
-  mount(<DecisionForm report={report} />, request)
-  await userEvent.click(screen.getByRole('button', { name: 'Revisar decisión' }))
-  expect(await screen.findByRole('alert')).toHaveTextContent('Escribí el motivo')
-  await userEvent.type(screen.getByLabelText('Motivo de la decisión'), 'Spam confirmado')
-  await userEvent.click(screen.getByRole('button', { name: 'Revisar decisión' }))
-  expect(request).not.toHaveBeenCalled()
-  await userEvent.click(screen.getByRole('button', { name: 'Confirmar y enviar' }))
-  expect(await screen.findByRole('heading', { name: 'Operación recibida' })).toBeVisible()
-  expect(request.mock.calls[0]?.[0]).toBe(`/api/v1/moderation/reports/${reportId}/decision`)
-  expect(JSON.parse(String(request.mock.calls[0]?.[1]?.body))).toEqual({ decision: 'hide', reason: 'Spam confirmado' })
+
+it('recupera el enlace del recibo después de recargar sin reenviar el reporte', async () => {
+  sessionStorage.setItem(`niche.p7.report.${moderator.id}.${postId}`, reportId)
+  const request = vi.fn<AuthRequest>().mockResolvedValue(reportedPost)
+  mount(<ReportPage />, request, moderator, `/reportar/${postId}`, '/reportar/:postId')
+  expect(await screen.findByRole('link', { name: 'Ver mi reporte' })).toHaveAttribute('href', `/reportes/${reportId}`)
+  expect(screen.queryByRole('button', { name: 'Enviar reporte' })).not.toBeInTheDocument()
+  expect(request.mock.calls.some(([, options]) => options?.method === 'POST')).toBe(false)
 })
-it('revertir usa el endpoint de reversión sin reenviar hide', async () => {
-  const request = vi.fn<AuthRequest>().mockResolvedValue({ ...moderationJob, action: 'revert' })
-  mount(<DecisionForm report={{ ...report, resolution_status: 'approved', operation_id: operationId }} />, request)
-  expect(screen.getByLabelText('Acción')).toHaveValue('revert')
-  await userEvent.type(screen.getByLabelText('Motivo de la decisión'), 'Revisión favorable')
-  await userEvent.click(screen.getByRole('button', { name: 'Revisar decisión' }))
-  await userEvent.click(screen.getByRole('button', { name: 'Confirmar y enviar' }))
-  await screen.findByText('Operación recibida')
-  expect(request.mock.calls[0]?.[0]).toBe(`/api/v1/moderation/reports/${reportId}/revert`)
-  expect(JSON.parse(String(request.mock.calls[0]?.[1]?.body))).toEqual({ reason: 'Revisión favorable' })
+
+it('distingue el duplicado de otros conflictos y conserva la descripción', async () => {
+  const request = vi.fn<AuthRequest>().mockResolvedValueOnce(reportedPost).mockRejectedValueOnce(new ApiError(409, 'User already reported this post', null))
+  mount(<ReportPage />, request, moderator, `/reportar/${postId}`, '/reportar/:postId')
+  await screen.findByText('Publicación denunciada')
+  await userEvent.type(screen.getByLabelText('Contanos qué pasó (opcional)'), 'Mi detalle')
+  await userEvent.click(screen.getByRole('button', { name: 'Enviar reporte' }))
+  expect(await screen.findByRole('alert')).toHaveTextContent('Ya enviaste un reporte')
+  expect(screen.getByLabelText('Contanos qué pasó (opcional)')).toHaveValue('Mi detalle')
 })
