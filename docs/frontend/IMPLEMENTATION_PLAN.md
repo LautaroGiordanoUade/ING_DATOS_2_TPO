@@ -126,17 +126,19 @@ incluye rutas todavía pendientes: OpenAPI no prueba comportamiento.
 - Entidades: Reaction, Comment, contadores y notificación; MongoDB/Redis.
 - POST/DELETE `/problems/5/reaction`, POST `/problems/5/comment` con Idempotency-Key;
   GET `/posts/{id}` o feed para contadores. Los alias `/interactions/*` son 204:
-  usar rutas del problema para consultar operation_id. No hay listado público de comentarios
-  ni consulta de reacción propia: no inventar historial/estado propio; revisar necesidad de
-  extensión mínima del contrato antes de prometer esas vistas.
+  usar rutas del problema para consultar operation_id. GET autenticado
+  `/interactions/reactions/{post_id}/me` restaura reacción propia y GET autenticado
+  `/posts/{post_id}/comments` lista autor/texto/fecha con cursor ligado al post.
+  `CommentList` muestra diez comentarios por página, carga anteriores y reinicia la lista
+  tras enviar. Un 404 retira contenido cacheado; otras fallas permiten reintentar.
 - Formulario: comentario 1–2000 (`commentPayloadSchema`), kind 1–30 (`reactionPayloadSchema`), UUIDs.
   Controles de alta/cambio/baja en `PostInteractions`; refresca contadores del servidor con
   `refreshPostCounters` después de cada mutación.
 - Estados: enviando, resultado de operación, 404 contenido retirado, 409 concurrencia,
   422 y 503; conserva texto e `Idempotency-Key` ante error para reintento seguro.
-- Tests implementados: 14 unitarios en `test_problem_05_regressions.py`, 11 de integración real
-  en `test_problem_05_consistency.py`, 7 de componente en `PostInteractions.test.tsx` y scripts
-  `scripts/validar_problema5.py` y `scripts/validar_problema5_fallas.py`.
+- Tests: regresiones P5, integración real de consistencia y `test_comment_pages.py`;
+  componentes `PostInteractions.test.tsx` y `CommentList.test.tsx`; E2E `interactions.spec.ts`
+  y `comments.spec.ts`, además de los scripts de validación P5.
 
 ### P6 — mensajería grupal
 

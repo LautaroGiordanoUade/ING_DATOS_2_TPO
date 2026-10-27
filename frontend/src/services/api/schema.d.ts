@@ -446,6 +446,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/posts/{post_id}/comments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Comments
+         * @description Newest visible comments first; every page checks current post/account availability.
+         */
+        get: operations["comments_api_v1_posts__post_id__comments_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/social/follows": {
         parameters: {
             query?: never;
@@ -1082,6 +1102,42 @@ export interface components {
             user_id: string;
             /** Text */
             text: string;
+        };
+        /** CommentPageResponse */
+        CommentPageResponse: {
+            /** Items */
+            items: components["schemas"]["CommentResponse"][];
+            /** Next Cursor */
+            next_cursor: string | null;
+        };
+        /** CommentResponse */
+        CommentResponse: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Post Id
+             * Format: uuid
+             */
+            post_id: string;
+            /**
+             * User Id
+             * Format: uuid
+             */
+            user_id: string;
+            /** Text */
+            text: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Author Name */
+            author_name: string;
+            /** Author Username */
+            author_username: string | null;
         };
         /**
          * DecisionRequest
@@ -2588,6 +2644,40 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PostResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    comments_api_v1_posts__post_id__comments_get: {
+        parameters: {
+            query?: {
+                cursor?: string | null;
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                post_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommentPageResponse"];
                 };
             };
             /** @description Validation Error */

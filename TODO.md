@@ -67,6 +67,7 @@ rutas en Swagger o respuestas en modo demo.
 
 - [x] Alta, cambio y baja de reacción única por usuario/publicación en MongoDB.
 - [x] Comentarios persistidos y contadores Redis.
+- [x] Lectura autenticada y paginada de comentarios, autor/fecha/texto, filtros de visibilidad y actualización de la lista al comentar/recargar.
 - [x] Notificaciones almacenadas y publicación Pub/Sub.
 - [x] Idempotency-Key para comentarios y replay concurrente.
 - [x] Bloqueo Redis por publicación para cambios de reacción y sus compensaciones.

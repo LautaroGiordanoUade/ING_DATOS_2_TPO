@@ -1,6 +1,7 @@
 import type { AuthRequest } from '../auth/api'
 import {
   commentPayloadSchema,
+  commentPageSchema,
   interactionOperationSchema,
   ownReactionSchema,
   reactionPayloadSchema,
@@ -11,6 +12,13 @@ import {
   type ReactionRemovePayload,
 } from './contracts'
 import { postSchema, type Post } from '../posts/contracts'
+
+export async function getComments(request: AuthRequest, postId: string, cursor: string | null, signal?: AbortSignal) {
+  const query = cursor ? `?cursor=${encodeURIComponent(cursor)}` : ''
+  return commentPageSchema.parse(await request(`/api/v1/posts/${postId}/comments${query}`, {
+    ...(signal ? { signal } : {}),
+  }))
+}
 
 export async function getOwnReaction(request: AuthRequest, postId: string, signal?: AbortSignal) {
   const data = await request(`/api/v1/interactions/reactions/${postId}/me`, {

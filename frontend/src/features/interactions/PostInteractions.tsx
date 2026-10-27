@@ -4,10 +4,12 @@ import { useAuth } from '../auth/context'
 import { ApiError } from '../../services/http/client'
 import { PRESET_REACTIONS, commentPayloadSchema, reactionPayloadSchema } from './contracts'
 import { getOwnReaction, refreshPostCounters, removeReaction, sendComment, sendReaction } from './api'
+import { CommentList } from './CommentList'
 
 interface PostInteractionsProps {
   postId: string
   onCountsChange: (reactionCount: number, commentCount: number) => void
+  commentCount?: number
 }
 
 function parseErrorMessage(err: unknown): string {
@@ -21,7 +23,7 @@ function parseErrorMessage(err: unknown): string {
   return 'Ocurrió un error inesperado al procesar la interacción.'
 }
 
-export function PostInteractions({ postId, onCountsChange }: PostInteractionsProps) {
+export function PostInteractions({ postId, onCountsChange, commentCount = 0 }: PostInteractionsProps) {
   const { user, request } = useAuth()
   const queryClient = useQueryClient()
   const reactionKey = ['own-reaction', user?.id, postId]
@@ -45,6 +47,7 @@ export function PostInteractions({ postId, onCountsChange }: PostInteractionsPro
   // Estados de comentarios
   const [isCommenting, setIsCommenting] = useState(false)
   const [showCommentBox, setShowCommentBox] = useState(false)
+  const [showComments, setShowComments] = useState(false)
   const [commentText, setCommentText] = useState('')
   const [idempotencyKey, setIdempotencyKey] = useState(() => crypto.randomUUID())
   const [commentMsg, setCommentMsg] = useState<{ type: 'error' | 'success'; text: string } | null>(null)
@@ -122,6 +125,9 @@ export function PostInteractions({ postId, onCountsChange }: PostInteractionsPro
       setCommentMsg({ type: 'success', text: 'Comentario enviado exitosamente.' })
       setCommentText('')
       setIdempotencyKey(crypto.randomUUID()) // Nueva clave solo ante éxito
+      await queryClient.cancelQueries({ queryKey: ['comments', user.id, postId] })
+      await queryClient.resetQueries({ queryKey: ['comments', user.id, postId] })
+      setShowComments(true)
       const updated = await refreshPostCounters(request, postId)
       onCountsChange(updated.reaction_count, updated.comment_count)
     } catch (err) {
@@ -254,6 +260,7 @@ export function PostInteractions({ postId, onCountsChange }: PostInteractionsPro
           )}
         </form>
       )}
+      <CommentList postId={postId} enabled={showComments || commentCount > 0} onOpen={() => setShowComments(true)} />
     </div>
   )
 }
