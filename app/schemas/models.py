@@ -75,6 +75,21 @@ class PostResponse(ApiModel):
     comment_count: int = 0
 
 
+class CommentResponse(ApiModel):
+    id: UUID
+    post_id: UUID
+    user_id: UUID
+    text: str
+    created_at: datetime
+    author_name: str
+    author_username: str | None
+
+
+class CommentPageResponse(ApiModel):
+    items: list[CommentResponse]
+    next_cursor: str | None
+
+
 class FollowRequest(ApiModel):
     user_id: UUID
     followed_user_id: UUID

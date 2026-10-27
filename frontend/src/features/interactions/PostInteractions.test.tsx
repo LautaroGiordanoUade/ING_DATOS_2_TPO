@@ -10,10 +10,12 @@ function mount(
   request: AuthRequest,
   onCountsChange = vi.fn(),
   ownReactionRequest: AuthRequest = async () => ({ kind: null }),
+  commentsRequest: AuthRequest = async () => ({ items: [], next_cursor: null }),
 ) {
   const authenticatedRequest: AuthRequest = (path, init) =>
     path === `/api/v1/interactions/reactions/${postId}/me`
       ? ownReactionRequest(path, init)
+      : path.startsWith(`/api/v1/posts/${postId}/comments`) ? commentsRequest(path, init)
       : request(path, init)
   return render(
     <PostInteractions postId={postId} onCountsChange={onCountsChange} />,
@@ -227,4 +229,26 @@ it('muestra error de lectura y permite reintentar sin confundirlo con ausencia d
   await userEvent.click(screen.getByRole('button', { name: 'Reintentar reacción' }))
   expect(await screen.findByRole('button', { name: 'Quitar mi reacción' })).toBeVisible()
   expect(screen.getByRole('button', { name: '👍 Me gusta' })).toHaveAttribute('aria-pressed', 'true')
+})
+
+it('abre y actualiza el listado después de enviar un comentario', async () => {
+  const request = vi.fn<AuthRequest>().mockImplementation(async (path) => {
+    if (path === '/api/v1/problems/5/comment') return {
+      operation_id: '66000000-0000-4000-8000-000000000001', status: 'completed',
+    }
+    return { id: postId, user_id: '11000000-0000-4000-8000-000000000001', text: 'Post',
+      media: [], interests: [], published_at: '2026-10-27T12:00:00Z', reaction_count: 0, comment_count: 1 }
+  })
+  const list: AuthRequest = async () => ({ items: [{
+    id: '99000000-0000-4000-8000-000000000001', post_id: postId,
+    user_id: '11000000-0000-4000-8000-000000000001', text: 'Ahora se ve debajo',
+    created_at: '2026-10-27T12:00:00Z', author_name: 'QA', author_username: 'qa',
+  }], next_cursor: null })
+  mount(request, vi.fn(), async () => ({ kind: null }), list)
+  await userEvent.click(screen.getByRole('button', { name: '💬 Escribir comentario' }))
+  await userEvent.type(screen.getByLabelText('Escribí un comentario'), 'Ahora se ve debajo')
+  await userEvent.click(screen.getByRole('button', { name: 'Comentar' }))
+  expect(await screen.findByText('Ahora se ve debajo')).toBeVisible()
+  expect(screen.getByText('@qa')).toBeVisible()
+  expect(screen.getByLabelText('Escribí un comentario')).toHaveValue('')
 })

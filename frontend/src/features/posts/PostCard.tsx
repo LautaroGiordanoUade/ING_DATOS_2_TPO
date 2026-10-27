@@ -32,7 +32,7 @@ export function PostCard({ post, author, username }: { post: Post; author: strin
         {post.interests.map((interest) => <li key={interest}>#{interest}</li>)}
       </ul>
       <p className="post-counts">{counts.reactions} reacciones · {counts.comments} comentarios</p>
-      <PostInteractions postId={post.id} onCountsChange={handleCountsChange} />
+      <PostInteractions postId={post.id} commentCount={counts.comments} onCountsChange={handleCountsChange} />
       <details className="post-identifiers">
         <summary>Identificador de publicación</summary>
         <code>{post.id}</code>

@@ -129,3 +129,11 @@
     width: 100%;
   }
 }
+.comment-list { margin-top: 20px; border-top: 1px solid #e8ebe5; padding-top: 14px; }
+.comment-list-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
+.comment-list-heading h3 { margin: 0; font-size: 16px; }
+.comment-items { padding: 0; list-style: none; display: grid; gap: 12px; }
+.comment-item { background: #f7f9f5; border-radius: 8px; padding: 12px; min-width: 0; }
+.comment-item p { white-space: pre-wrap; overflow-wrap: anywhere; margin: 8px 0 0; }
+.comment-author { display: flex; flex-wrap: wrap; gap: 5px 10px; font-size: 12px; overflow-wrap: anywhere; }
+.comment-author time { color: #747e70; }
