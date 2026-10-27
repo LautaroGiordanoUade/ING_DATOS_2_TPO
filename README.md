@@ -210,7 +210,8 @@ La guía de ejecución completa y defensa es la de Compose, con `APP_DEMO_MODE=f
 
 Últimas validaciones registradas, no ejecutadas automáticamente por el arranque:
 
-- Backend integrado: **335 pruebas aprobadas**, Ruff y mypy sobre 175 archivos de `app`.
+- Backend integrado: **337 pruebas aprobadas**, Ruff y mypy sobre 176 archivos de `app`.
+  Evidencia más reciente: [índices y mediciones](docs/index_audit.md).
 - Frontend: **203 pruebas** y **46 recorridos Playwright** de escritorio/móvil en la última
   integración de interfaces. Evidencia: [P7/P8](docs/frontend/integration_p7_p8.md).
 - Carga real de 50.000 publicaciones, replay y verificación entre motores;
@@ -222,7 +223,8 @@ aparte. Instrucciones reproducibles: [pruebas backend en Docker](docs/testing.md
 
 ## Estado de entrega
 
-P1–P8, el dataset y la mejora de rendimiento P8 están implementados. Quedan por cerrar
-la auditoría de índices/constraints y mediciones restantes, el procedimiento de reconstrucción
-de Redis, la actualización de DER/matriz y el informe con evidencia, contrafactuales y anexo,
+P1–P8, el dataset y la mejora de rendimiento P8 están implementados. La
+[auditoría de índices y mediciones locales](docs/index_audit.md) registra planes y resultados
+sobre el dataset. Quedan por cerrar el procedimiento de reconstrucción de Redis,
+la actualización del DER y el informe con evidencia, contrafactuales y anexo,
 además del ensayo final del grupo. El detalle está en [TODO.md](TODO.md).

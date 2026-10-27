@@ -112,7 +112,7 @@ rutas en Swagger o respuestas en modo demo.
 - [x] Swagger/OpenAPI con ejemplos, seed de desarrollo y smoke HTTP reproducible.
 - [x] Interfaz para reportar, consultar reporte propio, filtrar/revisar reportes y decidir/revertir por rol.
 - [x] Lectura protegida del contenido oculto, historial y seguimiento/recuperación de operaciones tras recarga.
-- Validación integrada con dataset y rendimiento P8: suite completa 335 aprobados; ver docs/problem_8_performance.md.
+- Validación integrada posterior a índices: suite completa 337 aprobados; ver docs/index_audit.md.
 - Despliegue soportado: Docker Linux, un host, consumidores P7 con volumen de flock compartido.
   No cubre pérdida de volúmenes ni consumidores independientes en múltiples hosts.
 - Guía: docs/problem_7_moderation_test_guide.md; diseño: docs/problems/problem_07.md.
@@ -126,7 +126,7 @@ rutas en Swagger o respuestas en modo demo.
 - [x] Workflow durable, snapshots por post, compensaciones, retry y recuperación tras reinicio.
 - [x] Idempotencia/CAS y consumidor común P7/P8; entregas P1 diferidas en reactivación.
 - [x] 67 tests nuevos: 57 integraciones con MongoDB/Neo4j/Redis reales y 10 unitarios.
-- [x] Suite completa integrada: 335 pruebas aprobadas; smoke HTTP real exitoso.
+- [x] Suite completa integrada: 337 pruebas aprobadas tras la auditoría de índices; smoke HTTP real previo exitoso.
 - [x] Datos reales de desarrollo, ejemplos Swagger y guía paso a paso.
 - [x] Interfaz de cuentas y trazabilidad integrada; recuperación de operaciones fallidas desde su pantalla.
 - [x] Snapshots Redis por lotes: suspensión de 42 publicaciones de 256,922 s a mediana local 12,213 s; evidencia en docs/problem_8_performance.md.
@@ -140,14 +140,14 @@ rutas en Swagger o respuestas en modo demo.
 - [x] La API ya no inicializa PostgreSQL; identidad/moderación se asignan a MongoDB.
 - [x] Registro de operaciones durable MongoDB y consulta por operation_id.
 - [x] Generador reproducible: 50000 publicaciones y población proporcional; carga por lotes, replay y verificación cruzada. Ver docs/dataset.md.
-- [ ] Auditar índices/constraints existentes contra consultas y volumen; completar los necesarios.
+- [x] Auditoría de índices/constraints y 20 planes MongoDB, 4 perfiles Neo4j y lecturas de repositorios sobre volumen; índices faltantes y evidencia en docs/index_audit.md.
 - [ ] Procedimiento de reconstrucción frente a pérdida de datos Redis.
 - PostgreSQL/Alembic quedan como código legado sin uso en ejecución; no son un cuarto motor.
 
 ## Informe y entrega
 
 - [x] Guía de Docker, dataset y guías técnicas P1–P8; README actualizado al sistema integrado.
-- [ ] Completar matriz con estimaciones y mediciones finales.
+- [x] Matriz con cantidades verificadas y mediciones locales; expectativas de uso separadas de resultados, límites de colas vacías/concurrencia documentados.
 - [ ] Actualizar DER y justificar cambios/desnormalizaciones.
 - [ ] Consolidar secuencias, fallas y evidencia P1–P8 en el informe final.
 - [ ] Responder tres contrafactuales y conclusión.

@@ -44,6 +44,12 @@ class MongoMessagingStore:
             partialFilterExpression={"sequence": {"$type": "number"}},
             name="ix_message_sequence",
         )
+        # The history predicate ($exists / $lt) does not imply the numeric partial
+        # filter above. Keep uniqueness and provide a complete read index, including
+        # legacy messages, without changing the history's visibility semantics.
+        await self.db.messages.create_index(
+            [("conversation_id", 1), ("sequence", -1)], name="ix_message_history"
+        )
         await self.db.messages.create_index([("delivery_status", 1), ("conversation_id", 1)])
 
     @staticmethod

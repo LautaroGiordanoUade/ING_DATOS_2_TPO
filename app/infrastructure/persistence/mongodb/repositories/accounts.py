@@ -27,7 +27,15 @@ class MongoAccountStore:
         )
         await self._database["account_history"].create_index([("user_id", 1), ("created_at", 1)])
         await self._database["posts"].create_index([("user_id", 1), ("published_at", -1)])
+        await self._database["posts"].create_index(
+            [("user_id", 1), ("published_at", -1), ("_id", -1)],
+            name="ix_post_author_published_id",
+        )
         await self._database["conversations"].create_index("participant_ids")
+        await self._database["conversations"].create_index(
+            [("participant_ids", 1), ("created_at", -1)],
+            name="ix_conversation_participant_created",
+        )
 
     async def user(self, user_id: UUID) -> User:
         user = await MongoUserRepository(self._database).get(user_id)
