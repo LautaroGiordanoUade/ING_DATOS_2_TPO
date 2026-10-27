@@ -15,7 +15,7 @@ las mediciones de operaciones siguen en el plan de cierre.
 | Comentario | post/fecha, append | 50000+ candidato a mayor volumen | alta/alta | durable e idempotencia por clave y fingerprint | MongoDB + Redis; P5 implementado con recuperación durable |
 | Notificación | destinatario/evento; entrega live | proporcional a interacciones | lectura alta, escritura alta | evento persistido y Pub/Sub; revocable en compensación | Redis; P5 implementado |
 | Seguimiento y recomendaciones | recorridos 1-2 saltos y amigos en común | 10000+ relaciones | lectura alta, escritura media | evitar duplicados, coordinar estado/feed y validar activos en MongoDB | Neo4j relaciones, MongoDB jobs/estado activo y Redis derivados; P2 y P4 implementados |
-| Conversación/mensaje | participantes, historial, lectura propia | 50000+ mensajes | alta/alta | historial durable, entrega/unread coordinados | MongoDB/Redis; P6 pendiente |
+| Conversación/mensaje | participantes, historial, lectura propia | 50000+ mensajes (objetivo de diseño; dataset actual: 10000) | alta/alta | historial durable, entrega/unread coordinados | MongoDB/Redis; P6 implementado |
 | Moderación | reportes por post; decidir/revertir | fracción de posts | lectura media, escritura baja | efectos globales compensables | MongoDB/Redis; P7 implementado, workflow durable y consumidor único |
 | Operación/jobs | UUID, pendientes, avance por lote | por operación + historial de pasos | lectura baja, escritura por paso | durable y reanudable | MongoDB; P1 y P5 recuperables en `operations`/`publication_jobs` |
 
@@ -26,4 +26,5 @@ mediciones con el dataset completo deben incorporarse al informe.
 
 P8 implementa account_jobs, snapshots por post y account_history en MongoDB, estado derivado
 User.account_status en Neo4j y gates/backup de feed/presencia en Redis. La consulta de conversaciones
-por participante está implementada para trazabilidad; envío/unread sigue siendo P6 pendiente.
+por participante está implementada para trazabilidad; P6 implementa envío, historial paginado,
+lectura propia, distribución y reconstrucción de unread desde MongoDB.

@@ -1,286 +1,228 @@
-# Niche Social Network — esqueleto del TPI Etapa 2
+# Niche Social Network — TPO Ingeniería de Datos II
 
-Carga reproducible de 50.000 publicaciones y datos relacionados: [Dataset](docs/dataset.md).
+Red social de nicho con los ocho problemas implementados en una API FastAPI y una interfaz
+React/TypeScript. MongoDB conserva contenido, identidad y trabajos durables; Neo4j resuelve
+el grafo social; Redis mantiene feeds, contadores, notificaciones y presencia.
+La ejecución completa soportada utiliza Docker Linux en un único host con volúmenes compartidos.
 
-## Frontend React
+## Levantar el proyecto
 
-`docker compose up -d --build` también construye y levanta el frontend en
-http://127.0.0.1:8080, servido por Nginx con proxy a la API. No requiere Node/npm en el host.
-
-La SPA React + TypeScript + Vite en `frontend/` implementa P1: registro/login, sesión,
-publicación real, consulta de operación y preview de distribución, con layout responsive.
-P3 muestra el feed real de cuentas seguidas en Inicio, con paginación y refresco; las
-publicaciones propias se consultan en `/mis-publicaciones`. P4 agrega en `/recomendaciones`
-las cuentas sugeridas por segundo grado y el buscador de amigos en común. P5 integra en cada
-tarjeta de publicación (`PostCard`) la barra de reacciones y el formulario de comentarios con
-`Idempotency-Key` (`PostInteractions`). Guía: [P3 UI](docs/frontend/problem_3.md).
-P7 permite reportar publicaciones y ofrece una bandeja para moderator/admin con ocultación,
-rechazo, restauración e historial. Guía: [P7 UI](docs/frontend/problem_7.md).
-P8 agrega trazabilidad por UUID, suspensión/reactivación y presencia: **Cuentas** para
-moderator/admin y **Mi cuenta** para el titular. Guía: [P8 UI](docs/frontend/problem_8.md).
-Instrucciones: [frontend/README.md](frontend/README.md) y [guía P1 UI](docs/frontend/problem_1.md).
-Inventario, dependencias y próximas iteraciones: [plan del frontend](docs/frontend/IMPLEMENTATION_PLAN.md).
-
-La UI valida la sesión mediante `GET /api/v1/users/me`. `POST /api/v1/posts` exige bearer
-y autor coincidente (401/403); el alias educativo `/api/v1/problems/1/publish` conserva
-el contrato de los scripts existentes. La consulta de operaciones agrega `post_id`
-para publicaciones; las demás operaciones devuelven null en ese campo.
-
-API FastAPI educativa para explorar persistencia poliglota. El proyecto contiene arquitectura,
-contratos y puntos de extensión; las decisiones que constituyen la resolución del TP están marcadas
-como `TODO(TP)`. Sin modo demo, los endpoints pendientes responden `501`.
-
-## Arquitectura
-
-- `app/domain`: entidades dataclass y repositories orientados al negocio; no importa frameworks.
-- `app/application`: DTO, puertos, ocho casos de uso y coordinación compensable.
-- `app/infrastructure`: adaptadores MongoDB, Redis y Neo4j (los archivos PostgreSQL son legado sin uso).
-- `app/api`: schemas Pydantic, dependencias y rutas FastAPI.
-- `docs`: decisiones, matriz de persistencia y guías de los problemas.
-
-MongoDB es el motor elegido para identidad, estado de cuenta, moderación, registro durable de
-operaciones, contenido y mensajería. Los adaptadores de identidad y moderación están implementados para P7. Neo4j lo es del grafo social. Redis mantiene datos operativos propios:
-feed materializado, contadores, notificaciones, presencia, sesiones e idempotencia.
-
-## Docker Compose
-
-Requiere Docker Desktop iniciado con contenedores Linux. Desde la raíz del repo:
+Requisitos: Git, Docker Desktop iniciado en modo contenedores Linux y Docker Compose v2.
+Desde la raíz del repositorio, en PowerShell:
 
 ```powershell
-docker compose up -d --build
+docker compose up -d --build --wait
 docker compose ps
-Invoke-RestMethod http://localhost:8000/health/ready
+Invoke-RestMethod http://127.0.0.1:8000/health/ready
 ```
 
-Levanta la API, los workers de publicaciones/moderación (P2/P5/P7/P8) y tres motores: MongoDB, Redis y Neo4j. Swagger está en
-http://localhost:8000/docs y Neo4j Browser en http://localhost:7474.
-El usuario Neo4j es `neo4j`; la contraseña local predeterminada es `local_dev_password`.
-Puede cambiarse con `NEO4J_PASSWORD` en `.env` antes del primer inicio.
-Neo4j conserva la contraseña inicial en su volumen: cambiar solo `.env` luego no la cambia.
-Los puertos se publican únicamente en localhost. Esta configuración es para desarrollo local.
+Compose construye Python y el frontend; para esta ejecución no hacen falta Python ni Node
+instalados en Windows. La API inicializa índices MongoDB y adapta los usuarios antiguos de prueba
+antes de quedar saludable. El dataset de volumen se carga con un comando separado.
 
-Dentro de Docker, la API conecta por nombres de servicio (`mongo`, `redis`, `neo4j`);
-fuera de Docker, `.env.example` usa localhost. No hace falta copiar `.env` para usar Compose.
-El modo demo está desactivado: los casos pendientes responden 501, no datos simulados.
-El readiness comprueba los tres motores y devuelve 503 si alguno no responde.
+| Acceso | Dirección |
+|---|---|
+| Interfaz | http://127.0.0.1:8080 |
+| Swagger | http://127.0.0.1:8000/docs |
+| ReDoc | http://127.0.0.1:8000/redoc |
+| OpenAPI | http://127.0.0.1:8000/openapi.json |
+| Readiness de los tres motores | http://127.0.0.1:8000/health/ready |
+| Neo4j Browser | http://127.0.0.1:7474 |
 
-P2 (seguimientos públicos/privados, aprobación y rollback) ya está implementado. Guía de
-Swagger, recuperación y límites: [Problema 2](docs/problems/problem_02.md). Prueba HTTP local:
+### Servicios y persistencia
+
+| Servicio Compose | Responsabilidad |
+|---|---|
+| `frontend` | React servido por Nginx; proxy `/backend/` hacia la API |
+| `api` | Endpoints, autenticación, consultas y aceptación de operaciones |
+| `publication-worker` | Distribución P1 en lotes, commit, compensación y reanudación |
+| `moderation-worker` | Procesa P2/P7/P8 y recupera operaciones pendientes P5/P6 |
+| `mongo` | Usuarios, publicaciones, interacciones, mensajes, jobs y auditoría |
+| `neo4j` | Seguimientos, solicitudes privadas, bloqueos y estado derivado de cuentas |
+| `redis` | Feeds, contadores, notificaciones, presencia, gates y vistas de mensajería |
+
+Los workers deben permanecer activos para completar y recuperar trabajos. Los volúmenes
+conservan los datos y coordinan los bloqueos locales. Redis usa AOF con sincronización
+cada segundo; una caída abrupta puede perder el último segundo de escrituras.
+PostgreSQL/Alembic permanecen como código legado y no participan del despliegue.
+
+Dentro de Docker se usan los nombres `mongo`, `redis` y `neo4j`; los puertos del host sólo
+se publican en localhost. Compose funciona sin copiar `.env`. El usuario local de Neo4j
+es `neo4j` y su contraseña predeterminada es `local_dev_password`; se puede configurar
+`NEO4J_PASSWORD` antes del primer inicio. Cambiar `.env` después no reemplaza la contraseña
+ya persistida en el volumen de Neo4j. Esta configuración está destinada a desarrollo local.
+
+## Cargar los datos y entrar a la interfaz
+
+El generador predeterminado crea **50.000 publicaciones en una sola entidad**, 1.200 usuarios,
+30.000 reacciones, 15.000 comentarios, 10.000 mensajes, 120 grupos y 24 reportes, además del
+grafo y las vistas Redis correspondientes. Usa UUID compartidos y una semilla reproducible.
+
+Primero se puede consultar el plan sin escribir datos:
 
 ```powershell
-Get-Content -Raw scripts/validar_problema2.py | docker compose exec -T api python -
+docker compose exec api python -m app.tools.seed_data
 ```
 
-P3 agrega el feed autenticado con ranking por bloques recientes y cursor de 15 minutos.
-Ver [Problema 3](docs/problems/problem_03.md). Prueba HTTP con datos QA nuevos:
+Para cargar, elegir una contraseña de desarrollo de al menos 12 caracteres:
 
 ```powershell
-Get-Content -Raw scripts/validar_problema3.py | docker compose exec -T api python -
+$env:SEED_PASSWORD = Read-Host 'Contraseña de las cuentas sintéticas (mínimo 12 caracteres)'
+docker compose exec -e SEED_PASSWORD api python -m app.tools.seed_data --apply
+Remove-Item Env:SEED_PASSWORD
+docker compose exec api python -m app.tools.seed_data --verify
 ```
 
-P4 implementa consultas Cypher reales de amigos en común y hasta 10 sugerencias de segundo grado
-con validación cruzada de estado activo en MongoDB. Ver [Problema 4](docs/problems/problem_04.md).
-Prueba HTTP local:
+Con la semilla predeterminada 42, se puede iniciar sesión en la interfaz con:
+
+| Usuario | Caso de uso |
+|---|---|
+| `tpo42_0000` | Creador con 1.199 seguidores; publicaciones y primer grupo |
+| `tpo42_0001` | Feed extenso y primer grupo |
+| `tpo42_0002` | Cuenta privada con solicitudes pendientes y primer grupo |
+| `tpo42_0003` | Moderador |
+| `tpo42_0004` | Administrador |
+| `tpo42_0005` | Cuenta de ejemplo para suspensión/reactivación |
+
+Estas cuentas usan la contraseña elegida al cargar. También se puede registrar una cuenta
+nueva desde `/registro`; el registro concede rol de usuario. Los roles privilegiados del
+dataset se preparan exclusivamente en development/testing.
+
+Una carga interrumpida se puede reanudar con la misma configuración y contraseña. Repetir
+`--apply` después de terminar devuelve `already_loaded` y conserva los cambios posteriores.
+`--verify` comprueba la distribución inicial: ejecutarlo antes de las demostraciones.
+El arranque de Compose y la repetición del generador conservan los datos existentes.
+Guía completa, cantidades, límites y checksum: [dataset](docs/dataset.md) y
+[evidencia de carga](docs/dataset_validation.json).
+
+## Los ocho problemas
+
+| Problema | Implementación | Acceso desde la interfaz | Guía técnica |
+|---|---|---|---|
+| P1 | Publicación, distribución por lotes y compensación | Publicar, Mis publicaciones y operación | [P1](docs/problems/problem_01.md) |
+| P2 | Seguir/dejar de seguir, solicitudes privadas y aprobación | Perfiles y Solicitudes | [P2](docs/problems/problem_02.md) |
+| P3 | Feed autenticado con ranking y cursor | Inicio, cargar más y refrescar | [P3](docs/problems/problem_03.md) |
+| P4 | Intereses, amigos en común y recomendaciones | Sugerencias y Mis intereses | [P4](docs/problems/problem_04.md) |
+| P5 | Reacciones, comentarios paginados, contadores y notificaciones | Tarjetas de publicaciones | [P5](docs/problems/problem_05.md) |
+| P6 | Grupos, mensajes, historial y lectura por participante | Mensajes | [P6](docs/problems/problem_06.md) |
+| P7 | Reportar, ocultar/rechazar/revertir, historial y recuperación | Reportar publicación y Moderación | [P7](docs/problems/problem_07.md) |
+| P8 | Suspensión/reactivación, trazabilidad y revocación de credenciales | Mi cuenta / Cuentas | [P8](docs/problems/problem_08.md) |
+
+Moderación requiere moderator/admin. Un usuario común consulta su reporte propio y la traza
+de su cuenta. La lectura de contenido oculto también exige permisos en el servidor.
+En P6, `completed` confirma distribución procesada; la lectura se registra por participante.
+Los mensajes se consultan periódicamente; los avisos Pub/Sub no confirman recepción.
+
+La mejora de P8 redujo la suspensión de 42 publicaciones de unos 257 segundos a una mediana
+local de 12,213 segundos, conservando estados y contadores. Método, condiciones, límites y
+comando de medición: [rendimiento P8](docs/problem_8_performance.md).
+
+## Operaciones, fallas y demostración
+
+La API usa bearer firmado con vencimiento; identidad, rol, estado y versión de credencial se
+validan contra MongoDB. La interfaz guarda la credencial en sessionStorage de la pestaña.
+Las rutas educativas conservan algunos contratos públicos por UUID; el conjunto de la API
+está preparado para el TP local, no como servicio cerrado de producción.
+
+Una respuesta `202` confirma recepción, no finalización. Seguir la operación hasta un estado
+terminal y comprobar sus efectos. Según el flujo, las rutas de seguimiento son:
+
+- P1/P5: `/api/v1/problems/operations/{operation_id}`.
+- P2: `/api/v1/social/operations/{operation_id}`.
+- P6: `/api/v1/messages/{message_id}/delivery`.
+- P7: `/api/v1/moderation/operations/{operation_id}`.
+- P8: `/api/v1/accounts/operations/{operation_id}`.
+
+El preview `/api/v1/problems/1/feed-preview/{user_id}` muestra IDs para inspeccionar P1;
+el feed completo P3 se consulta en `/api/v1/feeds/{user_id}`.
+Los campos y permisos exactos están en Swagger y en las guías de cada problema.
+
+Para ejercitar P1–P8 sobre el dataset cargado:
 
 ```powershell
-Get-Content -Raw scripts/validar_problema4.py | docker compose exec -T api python -
+$env:SEED_PASSWORD = Read-Host 'Contraseña usada al cargar'
+docker compose exec -e SEED_PASSWORD api python -m app.tools.verify_dataset --exercise
+Remove-Item Env:SEED_PASSWORD
 ```
 
-P5 implementa reacciones (alta, cambio y baja), comentarios con `Idempotency-Key` y fingerprint,
-contadores atómicos con gates P7/P8, notificaciones, bloqueo híbrido por publicación y recuperación
-durable tras caída. Ver [Problema 5](docs/problems/problem_05.md) y
-[Consistencia P5](docs/problem_05_consistency.md). Pruebas HTTP y de fallas:
+Este recorrido escribe actividad real y modifica temporalmente relaciones/estados. Un timeout
+de consulta deja la operación ejecutándose; consultar su identificador antes de volver a enviarla.
+Para la defensa se puede llevar el dataset cargado y demostrar operaciones y fallas sobre él.
 
-```powershell
-Get-Content -Raw scripts/validar_problema5.py | docker compose exec -T api python -
-Get-Content -Raw scripts/validar_problema5_fallas.py | docker compose exec -T api python -
-```
+En development, los flujos compensables admiten `X-Fail-At-Step`. En P1, por ejemplo:
+`mongo_create_post`, `neo4j_load_followers`, `redis_feed_update`, `redis_feed_partial` y
+`publication_commit`. Las guías indican los pasos de cada flujo y sus compensaciones.
 
-```powershell
-# Ver errores de arranque
-docker compose logs --tail 100 api neo4j
-# Apagar y volver a iniciar conservando los datos
-docker compose down
-docker compose up -d
-```
-
-Solo para borrar todos los datos y arrancar desde cero (destructivo):
-
-```powershell
-docker compose down --volumes
-docker compose up -d --build
-```
-
-MongoDB y Neo4j guardan sus datos en volúmenes; Redis usa volumen y AOF con sincronización
-cada segundo (puede perder el último segundo ante una caída abrupta).
-El registro de operaciones ahora se guarda en MongoDB. Esto conserva los pasos al reiniciar:
-el P1 retoma automáticamente lotes y compensaciones con los volúmenes conservados, y el
-`moderation-worker` reanuda los workflows durables de P2, P7 y P8 y reconcilia las operaciones
-pendientes de P5.
-Las carpetas PostgreSQL y Alembic quedan como legado; la API ya no las usa.
-
-## Problemas implementados
-
-P7 implementa reportes, autorización y moderación/revert durable con compensaciones, retries y
-concurrencia. Guía completa de Swagger y datos reales: [Problema 7](docs/problem_7_moderation_test_guide.md).
-
-P8 completa suspensión, reactivación y trazabilidad real en MongoDB/Neo4j/Redis, con revocación
-de credenciales, presencia, compensaciones y recuperación. Comparte el consumidor durable con P7.
-Guía: [Problema 8](docs/problem_8_suspension_test_guide.md).
-
-P1 publica mediante una cola durable y distribución en lotes. P4 resuelve amigos en común y
-sugerencias de segundo grado en Neo4j/MongoDB. P5 implementa reacciones, comentarios, contadores,
-notificaciones y recuperación durable, con el detalle de diseño en [Problema 5](docs/problems/problem_05.md).
-El Problema 6 conserva operaciones pendientes; el preview del P1 no reemplaza P3.
-
-En Git Bash, para probar P1 con 2000 seguidores aislados:
-
-```bash
-docker compose exec -T api python < scripts/validar_problema1.py
-```
-
-En PowerShell:
+También hay scripts HTTP independientes. Ejemplos desde PowerShell:
 
 ```powershell
 Get-Content -Raw scripts/validar_problema1.py | docker compose exec -T api python -
+Get-Content -Raw scripts/validar_problema2.py | docker compose exec -T api python -
+Get-Content -Raw scripts/validar_problema3.py | docker compose exec -T api python -
 ```
 
-En Swagger, `POST /api/v1/problems/1/publish` requiere al menos un interés; admite
-`Idempotency-Key` y devuelve `operation_id`, `post_id` y `status: pending`.
-Consultar `/api/v1/problems/operations/{operation_id}` hasta `completed` o `compensated`.
-La falla asíncrona se ve en esa consulta, no como error inmediato del POST aceptado.
-`/api/v1/problems/1/feed-preview/{user_id}` muestra los IDs visibles para demostrar P1.
+Los ejemplos específicos P7/P8 tienen su propia preparación: seguir las guías
+[P7](docs/problem_7_moderation_test_guide.md) y [P8](docs/problem_8_suspension_test_guide.md).
+Sus seeds pueden restablecer fixtures de ejemplo; se usan por separado del dataset general.
 
-El worker debe estar levantado incluso si la API corre localmente. El despliegue soportado
-es Docker Linux en un host; el bloqueo local compartido permite un solo consumidor.
-Guía de fallas, recuperación, modelo Neo4j y secuencia: [Problema 1](docs/problems/problem_01.md).
-Diseño y límites de P5: [Problema 5](docs/problems/problem_05.md) y [Consistencia P5](docs/problem_05_consistency.md).
+## Actualizar, detener y diagnosticar
 
-## Instalación local
-
-Requiere Python 3.12 o superior si se ejecuta fuera de Docker.
+Después de un merge, desde un checkout limpio:
 
 ```powershell
-python -m venv .venv
-.venv\Scripts\Activate.ps1
-python -m pip install -e ".[dev]"
-Copy-Item .env.example .env
+git switch main
+git pull --ff-only
+docker compose up -d --build --wait
 ```
 
-Configure en `.env` las URLs/credenciales de MongoDB, Redis y Neo4j. Los clientes son
-compartidos durante el lifespan y se cierran al apagar la aplicación. El arranque requiere MongoDB
-para adaptar los fixtures de desarrollo y verificar índices. Un error bloquea el inicio;
-`/health/ready` comprueba la conectividad de los tres motores una vez iniciada la API.
-
-## Ejecución
-
-La forma más simple en Windows levanta la API con mocks de desarrollo y recarga automática desde
-CMD, PowerShell o haciendo doble clic sobre `run_api.cmd`:
-
-```bat
-run_api.cmd
-```
-
-En el primer inicio, el launcher busca Python 3.12+, crea `.venv` e instala las dependencias del
-proyecto. Si falta Python o ocurre un error, mantiene la ventana abierta para mostrar el diagnóstico.
-
-Opciones:
-
-```bat
-:: Sin recarga automática
-run_api.cmd --no-reload
-
-:: Sin mocks: los TODO(TP) vuelven a responder 501
-run_api.cmd --without-mocks
-```
-
-El launcher PowerShell alternativo permanece disponible en `scripts/run_api.ps1`.
-
-También puede ejecutarse manualmente:
+Reconstruir incorpora el código nuevo a las imágenes. Para detener conservando datos:
 
 ```powershell
-uvicorn app.main:app --reload
+docker compose stop
+# O retirar contenedores y red, manteniendo los volúmenes:
+docker compose down
 ```
 
-- Swagger: `http://127.0.0.1:8000/docs`
-- ReDoc: `http://127.0.0.1:8000/redoc`
-- OpenAPI JSON: `http://127.0.0.1:8000/openapi.json`
-- Liveness: `GET /health`
-- Readiness: `GET /health/ready`
-- Problemas: `/api/v1/problems/1/...` hasta `/api/v1/problems/8/...`
-- Registro de operación: `GET /api/v1/problems/operations/{operation_id}`
-
-El script establece `APP_DEMO_MODE=true`. P1, P2, P3, P4, P5, P7/P8, identidad y lecturas de posts/feed usan motores reales incluso en modo demo.
-Las respuestas mock de los problemas restantes están centralizadas en
-`app/api/demo_data.py`, usan UUID deterministas y permiten probar desde Swagger sin levantar bases.
-No contienen consultas, algoritmos ni decisiones académicas. La configuración impide habilitar este
-modo cuando `APP_ENV=production`.
-
-UUID útiles para completar requests desde Swagger:
-
-- Usuario demo: `00000000-0000-0000-0000-000000000001`
-- Segundo usuario: `00000000-0000-0000-0000-000000000002`
-- Publicación demo: `10000000-0000-0000-0000-000000000001`
-- Conversación demo: `20000000-0000-0000-0000-000000000001`
-
-En `development`, los flujos compensables aceptan `X-Fail-At-Step`. Ejemplo para publicación:
-`mongo_create_post`, `neo4j_load_followers`, `redis_feed_update`, `redis_feed_partial`
-o `publication_commit`. En producción se rechaza.
-
-## Calidad y tests
+Para revisar problemas de arranque o trabajos pendientes:
 
 ```powershell
-ruff check .
-ruff format --check .
-mypy app tests
-pytest
+docker compose ps
+docker compose logs --tail 100 api publication-worker moderation-worker
+docker compose logs --tail 100 mongo redis neo4j
 ```
 
-La integración original sigue siendo un placeholder de otros problemas. P7 agrega 57 pruebas
-reales de MongoDB/Redis, API, concurrencia y recuperación:
+`/health` comprueba la API; `/health/ready` comprueba conectividad con los tres motores
+y devuelve 503 cuando alguno no responde. La reconstrucción frente a pérdida de Redis
+es un pendiente distinto de reiniciar contenedores con sus volúmenes conservados.
 
-```powershell
-$env:RUN_INTEGRATION_TESTS = "1"
-pytest -q
-Remove-Item Env:RUN_INTEGRATION_TESTS
-```
+## Desarrollo, arquitectura y pruebas
 
-La base y claves de P7 son aisladas por test. Las verificaciones P1/P2/P3/P4/P5 también están en
-scripts/validar_*.py. El formatter global tiene deuda previa; los archivos cambiados en P7
-están formateados. Mypy comprueba el destino Linux utilizado por los workers de Compose.
+El backend está organizado en `app/domain`, `app/application`, `app/infrastructure` y
+`app/api`; los consumidores viven en `app/workers` y los comandos de datos en `app/tools`.
+La interfaz está en `frontend/`. Ver [arquitectura](docs/architecture.md),
+[matriz de persistencia](docs/persistence_matrix.md) y [README del frontend](frontend/README.md).
 
-## Datos reproducibles
+Para desarrollar fuera de Docker se requiere Python 3.12+ y, para el frontend, Node 22.12+.
+Las dependencias Python de desarrollo están en `pyproject.toml` (`.[dev]`). Las URLs locales
+de motores se describen en `.env.example`. Los launchers `run_api.cmd` y `scripts/run_api.ps1`
+inician sólo la API y conservan opciones de modo demo; no levantan motores ni workers.
+La guía de ejecución completa y defensa es la de Compose, con `APP_DEMO_MODE=false`.
 
-`docker compose up -d --build` inicia la API, que completa automáticamente los usuarios
-antiguos de prueba P1 y verifica los índices antes de aceptar solicitudes. Los workers
-esperan a que la API esté saludable; no hay un contenedor adicional de inicialización.
-No borra datos ni carga o restablece los ejemplos P7/P8. Detalles y ejecución manual opcional:
-[migración de fixtures P1](docs/p1_fixture_migration.md).
+Últimas validaciones registradas, no ejecutadas automáticamente por el arranque:
 
-```powershell
-python scripts/seed_data.py --users 100 --posts 1000 --messages 1000 --seed 42
-```
+- Backend integrado: **335 pruebas aprobadas**, Ruff y mypy sobre 175 archivos de `app`.
+- Frontend: **203 pruebas** y **46 recorridos Playwright** de escritorio/móvil en la última
+  integración de interfaces. Evidencia: [P7/P8](docs/frontend/integration_p7_p8.md).
+- Carga real de 50.000 publicaciones, replay y verificación entre motores;
+  tres ciclos medidos de suspensión/reactivación. Evidencia: [P8](docs/problem_8_performance.json).
 
-El script es deliberadamente un esqueleto. El volumen de 50.000+ y la distribución realista son
-parte del trabajo pendiente.
+La imagen normal incluye la aplicación; las herramientas y fuentes de tests se preparan
+aparte. Instrucciones reproducibles: [pruebas backend en Docker](docs/testing.md) y
+[pruebas frontend](frontend/README.md#validación).
 
-## Conexión de motores
+## Estado de entrega
 
-- MongoDB: `MONGODB_URL` y `MONGODB_DATABASE`; se usa `AsyncMongoClient` oficial de PyMongo.
-- Redis: `REDIS_URL`; `redis-py` async administra el pool.
-- Neo4j: `NEO4J_URI`, `NEO4J_USER`, `NEO4J_PASSWORD`; se usa el driver async oficial.
-
-Consulte [TODO.md](TODO.md) para completar el TP y [docs/architecture.md](docs/architecture.md)
-para las decisiones que sostienen esta separación.
-
-
-## Datos reproducibles P8
-
-```powershell
-Get-Content -Raw scripts/seed_problem_08.py | docker compose exec -T api python -
-```
-
-Crea cuentas, posts, grafo, conversación y presencia de desarrollo. Imprime los IDs y una
-contraseña aleatoria; requiere APP_ENV=development y rechaza resets con jobs activos.
-El endpoint /accounts/{user_id}/suspend responde 202: consultar la operación hasta completed.
-La reactivación exige un nuevo login y heartbeat; no revive tokens revocados ni posts ocultos por P7.
+P1–P8, el dataset y la mejora de rendimiento P8 están implementados. Quedan por cerrar
+la auditoría de índices/constraints y mediciones restantes, el procedimiento de reconstrucción
+de Redis, la actualización de DER/matriz y el informe con evidencia, contrafactuales y anexo,
+además del ensayo final del grupo. El detalle está en [TODO.md](TODO.md).
