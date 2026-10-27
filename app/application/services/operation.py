@@ -1,6 +1,7 @@
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from enum import StrEnum
+from typing import Any
 from uuid import UUID, uuid4
 
 
@@ -23,7 +24,7 @@ class OperationContext:
     created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
     updated_at: datetime = field(default_factory=lambda: datetime.now(UTC))
     error: str | None = None
+    metadata: dict[str, Any] = field(default_factory=dict)
 
     def touch(self) -> None:
         self.updated_at = datetime.now(UTC)
-

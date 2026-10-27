@@ -35,7 +35,9 @@ export const operationLabels: Record<Operation['status'], string> = {
 }
 export const postSchema = z.object({
   id: z.guid(), user_id: z.guid(), text: z.string(), media: z.array(z.string()), interests: z.array(z.string()),
-  published_at: z.string(), reaction_count: z.number(), comment_count: z.number(),
+  // MongoDB returns UTC datetimes without an offset in historical post responses.
+  published_at: z.string().transform((value) => /(?:Z|[+-]\d{2}:\d{2})$/i.test(value) ? value : `${value}Z`),
+  reaction_count: z.number(), comment_count: z.number(),
 })
 export type Post = z.infer<typeof postSchema>
 export const previewSchema = z.object({ user_id: z.uuid(), post_ids: z.array(z.uuid()) })

@@ -1,15 +1,13 @@
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Header, Query, Response, status
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, Response, status
 
-from app.api.demo_data import (
-    DEMO_USER_ID,
-)
 from app.api.dependencies.auth import CurrentUserDep, ModeratorDep
 from app.api.dependencies.databases import ResourcesDep
 from app.api.dependencies.demo import DemoModeDep
 from app.api.dependencies.use_cases import (
+    FailureInjectorDep,
     RepositoriesDep,
     get_interaction_use_case,
     get_message_use_case,
@@ -20,6 +18,7 @@ from app.api.dependencies.use_cases import (
 )
 from app.api.v1.routers.feeds import get_user_feed
 from app.api.v1.routers.social import approve_follow, create_follow, delete_follow, follow_operation
+from app.application.ports.messaging import GroupMessage
 from app.application.services.follow_job import FollowJob
 from app.application.use_cases import (
     InteractWithPostUseCase,
@@ -31,7 +30,7 @@ from app.application.use_cases import (
 )
 from app.core.config import get_settings
 from app.core.exceptions import ResourceNotFoundError
-from app.domain.entities import Comment, Message, Post, Reaction
+from app.domain.entities import Comment, Post, Reaction
 from app.infrastructure.persistence.mongodb.repositories.publication_jobs import (
     MongoPublicationJobs,
 )
@@ -149,8 +148,6 @@ async def mutual_friends(
     use_case: Annotated[SocialRecommendationsUseCase, Depends(get_recommendations_use_case)],
     demo_mode: DemoModeDep,
 ) -> tuple[UUID, ...]:
-    if demo_mode:
-        return (DEMO_USER_ID,)
     return await use_case.mutual_friends(query.user_id, query.other_user_id)
 
 
@@ -158,7 +155,6 @@ async def mutual_friends(
 async def react(
     payload: ReactionCreate,
     use_case: Annotated[InteractWithPostUseCase, Depends(get_interaction_use_case)],
-    demo_mode: DemoModeDep,
 ) -> OperationResponse:
     operation = await use_case.react(
         Reaction(post_id=payload.post_id, user_id=payload.user_id, kind=payload.kind)
@@ -170,7 +166,6 @@ async def react(
 async def remove_reaction(
     payload: ReactionRemove,
     use_case: Annotated[InteractWithPostUseCase, Depends(get_interaction_use_case)],
-    demo_mode: DemoModeDep,
 ) -> OperationResponse:
     operation = await use_case.remove_reaction(payload.post_id, payload.user_id)
     return OperationResponse(operation_id=operation.operation_id, status=operation.status.value)
@@ -180,7 +175,6 @@ async def remove_reaction(
 async def comment(
     payload: CommentCreate,
     use_case: Annotated[InteractWithPostUseCase, Depends(get_interaction_use_case)],
-    demo_mode: DemoModeDep,
     idempotency_key: Annotated[str | None, Header(alias="Idempotency-Key")] = None,
 ) -> OperationResponse:
     operation = await use_case.comment(
@@ -190,21 +184,18 @@ async def comment(
     return OperationResponse(operation_id=operation.operation_id, status=operation.status.value)
 
 
-@router.post("/6/message", status_code=status.HTTP_202_ACCEPTED)
+@router.post("/6/message", response_model=GroupMessage, status_code=status.HTTP_202_ACCEPTED)
 async def send_message(
     payload: MessageCreate,
     use_case: Annotated[SendGroupMessageUseCase, Depends(get_message_use_case)],
-    demo_mode: DemoModeDep,
-) -> None:
-    if demo_mode:
-        return
-    await use_case.execute(
-        Message(
-            conversation_id=payload.conversation_id,
-            sender_id=payload.sender_id,
-            text=payload.text,
-            read_by=frozenset({payload.sender_id}),
-        )
+    actor: CurrentUserDep,
+    injector: FailureInjectorDep,
+    idempotency_key: Annotated[str, Header(alias="Idempotency-Key", min_length=1, max_length=128)],
+) -> GroupMessage:
+    if payload.sender_id != actor.id:
+        raise HTTPException(status_code=403, detail="El remitente debe ser el usuario autenticado")
+    return await use_case.send(
+        payload.conversation_id, actor.id, payload.text, idempotency_key, injector
     )
 
 

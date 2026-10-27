@@ -1,6 +1,8 @@
 from typing import Protocol
 from uuid import UUID
 
+from app.domain.recommendations import SuggestionCandidate
+
 
 class SocialGraphRepository(Protocol):
     async def follow(self, user_id: UUID, followed_user_id: UUID) -> None: ...
@@ -10,3 +12,8 @@ class SocialGraphRepository(Protocol):
     async def get_suggested_accounts(self, user_id: UUID, limit: int) -> tuple[UUID, ...]: ...
     async def trace_relationships(self, user_id: UUID) -> dict[str, object]: ...
 
+    async def suggestion_candidates(
+        self, user_id: UUID, after: UUID | None, limit: int
+    ) -> tuple[SuggestionCandidate, ...]: ...
+
+    async def eligible_suggestions(self, user_id: UUID, ids: tuple[UUID, ...]) -> set[UUID]: ...

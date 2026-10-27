@@ -1,7 +1,7 @@
 from copy import deepcopy
 from uuid import UUID
 
-from app.application.services.operation import OperationContext
+from app.application.services.operation import OperationContext, OperationStatus
 
 
 class InMemoryOperationLogRepository:
@@ -17,3 +17,17 @@ class InMemoryOperationLogRepository:
         operation = self._operations.get(operation_id)
         return deepcopy(operation) if operation else None
 
+    async def pending(
+        self, operation_types: tuple[str, ...] | None = None
+    ) -> list[OperationContext]:
+        return [
+            deepcopy(op)
+            for op in self._operations.values()
+            if op.status
+            in (
+                OperationStatus.PENDING,
+                OperationStatus.RUNNING,
+                OperationStatus.COMPENSATING,
+            )
+            and (operation_types is None or op.operation_type in operation_types)
+        ]

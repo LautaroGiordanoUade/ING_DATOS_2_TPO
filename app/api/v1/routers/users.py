@@ -7,7 +7,7 @@ from app.api.dependencies.use_cases import RepositoriesDep
 from app.application.services.identity import IdentityService
 from app.core.exceptions import ResourceNotFoundError
 from app.domain.entities.models import AccountType
-from app.schemas.models import UserCreate, UserResponse
+from app.schemas.models import UserCreate, UserInterestsUpdate, UserResponse
 from app.schemas.moderation import LoginRequest, TokenResponse
 
 router = APIRouter()
@@ -21,6 +21,7 @@ async def create_user(payload: UserCreate, repositories: RepositoriesDep) -> obj
         payload.email,
         payload.password,
         AccountType(payload.account_type),
+        tuple(payload.interests),
     )
 
 
@@ -36,6 +37,14 @@ async def login(payload: LoginRequest, repositories: RepositoriesDep) -> TokenRe
 async def get_current_user(actor: CurrentUserDep) -> object:
     """Validate the bearer against current account state and return its public profile."""
     return actor
+
+
+@router.put("/me/interests", response_model=UserResponse)
+async def update_interests(
+    payload: UserInterestsUpdate, actor: CurrentUserDep, repositories: RepositoriesDep
+) -> object:
+    """Atomically replace only the authenticated active user's declared interests."""
+    return await repositories.users.update_interests(actor.id, tuple(payload.interests))
 
 
 @router.get("/{user_id}", response_model=UserResponse)

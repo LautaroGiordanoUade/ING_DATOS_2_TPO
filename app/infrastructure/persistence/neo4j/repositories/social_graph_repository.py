@@ -4,7 +4,8 @@ from uuid import UUID
 from neo4j import AsyncDriver
 
 from app.application.services.follow_job import FollowJob
-from app.core.exceptions import ConflictError, FeatureNotImplementedError
+from app.core.exceptions import ConflictError
+from app.domain.recommendations import SuggestionCandidate
 
 
 class Neo4jSocialGraphRepository:
@@ -138,8 +139,28 @@ class Neo4jSocialGraphRepository:
             return tuple([UUID(record["id"]) async for record in result])
 
     async def get_mutual_friends(self, user_id: UUID, other_user_id: UUID) -> tuple[UUID, ...]:
-        # TODO(TP): Implementar consulta Cypher para amigos en común.
-        raise FeatureNotImplementedError("Neo4jSocialGraphRepository.get_mutual_friends")
+        if user_id == other_user_id:
+            return ()
+        async with self._driver.session() as session:
+            result = await session.run(
+                """
+                MATCH (u1:User {id:$u1})-[r1:FOLLOWS]->(f:User)
+                      <-[r2:FOLLOWS]-(u2:User {id:$u2})
+                WHERE f <> u1 AND f <> u2
+                  AND coalesce(r1.status,'accepted')='accepted'
+                  AND coalesce(r2.status,'accepted')='accepted'
+                  AND coalesce(u1.account_status,'active')='active'
+                  AND coalesce(u2.account_status,'active')='active'
+                  AND coalesce(f.account_status,'active')='active'
+                  AND NOT (u1)-[:BLOCKS]-(f)
+                  AND NOT (u2)-[:BLOCKS]-(f)
+                  AND NOT (u1)-[:BLOCKS]-(u2)
+                RETURN DISTINCT f.id AS id ORDER BY id
+                """,
+                u1=str(user_id),
+                u2=str(other_user_id),
+            )
+            return tuple([UUID(record["id"]) async for record in result])
 
     async def eligible_authors(self, user_id: UUID, authors: tuple[UUID, ...]) -> set[UUID]:
         if not authors:
@@ -162,18 +183,77 @@ class Neo4jSocialGraphRepository:
         async with self._driver.session() as session:
             result = await session.run(
                 """
-                MATCH (u:User {id:$id})-[:FOLLOWS {status:'accepted'}]->(middle:User)
-                      -[:FOLLOWS {status:'accepted'}]->(candidate:User)
-                WHERE candidate <> u AND coalesce(u.account_status,'active')='active'
+                MATCH (u:User {id:$id})-[r1:FOLLOWS]->(middle:User)
+                      -[r2:FOLLOWS]->(candidate:User)
+                WHERE candidate <> u
+                  AND coalesce(r1.status,'accepted')='accepted'
+                  AND coalesce(r2.status,'accepted')='accepted'
+                  AND coalesce(u.account_status,'active')='active'
                   AND coalesce(middle.account_status,'active')='active'
                   AND coalesce(candidate.account_status,'active')='active'
-                  AND NOT (u)-[:FOLLOWS]->(candidate) AND NOT (u)-[:BLOCKS]-(candidate)
-                RETURN candidate.id AS id, count(*) AS score ORDER BY score DESC, id LIMIT $limit
+                  AND NOT (u)-[:FOLLOWS]->(candidate)
+                  AND NOT (u)-[:BLOCKS]-(middle)
+                  AND NOT (middle)-[:BLOCKS]-(candidate)
+                  AND NOT (u)-[:BLOCKS]-(candidate)
+                RETURN candidate.id AS id, count(DISTINCT middle) AS score
+                ORDER BY score DESC, id LIMIT $limit
             """,
                 id=str(user_id),
                 limit=limit,
             )
             return tuple([UUID(record["id"]) async for record in result])
+
+    async def suggestion_candidates(
+        self, user_id: UUID, after: UUID | None, limit: int
+    ) -> tuple[SuggestionCandidate, ...]:
+        async with self._driver.session() as session:
+            result = await session.run(
+                """
+                MATCH (u:User {id:$id})-[r1:FOLLOWS]->(middle:User)
+                      -[r2:FOLLOWS]->(candidate:User)
+                WHERE candidate <> u
+                  AND ($after IS NULL OR candidate.id > $after)
+                  AND coalesce(r1.status,'accepted')='accepted'
+                  AND coalesce(r2.status,'accepted')='accepted'
+                  AND coalesce(u.account_status,'active')='active'
+                  AND coalesce(middle.account_status,'active')='active'
+                  AND coalesce(candidate.account_status,'active')='active'
+                  AND NOT (u)-[:FOLLOWS]->(candidate)
+                  AND NOT (u)-[:BLOCKS]-(middle)
+                  AND NOT (middle)-[:BLOCKS]-(candidate)
+                  AND NOT (u)-[:BLOCKS]-(candidate)
+                RETURN candidate.id AS id, count(DISTINCT middle) AS score
+                ORDER BY id LIMIT $limit
+                """,
+                id=str(user_id),
+                after=None if after is None else str(after),
+                limit=limit,
+            )
+            return tuple(
+                [SuggestionCandidate(UUID(row["id"]), int(row["score"])) async for row in result]
+            )
+
+    async def eligible_suggestions(self, user_id: UUID, ids: tuple[UUID, ...]) -> set[UUID]:
+        if not ids:
+            return set()
+        async with self._driver.session() as session:
+            result = await session.run(
+                """
+                UNWIND $ids AS id
+                OPTIONAL MATCH (u:User {id:$user})
+                OPTIONAL MATCH (candidate:User {id:id})
+                WITH u,candidate,id
+                WHERE id <> $user
+                  AND coalesce(u.account_status,'active')='active'
+                  AND coalesce(candidate.account_status,'active')='active'
+                  AND NOT EXISTS { MATCH (:User {id:$user})-[:FOLLOWS]->(:User {id:id}) }
+                  AND NOT EXISTS { MATCH (:User {id:$user})-[:BLOCKS]-(:User {id:id}) }
+                RETURN DISTINCT id ORDER BY id
+                """,
+                user=str(user_id),
+                ids=[str(i) for i in ids],
+            )
+            return {UUID(row["id"]) async for row in result}
 
     async def trace_relationships(self, user_id: UUID) -> dict[str, object]:
         async with self._driver.session() as session:

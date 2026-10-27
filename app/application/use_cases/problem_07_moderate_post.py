@@ -37,6 +37,9 @@ class ModeratePostUseCase:
         report = await self._moderation.report(report_id)
         if str(report["post_id"]) != str(post_id):
             raise ConflictError("Report belongs to a different post")
+        if decision == "revert" and report.get("resolution_report_id"):
+            # Any report resolved by the same hide points to one canonical reversal.
+            report_id = UUID(str(report["resolution_report_id"]))
         operation_id = uuid5(report_id, "revert" if decision == "revert" else "decision")
         existing = await self._moderation.get_job(operation_id)
         if existing is not None:
@@ -51,6 +54,12 @@ class ModeratePostUseCase:
             hide = await self._moderation.get_job(uuid5(report_id, "decision"))
             if hide is None or hide.status != "completed" or hide.snapshot is None:
                 raise ConflictError("Hide has not completed")
+            if (
+                hide.post_id != post_id
+                or post.moderation_status != "hidden"
+                or (str(report_id) != (await self._moderation.snapshot(post_id)).owner)
+            ):
+                raise ConflictError("This report no longer owns the moderation")
             restore = hide.snapshot
         else:
             if status != "pending":

@@ -23,11 +23,13 @@ from app.application.use_cases import (
 from app.core.config import get_settings
 from app.infrastructure.persistence.mongodb.repositories.accounts import MongoAccountStore
 from app.infrastructure.persistence.mongodb.repositories.follows import MongoFollowStore
+from app.infrastructure.persistence.mongodb.repositories.messaging import MongoMessagingStore
 from app.infrastructure.persistence.mongodb.repositories.publication_jobs import (
     MongoPublicationJobs,
 )
 from app.infrastructure.persistence.redis.accounts import RedisAccountViews
 from app.infrastructure.persistence.redis.follows import RedisFollowViews
+from app.infrastructure.persistence.redis.messaging import ConversationLock, RedisMessagingViews
 from app.infrastructure.persistence.redis.moderation import RedisModerationViews
 from app.infrastructure.persistence.redis.personalized_feed import RedisPersonalizedFeed
 from app.infrastructure.persistence.redis.reaction_lock import RedisReactionLock
@@ -104,16 +106,12 @@ def get_interaction_use_case(
 
 
 def get_message_use_case(
-    repositories: RepositoriesDep,
     resources: ResourcesDep,
-    failure_injector: FailureInjectorDep,
 ) -> SendGroupMessageUseCase:
     return SendGroupMessageUseCase(
-        repositories.conversations,
-        repositories.messages,
-        repositories.counters,
-        repositories.notifications,
-        CompensationService(resources.operation_log, failure_injector),
+        MongoMessagingStore(resources.mongo_client[get_settings().mongodb_database]),
+        RedisMessagingViews(resources.redis),
+        ConversationLock(resources.redis),
     )
 
 

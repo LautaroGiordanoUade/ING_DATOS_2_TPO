@@ -1,14 +1,16 @@
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Header, HTTPException
+from fastapi import APIRouter, Depends, Header, HTTPException, Query
 
 from app.api.dependencies.auth import CurrentUserDep
 from app.api.dependencies.use_cases import RepositoriesDep, get_publish_use_case
+from app.application.services.comment_queries import CommentQueries
 from app.application.services.content_queries import ContentQueries
 from app.application.use_cases import PublishContentUseCase
 from app.domain.entities import Post
-from app.schemas.models import PostCreate, PostResponse, PublicationResponse
+from app.infrastructure.security.comment_cursor import CommentCursorCodec
+from app.schemas.models import CommentPageResponse, PostCreate, PostResponse, PublicationResponse
 
 router = APIRouter()
 
@@ -55,3 +57,17 @@ async def by_author(user_id: UUID, repositories: RepositoriesDep) -> object:
 @router.get("/{post_id}", response_model=PostResponse)
 async def detail(post_id: UUID, repositories: RepositoriesDep) -> object:
     return await ContentQueries(repositories.posts, repositories.counters).detail(post_id)
+
+
+@router.get("/{post_id}/comments", response_model=CommentPageResponse)
+async def comments(
+    post_id: UUID,
+    actor: CurrentUserDep,
+    repositories: RepositoriesDep,
+    cursor: Annotated[str | None, Query(max_length=2048)] = None,
+    limit: Annotated[int, Query(ge=1, le=50)] = 10,
+) -> object:
+    """Newest visible comments first; every page checks current post/account availability."""
+    return await CommentQueries(
+        repositories.posts, repositories.comments, CommentCursorCodec()
+    ).page(post_id, cursor, limit)

@@ -19,6 +19,7 @@ class IdentityService:
         email: str,
         password: str,
         account_type: AccountType = AccountType.PUBLIC,
+        interests: tuple[str, ...] = (),
     ) -> User:
         digest = await asyncio.to_thread(PasswordHasher().hash, password)
         return await self._users.create(
@@ -28,6 +29,7 @@ class IdentityService:
                 email=email,
                 password_hash=digest,
                 account_type=account_type,
+                interests=interests,
             )
         )
 

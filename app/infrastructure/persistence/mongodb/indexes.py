@@ -25,3 +25,7 @@ async def ensure_mongo_indexes(database: AsyncDatabase[dict[str, object]]) -> No
     from app.infrastructure.persistence.mongodb.repositories.follows import MongoFollowStore
 
     await MongoFollowStore(database).ensure_indexes()
+
+    from app.infrastructure.persistence.mongodb.repositories.messaging import MongoMessagingStore
+
+    await MongoMessagingStore(database).ensure_indexes()

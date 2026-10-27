@@ -1,0 +1,266 @@
+import { useState } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useAuth } from '../auth/context'
+import { ApiError } from '../../services/http/client'
+import { PRESET_REACTIONS, commentPayloadSchema, reactionPayloadSchema } from './contracts'
+import { getOwnReaction, refreshPostCounters, removeReaction, sendComment, sendReaction } from './api'
+import { CommentList } from './CommentList'
+
+interface PostInteractionsProps {
+  postId: string
+  onCountsChange: (reactionCount: number, commentCount: number) => void
+  commentCount?: number
+}
+
+function parseErrorMessage(err: unknown): string {
+  if (err instanceof ApiError) {
+    if (err.status === 404) return 'La publicación ya no está disponible (fue retirada o eliminada).'
+    if (err.status === 409) return 'Conflicto por operaciones concurrentes. Volvé a intentar.'
+    if (err.status === 422) return 'Revisá los datos enviados antes de continuar.'
+    if (err.status === 503) return 'El servicio no está disponible en este momento.'
+    return err.message
+  }
+  return 'Ocurrió un error inesperado al procesar la interacción.'
+}
+
+export function PostInteractions({ postId, onCountsChange, commentCount = 0 }: PostInteractionsProps) {
+  const { user, request } = useAuth()
+  const queryClient = useQueryClient()
+  const reactionKey = ['own-reaction', user?.id, postId]
+  const ownReaction = useQuery({
+    queryKey: reactionKey,
+    queryFn: ({ signal }) => getOwnReaction(request, postId, signal),
+    enabled: Boolean(user),
+    retry: false,
+    refetchOnWindowFocus: false,
+    networkMode: 'always',
+  })
+
+  // Estados de reacción
+  const selectedKind = ownReaction.data?.kind ?? null
+  const [customKind, setCustomKind] = useState('')
+  const [showCustom, setShowCustom] = useState(false)
+  const [isReacting, setIsReacting] = useState(false)
+  const [reactionMsg, setReactionMsg] = useState<{ type: 'error' | 'success'; text: string } | null>(null)
+  const reactionUnavailable = isReacting || ownReaction.isPending || ownReaction.isError
+
+  // Estados de comentarios
+  const [isCommenting, setIsCommenting] = useState(false)
+  const [showCommentBox, setShowCommentBox] = useState(false)
+  const [showComments, setShowComments] = useState(false)
+  const [commentText, setCommentText] = useState('')
+  const [idempotencyKey, setIdempotencyKey] = useState(() => crypto.randomUUID())
+  const [commentMsg, setCommentMsg] = useState<{ type: 'error' | 'success'; text: string } | null>(null)
+
+  if (!user) return null
+
+  const handleReact = async (kindToSet: string) => {
+    const parsed = reactionPayloadSchema.safeParse({
+      post_id: postId,
+      user_id: user.id,
+      kind: kindToSet,
+    })
+    if (!parsed.success) {
+      setReactionMsg({
+        type: 'error',
+        text: parsed.error.issues[0]?.message ?? 'El tipo de reacción no es válido.',
+      })
+      return
+    }
+
+    setIsReacting(true)
+    setReactionMsg(null)
+    try {
+      await queryClient.cancelQueries({ queryKey: reactionKey })
+      await sendReaction(request, parsed.data)
+      queryClient.setQueryData(reactionKey, { kind: parsed.data.kind })
+      setCustomKind('')
+      setShowCustom(false)
+      setReactionMsg({ type: 'success', text: `Reacción enviada (${parsed.data.kind}).` })
+      const updated = await refreshPostCounters(request, postId)
+      onCountsChange(updated.reaction_count, updated.comment_count)
+    } catch (err) {
+      setReactionMsg({ type: 'error', text: parseErrorMessage(err) })
+    } finally {
+      setIsReacting(false)
+    }
+  }
+
+  const handleRemoveReaction = async () => {
+    setIsReacting(true)
+    setReactionMsg(null)
+    try {
+      await queryClient.cancelQueries({ queryKey: reactionKey })
+      await removeReaction(request, { post_id: postId, user_id: user.id })
+      queryClient.setQueryData(reactionKey, { kind: null })
+      setReactionMsg({ type: 'success', text: 'Reacción eliminada.' })
+      const updated = await refreshPostCounters(request, postId)
+      onCountsChange(updated.reaction_count, updated.comment_count)
+    } catch (err) {
+      setReactionMsg({ type: 'error', text: parseErrorMessage(err) })
+    } finally {
+      setIsReacting(false)
+    }
+  }
+
+  const handleSubmitComment = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const parsed = commentPayloadSchema.safeParse({
+      post_id: postId,
+      user_id: user.id,
+      text: commentText,
+    })
+    if (!parsed.success) {
+      setCommentMsg({
+        type: 'error',
+        text: parsed.error.issues[0]?.message ?? 'Escribí un comentario válido.',
+      })
+      return
+    }
+
+    setIsCommenting(true)
+    setCommentMsg(null)
+    try {
+      await sendComment(request, parsed.data, idempotencyKey)
+      setCommentMsg({ type: 'success', text: 'Comentario enviado exitosamente.' })
+      setCommentText('')
+      setIdempotencyKey(crypto.randomUUID()) // Nueva clave solo ante éxito
+      await queryClient.cancelQueries({ queryKey: ['comments', user.id, postId] })
+      await queryClient.resetQueries({ queryKey: ['comments', user.id, postId] })
+      setShowComments(true)
+      const updated = await refreshPostCounters(request, postId)
+      onCountsChange(updated.reaction_count, updated.comment_count)
+    } catch (err) {
+      // ANTE ERROR: Se conserva commentText y la misma idempotencyKey para reintento seguro
+      setCommentMsg({ type: 'error', text: parseErrorMessage(err) })
+    } finally {
+      setIsCommenting(false)
+    }
+  }
+
+  return (
+    <div className="post-interactions" aria-label="Interacciones de la publicación">
+      {ownReaction.isPending && <p role="status">Cargando tu reacción…</p>}
+      {ownReaction.isError && (
+        <div role="alert">
+          No pudimos cargar tu reacción.{' '}
+          <button type="button" disabled={ownReaction.isFetching} onClick={() => void ownReaction.refetch()}>
+            Reintentar reacción
+          </button>
+        </div>
+      )}
+      {selectedKind && <p>Tu reacción: {selectedKind}</p>}
+      {/* Barra de Reacciones */}
+      <div className="reaction-bar" role="group" aria-label="Reacciones disponibles">
+        {PRESET_REACTIONS.map(({ kind, label }) => (
+          <button
+            key={kind}
+            type="button"
+            className={`reaction-button ${selectedKind === kind ? 'active' : ''}`}
+            aria-pressed={selectedKind === kind}
+            disabled={reactionUnavailable}
+            onClick={() => void handleReact(kind)}
+          >
+            {label}
+          </button>
+        ))}
+
+        {!showCustom ? (
+          <button
+            type="button"
+            className="reaction-button"
+            onClick={() => setShowCustom(true)}
+            disabled={reactionUnavailable}
+          >
+            ＋ Otra
+          </button>
+        ) : (
+          <div className="custom-reaction-form">
+            <input
+              type="text"
+              placeholder="Ej: aplauso"
+              maxLength={30}
+              value={customKind}
+              onChange={(e) => setCustomKind(e.target.value)}
+              disabled={reactionUnavailable}
+            />
+            <button
+              type="button"
+              className="button-primary"
+              style={{ minHeight: '32px', padding: '4px 10px', fontSize: '11px' }}
+              disabled={reactionUnavailable || !customKind.trim()}
+              onClick={() => {
+                if (customKind.trim()) void handleReact(customKind.trim())
+              }}
+            >
+              Aplicar
+            </button>
+          </div>
+        )}
+
+        {selectedKind && (
+          <button
+            type="button"
+            className="reaction-remove-button"
+            disabled={reactionUnavailable}
+            onClick={() => void handleRemoveReaction()}
+          >
+            Quitar mi reacción
+          </button>
+        )}
+      </div>
+
+      {reactionMsg && (
+        <div
+          role={reactionMsg.type === 'error' ? 'alert' : 'status'}
+          className={`interaction-feedback ${reactionMsg.type}`}
+        >
+          {reactionMsg.text}
+        </div>
+      )}
+
+      {/* Control de Comentarios */}
+      <button
+        type="button"
+        className="comment-toggle-button"
+        onClick={() => setShowCommentBox((prev) => !prev)}
+      >
+        {showCommentBox ? 'Ocultar caja de comentarios' : '💬 Escribir comentario'}
+      </button>
+
+      {showCommentBox && (
+        <form className="comment-form" onSubmit={(e) => void handleSubmitComment(e)}>
+          <textarea
+            aria-label="Escribí un comentario"
+            placeholder="Sumá tu comentario a la publicación…"
+            rows={2}
+            maxLength={2000}
+            value={commentText}
+            disabled={isCommenting}
+            onChange={(e) => setCommentText(e.target.value)}
+          />
+          <div className="comment-actions">
+            <span className="comment-counter">{commentText.length} / 2.000</span>
+            <button
+              type="submit"
+              className="button-primary"
+              style={{ minHeight: '36px', padding: '6px 14px' }}
+              disabled={isCommenting || !commentText.trim()}
+            >
+              {isCommenting ? 'Enviando…' : 'Comentar'}
+            </button>
+          </div>
+          {commentMsg && (
+            <div
+              role={commentMsg.type === 'error' ? 'alert' : 'status'}
+              className={`interaction-feedback ${commentMsg.type}`}
+            >
+              {commentMsg.text}
+            </div>
+          )}
+        </form>
+      )}
+      <CommentList postId={postId} enabled={showComments || commentCount > 0} onOpen={() => setShowComments(true)} />
+    </div>
+  )
+}

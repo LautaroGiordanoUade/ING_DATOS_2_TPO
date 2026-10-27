@@ -1,4 +1,5 @@
 import logging
+from datetime import UTC, datetime
 from uuid import uuid5
 
 from app.application.ports.moderation import ModerationStore, ModerationViews
@@ -70,6 +71,7 @@ class ModerationProcessor(WorkflowSteps[ModerationJob]):
                 )
             # A persisted commit decision is never compensated on acknowledgement loss.
             job.status = "committing"
+            job.decision_at = datetime.now(UTC)
             await self._store.save(job)
         except Exception as exc:
             logger.exception("Moderation %s will compensate", job.operation_id)
@@ -82,6 +84,10 @@ class ModerationProcessor(WorkflowSteps[ModerationJob]):
 
     async def _commit(self, job: ModerationJob) -> None:
         try:
+            if job.decision_at is None:
+                # Legacy jobs may already be committing without a stable resolution timestamp.
+                job.decision_at = datetime.now(UTC)
+                await self._store.save(job)
             await self._retry(job, "audit", lambda: self._store.finalize(job))
             job.status = "completed"
             await self._store.save(job)

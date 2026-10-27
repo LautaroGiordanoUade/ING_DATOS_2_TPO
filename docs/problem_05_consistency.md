@@ -1,4 +1,4 @@
-# Problema 5: concurrencia y notificaciones parciales
+# Problema 5: concurrencia, notificaciones y recuperación durable
 
 Las altas, cambios y bajas de reacciones y los comentarios adquieren el mismo bloqueo por
 publicación (`lock:post_reactions:{post_id}`). Se mantiene durante la escritura
@@ -14,11 +14,32 @@ compartirlo entre procesos/instancias del mismo host; el sistema operativo lo li
 muere el proceso. Todos los escritores deben usar ese volumen (o el mismo
 `P5_LOCK_DIRECTORY`). No ofrece exclusión entre hosts independientes ni agrega contenedores.
 
-Al entrar, después de validar la publicación y bajo ese bloqueo, se recalculan ambos
-contadores desde MongoDB. El siguiente escritor repara así contadores pendientes por una
-caída anterior. Los comentarios también se serializan para no pisar sus compensaciones.
-Reparar contadores no implica recuperar una notificación, resolver una operación pendiente
-ni una reserva de idempotencia abandonada: la recuperación durable completa sigue pendiente.
+## Recuperación durable de operaciones tras caída
+
+Las operaciones de interacción (`problem_05_react`, `problem_05_remove_reaction`,
+`problem_05_comment`) persisten de forma durable en la colección `operations` de MongoDB
+junto con sus metadatos (`post_id`, `user_id`, `author_id`, `event_id`/`comment_id`,
+`previous_id`/`previous_kind`, `removed_id`/`removed_kind`, `scoped_key`, `fingerprint`).
+
+Si un proceso se interrumpe abruptamente (crash, reinicio o SIGKILL):
+1. **Detección de operaciones pendientes:** Tanto en el ingreso del siguiente escritor a la publicación
+   (`_repair_counters`) como en el worker en segundo plano (`app.workers.moderation`), se consultan las
+   operaciones con estado `running`, `pending` o `compensating` mediante `operation_log.pending()`.
+2. **Reconciliación bajo bloqueo:** Bajo el bloqueo de la publicación (`reaction_lock.hold(post_id)`):
+   - **Operaciones completadas en MongoDB:** Si la reacción nueva (`current.id == event_id`), el cambio de
+     reacción (`current.kind == kind`), la baja (`current is None` en `problem_05_remove_reaction`) o el
+     comentario ya se aplicaron en MongoDB, se recalculan los contadores absolutos en Redis, se emite la
+     notificación pendiente al autor cuando corresponda (evitando notificaciones perdidas tras el corte),
+     se completa la clave de idempotencia (`idempotency.complete(...)` para que los reintentos devuelvan el
+     resultado determinista 202) y se transiciona el estado de la operación a `completed`.
+   - **Operaciones interrumpidas antes de persistir o en compensación:** Si la operación no llegó a
+     persistirse en MongoDB o cayó mientras se compensaba, se restauran los snapshots previos de reacción
+     (`previous_kind` o `removed_kind`) o se limpian las referencias parciales, se recalculan los contadores,
+     se revoca la notificación en Redis si existía y se **libera la reserva de idempotencia**
+     (`idempotency.release(scoped_key)`), evitando bloqueos huérfanos 409 y permitiendo que el cliente
+     reintente inmediatamente. La operación pasa a `compensated` o `failed`.
+
+## Consistencia de contadores y notificaciones
 
 Antes de cambiar o borrar una reacción se lee su estado previo bajo el mismo bloqueo.
 Esto permite restaurarlo si MongoDB hizo la escritura pero se perdió la respuesta.
@@ -39,30 +60,8 @@ de evento para no eliminar notificaciones de altas anteriores al compensar.
 El mismo mecanismo cubre las notificaciones de comentarios.
 
 La revocación elimina la notificación guardada; no puede retirar un evento Pub/Sub
-que un cliente ya recibió. No se garantiza entrega exactamente una vez ni recuperación
-automática ante una caída entre motores. Si falla también la compensación, el registro
-queda en estado failed y requiere reconciliación.
+que un cliente ya recibió.
 
-Regresiones: `tests/unit/test_problem_05_regressions.py` y
-`tests/integration/test_problem_05_consistency.py`. Estas últimas usan motores reales:
-las seis fallas detectadas en revisión, respuestas MongoDB perdidas, comentarios concurrentes,
-lease vencido con dueño vivo y caída real de un proceso de prueba.
-
-Para repetir las pruebas con las bases levantadas, desde Git Bash:
-
-```bash
-docker compose exec -T api python < scripts/validar_problema5.py
-docker compose exec -T api python < scripts/validar_problema5_fallas.py
-```
-
-Los scripts crean UUID nuevos y dejan los datos aislados para inspección. El segundo
-inyecta la falla después de HSET y fuerza el orden concurrente que antes desalineaba
-el contador. No detienen motores ni modifican las publicaciones existentes.
-
-Validación de la corrección: 218 pruebas aprobadas con main y P5 corregido, incluidas
-12 integraciones nuevas; 247 pruebas aprobadas al combinarlo con P3 en una copia temporal,
-sin mezclar las ramas. Mypy sin errores en ambos conjuntos; Ruff en los archivos modificados.
-Los resultados del arreglo sustituyen la evidencia histórica anterior de 20 checks P5.
-Docker reconstruido: 18 checks HTTP P5 y dos regresiones de falla/concurrencia aprobados.
-El script de fallas ya no corrige manualmente el contador antes de verificarlo; comprueba
-el estado que dejó la aplicación y exige consistencia también en la falla de notificación.
+Diseño completo, diagramas y guía de pruebas: `docs/problems/problem_05.md`.
+Regresiones y pruebas: `tests/unit/test_problem_05_regressions.py` y
+`tests/integration/test_problem_05_consistency.py`.

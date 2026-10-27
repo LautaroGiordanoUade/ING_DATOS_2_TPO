@@ -1,5 +1,8 @@
 # P7 UI — Reportes y moderación
 
+Esta guía conserva la evidencia de la entrega original de P7. Para el estado combinado
+con las UI P2/P4/P5/P6 de main y P8, ver [integración final](integration_p7_p8.md).
+
 Implementado sobre el backend P7 existente, sin cambios de API ni de workers.
 Se priorizó P7 por pedido del usuario; P2/P5 UI continúan pendientes. P5 se usa solo
 como preparación API de las pruebas de contadores. La aplicación sigue en Docker/Nginx,

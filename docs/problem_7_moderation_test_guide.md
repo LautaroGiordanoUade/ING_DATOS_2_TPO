@@ -215,6 +215,23 @@ y antes del checkpoint, y después de persistir la auditoría.
 
 ## Concurrencia
 
+### Varios reportes de la misma publicación
+
+1. Sobre una publicación visible, crear reportes con dos o más usuarios diferentes.
+2. Con moderador/admin decidir hide desde uno y esperar la operación completed.
+3. Consultar cada reporte: todos los pendientes del post deben quedar approved, con el mismo
+   operation_id, resolution_operation_id, resolution_report_id y resolved_at. El historial
+   muestra un evento cuyo affected_report_count coincide con la cantidad de reportes cerrados.
+4. Solicitar revert desde cualquiera de esos reportes y esperar completed. Todos los asociados
+   pasan a reverted y conservan resolution_operation_id como referencia al hide original.
+5. Un reporte previamente rejected y los reportes de otro post deben conservar su estado.
+   Rechazar un reporte individual no rechaza automáticamente a los demás.
+
+Un reporte que se intente insertar después del ocultamiento recibe 409, aunque su primera
+validación haya ocurrido antes. Los nuevos reportes creados durante el commit de la reversión
+permanecen pending. Las pruebas de interrupción parcial están en
+`tests/integration/test_problem_07_report_groups.py`.
+
 Con el cuarto post, crear un reporte. Abrir dos pestañas de Swagger con moderador/admin y decidir
 `hide` y `reject` casi simultáneamente sobre ese mismo reporte: una respuesta **202**, otra **409**.
 Dos decisiones idénticas devuelven la misma operación. Dos reportes diferentes del mismo post
@@ -255,6 +272,8 @@ los problemas restantes no se usa como evidencia de P7. Sin la variable se omite
 La implementación soporta el despliegue **Docker Linux en un host**, con todos los consumidores
 P7 compartiendo `moderation_worker_lock`. `flock` limita a un consumidor activo y el SO libera
 el bloqueo al terminarlo. Múltiples API pueden encolar gracias a restricciones MongoDB.
+Todas las API y el worker deben compartir también `interaction_locks`, ya configurado en Compose,
+para coordinar inserción de reportes y transiciones de visibilidad/commit por publicación.
 No desplegar consumidores en hosts/volúmenes independientes: requeriría fencing distribuido.
 El límite de audiencia es 100000 referencias por post, coherente con P1; snapshot mediante SCAN
 puede resultar costoso en feeds muy grandes. No se promete recuperación ante pérdida de volúmenes

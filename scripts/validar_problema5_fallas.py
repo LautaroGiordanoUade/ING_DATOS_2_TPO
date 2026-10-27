@@ -75,9 +75,14 @@ async def main():
         "counter_redis": int(await redis.get(f"post_reactions:{post}:count") or 0),
         "notifications_remaining": await redis.hlen(f"user:{author}:notifications"),
     }
-    result["ok"] = all(result[key] == 0 for key in (
-        "reactions_mongo", "counter_redis", "notifications_remaining",
-    ))
+    result["ok"] = all(
+        result[key] == 0
+        for key in (
+            "reactions_mongo",
+            "counter_redis",
+            "notifications_remaining",
+        )
+    )
     assert result["ok"], result
     print(json.dumps(result), flush=True)
     # Force a valid overlapping schedule: create writes Mongo, delete finishes, create resumes.

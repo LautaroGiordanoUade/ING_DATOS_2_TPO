@@ -4,6 +4,7 @@ export const userSchema = z.object({
   id: z.guid(), username: z.string(), full_name: z.string(), biography: z.string().nullable(),
   account_type: z.enum(['public', 'private']), account_status: z.enum(['active', 'suspended']),
   registered_at: z.string(), role: z.enum(['user', 'moderator', 'admin']),
+  interests: z.array(z.string()).optional(),
 })
 export type User = z.infer<typeof userSchema>
 

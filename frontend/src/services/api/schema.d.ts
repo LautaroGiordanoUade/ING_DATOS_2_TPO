@@ -358,6 +358,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/users/me/interests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Update Interests
+         * @description Atomically replace only the authenticated active user's declared interests.
+         */
+        put: operations["update_interests_api_v1_users_me_interests_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/users/{user_id}": {
         parameters: {
             query?: never;
@@ -418,6 +438,26 @@ export interface paths {
         };
         /** Detail */
         get: operations["detail_api_v1_posts__post_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/posts/{post_id}/comments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Comments
+         * @description Newest visible comments first; every page checks current post/account availability.
+         */
+        get: operations["comments_api_v1_posts__post_id__comments_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -566,6 +606,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/interactions/reactions/{post_id}/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Own Reaction
+         * @description Return the bearer owner's reaction, or null when they have not reacted.
+         */
+        get: operations["own_reaction_api_v1_interactions_reactions__post_id__me_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/interactions/reactions": {
         parameters: {
             query?: never;
@@ -577,7 +637,8 @@ export interface paths {
         put?: never;
         /** Create Reaction */
         post: operations["create_reaction_api_v1_interactions_reactions_post"];
-        delete?: never;
+        /** Delete Reaction */
+        delete: operations["delete_reaction_api_v1_interactions_reactions_delete"];
         options?: never;
         head?: never;
         patch?: never;
@@ -600,7 +661,77 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/messages": {
+    "/api/v1/messages/participants": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Participants */
+        get: operations["participants_api_v1_messages_participants_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/messages/conversations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Conversations */
+        get: operations["conversations_api_v1_messages_conversations_get"];
+        put?: never;
+        /** Create Conversation */
+        post: operations["create_conversation_api_v1_messages_conversations_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/messages/conversations/{conversation_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Conversation */
+        get: operations["conversation_api_v1_messages_conversations__conversation_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/messages/conversations/{conversation_id}/messages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** History */
+        get: operations["history_api_v1_messages_conversations__conversation_id__messages_get"];
+        put?: never;
+        /** Create Message */
+        post: operations["create_message_api_v1_messages_conversations__conversation_id__messages_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/messages/conversations/{conversation_id}/read": {
         parameters: {
             query?: never;
             header?: never;
@@ -608,9 +739,29 @@ export interface paths {
             cookie?: never;
         };
         get?: never;
+        /**
+         * Mark Read
+         * @description Advance monotonically through a real message; replay never decrements twice.
+         */
+        put: operations["mark_read_api_v1_messages_conversations__conversation_id__read_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/messages/{message_id}/delivery": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Delivery */
+        get: operations["delivery_api_v1_messages__message_id__delivery_get"];
         put?: never;
-        /** Create Message */
-        post: operations["create_message_api_v1_messages_post"];
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -1042,6 +1193,42 @@ export interface components {
             /** Text */
             text: string;
         };
+        /** CommentPageResponse */
+        CommentPageResponse: {
+            /** Items */
+            items: components["schemas"]["CommentResponse"][];
+            /** Next Cursor */
+            next_cursor: string | null;
+        };
+        /** CommentResponse */
+        CommentResponse: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Post Id
+             * Format: uuid
+             */
+            post_id: string;
+            /**
+             * User Id
+             * Format: uuid
+             */
+            user_id: string;
+            /** Text */
+            text: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Author Name */
+            author_name: string;
+            /** Author Username */
+            author_username: string | null;
+        };
         /**
          * DecisionRequest
          * @example {
@@ -1163,6 +1350,88 @@ export interface components {
                 [key: string]: number;
             };
         };
+        /** Group */
+        Group: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+            /** Participant Ids */
+            participant_ids: string[];
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Sequence
+             * @default 0
+             */
+            sequence: number;
+            /** Read Through */
+            read_through?: {
+                [key: string]: number;
+            };
+            /** Participants */
+            participants?: components["schemas"]["Participant"][];
+            /**
+             * Unread
+             * @default 0
+             */
+            unread: number;
+        };
+        /** GroupCreate */
+        GroupCreate: {
+            /** Name */
+            name: string;
+            /** Participant Ids */
+            participant_ids: string[];
+        };
+        /** GroupMessage */
+        GroupMessage: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Conversation Id
+             * Format: uuid
+             */
+            conversation_id: string;
+            /**
+             * Sender Id
+             * Format: uuid
+             */
+            sender_id: string;
+            /** Text */
+            text: string;
+            /** Sequence */
+            sequence: number;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Delivery Status
+             * @default pending
+             * @enum {string}
+             */
+            delivery_status: "pending" | "completed";
+            /** Error */
+            error?: string | null;
+            /**
+             * Author Name
+             * @default
+             */
+            author_name: string;
+            /** Completed Steps */
+            completed_steps?: string[];
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -1195,32 +1464,17 @@ export interface components {
             /** Text */
             text: string;
         };
-        /** MessageResponse */
-        MessageResponse: {
-            /**
-             * Id
-             * Format: uuid
-             */
-            id: string;
-            /**
-             * Conversation Id
-             * Format: uuid
-             */
-            conversation_id: string;
-            /**
-             * Sender Id
-             * Format: uuid
-             */
-            sender_id: string;
+        /** MessagePage */
+        MessagePage: {
+            /** Items */
+            items: components["schemas"]["GroupMessage"][];
+            /** Next Before */
+            next_before?: number | null;
+        };
+        /** MessageText */
+        MessageText: {
             /** Text */
             text: string;
-            /** Read By */
-            read_by: string[];
-            /**
-             * Created At
-             * Format: date-time
-             */
-            created_at: string;
         };
         /** ModerationJob */
         ModerationJob: {
@@ -1276,6 +1530,8 @@ export interface components {
             resume_phase: string;
             /** Fail At */
             fail_at?: string | null;
+            /** Decision At */
+            decision_at?: string | null;
             /**
              * Created At
              * Format: date-time
@@ -1361,6 +1617,23 @@ export interface components {
             operation_id: string;
             /** Status */
             status: string;
+        };
+        /** OwnReactionResponse */
+        OwnReactionResponse: {
+            /** Kind */
+            kind: string | null;
+        };
+        /** Participant */
+        Participant: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Username */
+            username: string;
+            /** Full Name */
+            full_name: string;
         };
         /** PostCreate */
         PostCreate: {
@@ -1458,6 +1731,14 @@ export interface components {
              */
             user_id: string;
         };
+        /** ReadThrough */
+        ReadThrough: {
+            /**
+             * Message Id
+             * Format: uuid
+             */
+            message_id: string;
+        };
         /** ReadinessResponse */
         ReadinessResponse: {
             /** Status */
@@ -1533,6 +1814,10 @@ export interface components {
             decision_reason?: string | null;
             /** Operation Id */
             operation_id?: string | null;
+            /** Resolution Operation Id */
+            resolution_operation_id?: string | null;
+            /** Resolution Report Id */
+            resolution_report_id?: string | null;
         };
         /**
          * RevertRequest
@@ -1566,6 +1851,8 @@ export interface components {
         };
         /** UserCreate */
         UserCreate: {
+            /** Interests */
+            interests?: string[];
             /**
              * Account Type
              * @default public
@@ -1581,8 +1868,15 @@ export interface components {
             /** Password */
             password: string;
         };
+        /** UserInterestsUpdate */
+        UserInterestsUpdate: {
+            /** Interests */
+            interests: string[];
+        };
         /** UserResponse */
         UserResponse: {
+            /** Interests */
+            interests?: string[];
             /**
              * Id
              * Format: uuid
@@ -2147,7 +2441,8 @@ export interface operations {
     send_message_api_v1_problems_6_message_post: {
         parameters: {
             query?: never;
-            header?: {
+            header: {
+                "Idempotency-Key": string;
                 "x-fail-at-step"?: string | null;
             };
             path?: never;
@@ -2165,7 +2460,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["GroupMessage"];
                 };
             };
             /** @description Validation Error */
@@ -2371,6 +2666,39 @@ export interface operations {
             };
         };
     };
+    update_interests_api_v1_users_me_interests_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UserInterestsUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_user_api_v1_users__user_id__get: {
         parameters: {
             query?: never;
@@ -2500,6 +2828,40 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PostResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    comments_api_v1_posts__post_id__comments_get: {
+        parameters: {
+            query?: {
+                cursor?: string | null;
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                post_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommentPageResponse"];
                 };
             };
             /** @description Validation Error */
@@ -3045,6 +3407,39 @@ export interface operations {
             };
         };
     };
+    own_reaction_api_v1_interactions_reactions__post_id__me_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-fail-at-step"?: string | null;
+            };
+            path: {
+                post_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OwnReactionResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     create_reaction_api_v1_interactions_reactions_post: {
         parameters: {
             query?: never;
@@ -3057,6 +3452,39 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["ReactionCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_reaction_api_v1_interactions_reactions_delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-fail-at-step"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReactionRemove"];
             };
         };
         responses: {
@@ -3112,16 +3540,219 @@ export interface operations {
             };
         };
     };
-    create_message_api_v1_messages_post: {
+    participants_api_v1_messages_participants_get: {
+        parameters: {
+            query: {
+                q: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Participant"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    conversations_api_v1_messages_conversations_get: {
+        parameters: {
+            query?: {
+                before?: string | null;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Group"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_conversation_api_v1_messages_conversations_post: {
         parameters: {
             query?: never;
-            header?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
             path?: never;
             cookie?: never;
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["MessageCreate"];
+                "application/json": components["schemas"]["GroupCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Group"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    conversation_api_v1_messages_conversations__conversation_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                conversation_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Group"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    history_api_v1_messages_conversations__conversation_id__messages_get: {
+        parameters: {
+            query?: {
+                before?: number | null;
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                conversation_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MessagePage"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_message_api_v1_messages_conversations__conversation_id__messages_post: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+                "x-fail-at-step"?: string | null;
+            };
+            path: {
+                conversation_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MessageText"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GroupMessage"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    mark_read_api_v1_messages_conversations__conversation_id__read_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                conversation_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReadThrough"];
             };
         };
         responses: {
@@ -3131,7 +3762,40 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["MessageResponse"];
+                    "application/json": {
+                        [key: string]: number;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delivery_api_v1_messages__message_id__delivery_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                message_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GroupMessage"];
                 };
             };
             /** @description Validation Error */

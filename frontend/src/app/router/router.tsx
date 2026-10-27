@@ -6,6 +6,9 @@ import { RequireAuth } from '../../features/auth/RequireAuth'
 import { RequireModerator } from '../../features/moderation/RequireModerator'
 
 const LoginPage = lazy(() => import('../../features/auth/AuthPage').then((module) => ({ default: module.LoginPage })))
+const ProfilePage = lazy(() => import('../../features/social/ProfilePage').then((module) => ({ default: module.ProfilePage })))
+const RequestsPage = lazy(() => import('../../features/social/RequestsPage').then((module) => ({ default: module.RequestsPage })))
+const MessagesPage = lazy(() => import('../../features/messages/MessagesPage').then((module) => ({ default: module.MessagesPage })))
 const RegisterPage = lazy(() => import('../../features/auth/AuthPage').then((module) => ({ default: module.RegisterPage })))
 const ComposerPage = lazy(() => import('../../features/posts/ComposerPage').then((module) => ({ default: module.ComposerPage })))
 const OperationPage = lazy(() => import('../../features/posts/OperationPage').then((module) => ({ default: module.OperationPage })))
@@ -17,6 +20,11 @@ const ModerationOperationPage = lazy(() => import('../../features/moderation/Mod
 const AccountsPage = lazy(() => import('../../features/accounts/AccountsPage').then((module) => ({ default: module.AccountsPage })))
 const AccountTracePage = lazy(() => import('../../features/accounts/AccountTracePage').then((module) => ({ default: module.AccountTracePage })))
 const AccountOperationPage = lazy(() => import('../../features/accounts/AccountOperationPage').then((module) => ({ default: module.AccountOperationPage })))
+const RecommendationsPage = lazy(() =>
+  import('../../features/recommendations/RecommendationsPage').then((module) => ({
+    default: module.RecommendationsPage,
+  }))
+)
 
 export const router = createBrowserRouter([
   {
@@ -26,6 +34,10 @@ export const router = createBrowserRouter([
       { path: '/login', element: <LoginPage /> },
       { path: '/registro', element: <RegisterPage /> },
       { element: <RequireAuth />, children: [
+        { path: '/recomendaciones', element: <RecommendationsPage /> },
+        { path: '/mensajes/:conversationId?', element: <MessagesPage /> },
+        { path: '/perfiles/:userId', element: <ProfilePage /> },
+        { path: '/solicitudes', element: <RequestsPage /> },
         { path: '/mis-publicaciones', element: <MyPostsPage /> },
         { path: '/publicar', element: <ComposerPage /> },
         { path: '/operaciones/:operationId', element: <OperationPage /> },

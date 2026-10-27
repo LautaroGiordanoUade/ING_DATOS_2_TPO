@@ -32,6 +32,9 @@ rutas en Swagger o respuestas en modo demo.
 - [x] Workflow durable con compensación, recuperación y retry en el worker existente P7/P8.
 - [x] Idempotency-Key, exclusión por participantes y pruebas de fallas/concurrencia/reinicio.
 - [x] Guía y smoke HTTP reproducible en docs/problems/problem_02.md.
+- [x] Interfaz de perfiles, seguir/dejar de seguir, cancelar solicitudes y aprobar solicitudes recibidas.
+- [x] Seguimiento de operaciones y claves por intento, recarga, respuesta perdida y recuperación fallida.
+- [x] Navegación desde sugerencias/autores, contadores y actualización del feed; pruebas desktop/móvil.
 - Límites: un consumidor por host/volumen; una operación activa por participante (409 si está
   ocupado), hasta 10000 publicaciones por autor y 100000 referencias en el feed inspeccionado.
   El ranking y la paginación del feed completo pertenecen al P3.
@@ -53,13 +56,21 @@ rutas en Swagger o respuestas en modo demo.
 
 ## Problema 4: amigos en común y sugerencias
 
-- [ ] Cypher de amigos en común y 10 sugerencias por segundo grado/intereses.
-- [ ] Excluir bloqueados, suspendidos y cuentas ya seguidas.
+- [x] Consultas Cypher reales de amigos en común y hasta 10 sugerencias de segundo grado en Neo4j.
+- [x] Exclusión de solicitudes pendientes (P2), bloqueos directos o en el camino y cuentas ya seguidas.
+- [x] Validación cruzada de cuentas activas en MongoDB (`is_suspended` y `active_ids`) con sobremuestreo.
+- [x] Orden determinista por `score DESC, id ASC` en sugerencias y `id ASC` en amigos en común.
+- [x] UI en `/recomendaciones` (`RecommendationsPage`, `UserCard`), tests unitarios/integración y smoke HTTP en `scripts/validar_problema4.py`.
+- [x] Guía, secuencia y contratos en `docs/problems/problem_04.md`.
+- [x] Intereses declarados MongoDB, edición autenticada y normalización; usuarios antiguos sin cambios destructivos.
+- [x] Ranking por intereses comunes y conexiones, lectura por lotes sin corte a 30, complemento por intereses con filtros Neo4j.
+- [x] Editor «Mis intereses», etiquetas compartidas y pruebas de guardado/recarga/ranking en escritorio y móvil.
 
 ## Problema 5: reacciones y comentarios
 
 - [x] Alta, cambio y baja de reacción única por usuario/publicación en MongoDB.
 - [x] Comentarios persistidos y contadores Redis.
+- [x] Lectura autenticada y paginada de comentarios, autor/fecha/texto, filtros de visibilidad y actualización de la lista al comentar/recargar.
 - [x] Notificaciones almacenadas y publicación Pub/Sub.
 - [x] Idempotency-Key para comentarios y replay concurrente.
 - [x] Bloqueo Redis por publicación para cambios de reacción y sus compensaciones.
@@ -70,18 +81,28 @@ rutas en Swagger o respuestas en modo demo.
 - [x] Snapshot previo de reacción y reconciliación después de restaurar MongoDB.
 - [x] Recálculo absoluto atómico respetando gates P7/P8 y contadores preservados.
 - [x] Fingerprint del contenido para idempotencia de comentarios.
-- [ ] Recuperación durable de toda la operación tras caída, incluidas notificaciones e idempotencia pendiente.
-- Ver docs/problem_05_consistency.md para las garantías y límites actuales.
+- [x] Recuperación durable de toda la operación tras caída (altas, cambios, bajas y comentarios), incluidas notificaciones e idempotencia pendiente.
+- [x] UI de reacciones y comentarios en `PostInteractions` (`PostCard`), guía completa en `docs/problems/problem_05.md` y detalle de consistencia en `docs/problem_05_consistency.md`.
 
 ## Problema 6: mensajería grupal
 
-- [ ] Conversaciones/historial MongoDB y validación de participantes.
-- [ ] Presencia y entrega Redis, unread y lectura por participante.
-- [ ] Idempotencia, concurrencia, compensaciones y recuperación.
+- [x] Grupos de 2–20 participantes activos, autenticación y búsqueda por nombre de usuario.
+- [x] Historial MongoDB paginado por secuencia y lectura monotónica por participante.
+- [x] Presencia P8, avisos Redis y unread por conversación/participante, reconstruible desde MongoDB.
+- [x] Claves únicas durables para grupos y mensajes; replay y conflicto de contenido.
+- [x] Coordinación API/worker por conversación y volumen compartido; recuperación hacia adelante.
+- [x] Outbox en el propio mensaje: nunca borrar un mensaje persistido después de intentar entregarlo.
+- [x] Interfaz `/mensajes`, grupos, selección de participantes, historial, envío y marcado de lectura.
+- Pruebas y límites: `docs/problems/problem_06.md`. Un host/volumen compartido,
+  participantes fijos; avisos Pub/Sub sin confirmación de recepción. La interfaz consulta
+  historial cada 3 segundos; `completed` significa distribución procesada, no lectura del receptor.
 
 ## Problema 7: moderación — IMPLEMENTADO
 
 - [x] Reportes y decisiones reales en MongoDB; roles user/moderator/admin y bearer firmado.
+- [x] Hide resuelve todos los reportes pendientes asociados; revert actúa sobre ese mismo grupo.
+- [x] Origen de resolución, fecha estable y cantidad afectada en auditoría; recuperación parcial.
+- [x] Coordinación de reportes en curso con ocultamiento y revalidación al encolar decisiones.
 - [x] Ocultamiento global; retiro físico del feed; preservación/ocultamiento de contadores P5.
 - [x] Snapshot durable; revert del estado, pertenencia y scores anteriores; auditoría.
 - [x] Workflow compensable y recuperable después de reiniciar el consumidor.
@@ -89,7 +110,7 @@ rutas en Swagger o respuestas en modo demo.
 - [x] Idempotencia, exclusión atómica por post, decisiones/reintentos concurrentes.
 - [x] Tests unitarios, API e integración con MongoDB/Redis reales, incluidos crashes entre pasos.
 - [x] Swagger/OpenAPI con ejemplos, seed de desarrollo y smoke HTTP reproducible.
-- Validación: suite completa 94 passed / 0 failed; smoke HTTP sobre Compose exitoso.
+- Validación actualizada: suite completa 316 aprobados; smoke HTTP de tres reportes sobre Compose exitoso.
 - Despliegue soportado: Docker Linux, un host, consumidores P7 con volumen de flock compartido.
   No cubre pérdida de volúmenes ni consumidores independientes en múltiples hosts.
 - Guía: docs/problem_7_moderation_test_guide.md; diseño: docs/problems/problem_07.md.
@@ -121,7 +142,7 @@ rutas en Swagger o respuestas en modo demo.
 
 ## Informe y entrega
 
-- [x] Guía de Docker y guías concretas P1/P5.
+- [x] Guía de Docker y guías concretas P1/P4/P5.
 - [ ] Completar matriz con estimaciones y mediciones finales.
 - [ ] Actualizar DER y justificar cambios/desnormalizaciones.
 - [ ] Documentar secuencias, fallas y evidencia de los demás problemas.

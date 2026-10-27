@@ -16,6 +16,8 @@ function requestWithPages(...pages: unknown[]) {
   let index = 0
   return vi.fn<AuthRequest>().mockImplementation(async (path) => {
     if (path.startsWith('/api/v1/users/')) return author
+    if (path.startsWith('/api/v1/interactions/reactions/')) return { kind: null }
+    if (path.includes('/comments')) return { items: [], next_cursor: null }
     const page = pages[index++]
     if (page instanceof Error) throw page
     return page

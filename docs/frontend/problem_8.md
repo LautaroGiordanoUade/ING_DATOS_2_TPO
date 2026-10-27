@@ -1,5 +1,8 @@
 # P8 UI — Suspensión y trazabilidad de cuentas
 
+Esta guía conserva la evidencia de la entrega original de P8. La integración posterior
+con las demás UI de main se valida en [integración final](integration_p7_p8.md).
+
 Implementado el 27/10/2026 sobre el backend P8 existente. Sin modificaciones de API,
 workers, contratos OpenAPI ni lógica de suspensión. P1, P3 y P7 conservan sus regresiones.
 

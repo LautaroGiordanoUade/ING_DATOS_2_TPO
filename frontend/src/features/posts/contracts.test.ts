@@ -1,6 +1,6 @@
 import { expect, it } from 'vitest'
-import { composerSchema, isMediaUrl, splitInterests, terminal, toPostPayload } from './contracts'
-import { user } from '../../../tests/fixtures/session'
+import { composerSchema, isMediaUrl, postSchema, splitInterests, terminal, toPostPayload } from './contracts'
+import { postId, user } from '../../../tests/fixtures/session'
 
 it('rechaza texto vacío, exceso de caracteres e intereses vacíos', () => {
   expect(composerSchema.safeParse({ text: ' ', interests: 'datos', media: '' }).success).toBe(false)
@@ -18,3 +18,12 @@ it('solo detiene polling en estados terminales reales', () => {
   for (const state of ['completed', 'compensated', 'failed']) expect(terminal(state)).toBe(true)
   for (const state of ['pending', 'running', 'compensating']) expect(terminal(state)).toBe(false)
 })
+
+it.each(['2026-10-27T04:00:00', '2026-10-27T04:00:00Z', '2026-10-27T07:00:00+03:00'])(
+  'interpreta publicaciones UTC antiguas y conserva offsets explícitos: %s', (published_at) => {
+    const post = postSchema.parse({ id: postId, user_id: user.id, text: 'Post', media: [],
+      interests: [], published_at, reaction_count: 0, comment_count: 0 })
+    expect(Date.parse(post.published_at)).toBe(Date.UTC(2026, 9, 27, 4))
+    if (published_at.includes('+')) expect(post.published_at).toBe(published_at)
+  },
+)

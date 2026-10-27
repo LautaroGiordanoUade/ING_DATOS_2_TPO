@@ -1,27 +1,25 @@
-# Plan del frontend — estado después de P1, P3, P7 y P8
+# Plan del frontend — integración de P1 a P8
 
-Inspección del 21/10/2026 sobre `main` actualizado, commit `0d0f734`.
-Rama de trabajo: `feature/frontend-react-ui`. No existía frontend ni AGENTS.md aplicable.
-No se encontró un enunciado original separado (PDF/DOCX). El inventario se basa en
-`TODO.md`, `docs/problems/problem_01.md` a `problem_08.md`, guías, casos de uso,
-adaptadores y OpenAPI generado directamente desde `app.main:app`. Si se aporta el
-enunciado original habrá que contrastarlo antes de ampliar el alcance.
+Inspección actualizada sobre la rama de trabajo. No se encontró un enunciado original separado
+(PDF/DOCX). El inventario se basa en `TODO.md`, `docs/problems/problem_01.md` a `problem_08.md`,
+guías, casos de uso, adaptadores y OpenAPI generado directamente desde `app.main:app`. Si se aporta
+el enunciado original habrá que contrastarlo antes de ampliar el alcance.
 
 ## Inventario real
 
 Los ocho números son los ocho casos de uso existentes. Autenticación es infraestructura
 compartida, no un noveno problema. El estado del backend distingue código/documentación
-de verificación ejecutada durante esta entrega. P1, P3, P7 y P8 UI están terminados y documentados;
-los restantes problemas de UI siguen pendientes.
+de verificación ejecutada durante cada entrega. Las UI de P1 a P6 de main se integran
+con P7 y P8 en esta rama; su validación conjunta se documenta en integration_p7_p8.md.
 
-| Problema | Funcionalidad | UI mínima necesaria | Backend en main | Frontend |
+| Problema | Funcionalidad | UI mínima necesaria | Backend de esta rama | Frontend |
 |---|---|---|---|---|
 | 1 — Publicación y distribución recuperable | Publicar con intereses y distribuir por lotes | Crear publicación, estado de operación y preview de IDs visibles | Implementado; worker P1 | Completado y validado — ver problem_1.md |
-| 2 — Seguir/dejar de seguir | Follow público, solicitud privada, aprobación y contadores | Perfil por UUID, seguir/cancelar/dejar de seguir y solicitudes recibidas | Implementado; worker compartido P2/P7/P8 | Pendiente |
+| 2 — Seguir/dejar de seguir | Follow público, solicitud privada, aprobación y contadores | Perfiles desde sugerencias/autores, seguir/cancelar/dejar de seguir y solicitudes | Implementado; worker compartido P2/P7/P8 | Completado y validado — ver problem_2.md |
 | 3 — Feed personalizado | Hasta 20 posts, ranking por bloques y cursor opaco | Inicio con tarjetas, siguiente página y refrescar | Implementado; navegación de 15 min | Completado y validado — ver problem_3.md |
-| 4 — Amigos en común y sugerencias | Segundo grado/intereses, hasta 10 sugerencias | Sugerencias y consulta de amigos en común | Parcial: segundo grado real; mutual friends lanza 501 y faltan intereses | Bloqueado por backend incompleto |
-| 5 — Reacciones y comentarios | Reacción única, cambio/baja, comentarios y contadores | Controles en tarjeta y formulario de comentario | Implementado con límites de recuperación durable documentados | Pendiente |
-| 6 — Mensajería grupal | Historial, entrega, unread y lectura por participante | Conversación grupal, historial y envío, solo cuando existan contratos reales | Pendiente; envío lanza 501, faltan lecturas públicas completas | Bloqueado por backend incompleto |
+| 4 — Amigos en común y sugerencias | Segundo grado y amigos en común, hasta 10 sugerencias | Sugerencias y consulta de amigos en común en `/recomendaciones` | Implementado; Neo4j + filtro activo MongoDB | Completado y validado (`RecommendationsPage`, `UserCard`) |
+| 5 — Reacciones y comentarios | Reacción única, cambio/baja, comentarios y contadores | Controles en tarjeta y formulario de comentario | Implementado con recuperación durable | Completado y validado (`PostInteractions` en `PostCard`) |
+| 6 — Mensajería grupal | Historial, avisos, unread y lectura por participante | Crear grupos, buscar participantes, historial paginado, envío y lectura | Implementado; MongoDB/Redis, outbox y worker compartido | Implementado — ver problem_6.md |
 | 7 — Moderación | Reportar, decidir, consultar y revertir | Reportar desde post; lista/detalle de reportes, decisión/reversión e historial | Implementado; bearer y roles user/moderator/admin | Completado y validado — ver problem_7.md |
 | 8 — Suspensión y trazabilidad | Suspender/reactivar, revocar credenciales y consultar traza privada | Cuenta, motivo de suspensión/reactivación, historial y traza | Implementado; efectos MongoDB/Neo4j/Redis | Completado y validado — ver problem_8.md |
 
@@ -37,21 +35,24 @@ los restantes problemas de UI siguen pendientes.
    POST /posts ahora exige bearer y autor coincidente en servidor. El alias educativo
    /problems/1/publish conserva su contrato público para scripts, como límite documentado.
    Este paso está completo: 69 tests frontend, 14 E2E reales y 32 regresiones Python focalizadas.
-2. P2: depende de identidad/P1 para probar entrega y retiro. Solicitudes privadas incluidas.
+2. P2: completo; perfiles, controles de seguimiento, solicitudes privadas y aprobación,
+   operaciones recuperables en la interfaz y actualización de contadores/feed. Ver problem_2.md.
 3. P3: completo por pedido explícito de priorizar el feed antes de la UI P2. Reutiliza
    el backend P2 ya implementado y los seguidores sembrados; no requiere construir su UI.
    Inicio muestra seguidos y /mis-publicaciones conserva el contenido propio. Ver problem_3.md.
-4. P5: depende de posts/P3 e identidad. Refrescar datos del servidor después de mutaciones.
-5. P7: completo por pedido explícito de priorización. Usa identidad por rol y posts/P3;
-   verifica contadores con preparación API P5, sin construir su UI. Ver problem_7.md.
-6. P8: completo por pedido explícito. Usa identidad/P3/P7 y preparación API P2/P4/P6
-   para verificar trazabilidad, suspensión y reactivación sin revivir contenido moderado.
-   No implementa las UI pendientes de esos problemas. Ver problem_8.md.
-7. P4: después de completar backend de intereses/amigos en común y probar su contrato.
-8. P6: después de completar backend de conversación/historial/participantes/unread.
+4. P5: implementado en backend (`InteractWithPostUseCase` con recuperación durable) y en
+   frontend (`features/interactions/` integrado en `PostCard`), refrescando los contadores del
+   servidor después de cada mutación.
+5. P7: completo; reportes, decisiones, reversión, permisos e historial. Ver problem_7.md.
+6. P8: completo; suspensión/reactivación, consulta agregada y revocación de sesión.
+   Ver problem_8.md e integration_p7_p8.md para la integración con el resto de los módulos.
+7. P4: implementado en backend (`SocialRecommendationsUseCase` y `Neo4jSocialGraphRepository`)
+   y en frontend (`features/recommendations/` con ruta protegida `/recomendaciones`).
+8. P6: implementado con backend de grupos/historial/participantes/unread y recuperación;
+   interfaz y pruebas en `problem_6.md`.
 
-Cada paso requiere autorización del usuario; no se avanza automáticamente. P4/P6
-requieren trabajo backend futuro expresamente acotado antes de declarar una UI completa.
+Cada paso requiere autorización del usuario; no se avanza automáticamente. El backend
+y la interfaz de P6 se implementaron dentro del alcance autorizado para mensajería.
 
 ## Contratos e implementación por problema
 
@@ -89,9 +90,9 @@ incluye rutas todavía pendientes: OpenAPI no prueba comportamiento.
 - Endpoints: POST/DELETE `/social/follows`, POST `/social/follows/approve`, GET
   `/social/requests`, `/social/relations/{followed_id}`, `/social/counts/{user_id}`,
   `/social/operations/{id}` y perfil `/users/{id}`. Jobs 202; bearer, actor propio;
-  aprobación exclusiva del titular. No exponer retry técnico en navegación normal.
-- UI: perfil por UUID porque no existe buscador de cuentas; solicitudes recibidas;
-  botones reutilizables y confirmación de unfollow. UUID válido, impedir auto-follow,
+  aprobación exclusiva del titular. Retry visible sólo cuando una operación requiere recuperación.
+- UI: `/perfiles/:userId` desde sugerencias/autores y Mi perfil; `/solicitudes`;
+  botones reutilizables para seguir/cancelar/baja/aprobar. UUID válido, impedir auto-follow,
   clave de idempotencia 1–200. Estados none/pending/accepted/processing y jobs terminales.
 - Errores: usuario inexistente/suspendido, bloqueos, 401/403/404/409/422/503, lista vacía.
 - Tests: validación/derivación de estado; botones/permisos/estados; E2E público/privado,
@@ -111,40 +112,47 @@ incluye rutas todavía pendientes: OpenAPI no prueba comportamiento.
 
 ### P4 — amigos en común y sugerencias
 
-- Entidades: User, intereses, FOLLOWS/BLOCKS; Neo4j y MongoDB para estado activo.
-- GET `/problems/4/recommendations/{user_id}` devuelve UUIDs reales de segundo grado;
-  GET `/problems/4/mutual-friends?user_id=...&other_user_id=...` sigue sin implementación.
-- UI futura: sugerencias (máximo 10) y consulta por UUID; perfiles mediante contrato real,
-  validación de IDs, loading/vacío/501/503. No presentar recomendaciones parciales como TP completo.
-- Componentes reutilizados: UserAvatar/perfil/acciones P2 y mensajes de estado.
-- Tests futuros: exclusión seguido/bloqueado/suspendido y criterio intereses; componentes
-  vacíos/errores y E2E con grafo controlado. Dependencias P2 e implementación backend faltante.
+- Entidades: User.interests en MongoDB, FOLLOWS/BLOCKS en Neo4j y validación de estado activo.
+- «Mis intereses» edita preferencias con PUT `/users/me/interests`, refresca sugerencias y
+  muestra etiquetas compartidas. Usuarios antiguos sin el campo conservan sus datos.
+- GET `/problems/4/recommendations/{user_id}` devuelve hasta 10 UUIDs por segundo grado e intereses;
+  GET `/problems/4/mutual-friends?user_id=...&other_user_id=...` devuelve UUIDs reales de amigos
+  en común ordenados por identificador.
+- UI implementada en `/recomendaciones` (`RecommendationsPage` y `UserCard`): muestra sugerencias
+  (máximo 10), carga perfiles mediante `GET /users/{id}`, permite seleccionar cualquier tarjeta
+  sugerida o ingresar un UUID validado con `mutualFriendsQuerySchema` para consultar amigos en común.
+- Tests implementados: unitarios e integración de backend (`test_problem_04_recommendations.py`),
+  smoke HTTP (`scripts/validar_problema4.py`) y pruebas de componente en `RecommendationsPage.test.tsx`.
 
 ### P5 — reacciones y comentarios
 
 - Entidades: Reaction, Comment, contadores y notificación; MongoDB/Redis.
 - POST/DELETE `/problems/5/reaction`, POST `/problems/5/comment` con Idempotency-Key;
   GET `/posts/{id}` o feed para contadores. Los alias `/interactions/*` son 204:
-  usar rutas del problema para consultar operation_id. No hay listado público de comentarios
-  ni consulta de reacción propia: no inventar historial/estado propio; revisar necesidad de
-  extensión mínima del contrato antes de prometer esas vistas.
-- Formulario: comentario 1–2000, kind 1–30 según API (no inventar enumeración), UUIDs.
-  Controles de alta/cambio/baja; no convertir contadores locales en fuente de verdad.
+  usar rutas del problema para consultar operation_id. GET autenticado
+  `/interactions/reactions/{post_id}/me` restaura reacción propia y GET autenticado
+  `/posts/{post_id}/comments` lista autor/texto/fecha con cursor ligado al post.
+  `CommentList` muestra diez comentarios por página, carga anteriores y reinicia la lista
+  tras enviar. Un 404 retira contenido cacheado; otras fallas permiten reintentar.
+- Formulario: comentario 1–2000 (`commentPayloadSchema`), kind 1–30 (`reactionPayloadSchema`), UUIDs.
+  Controles de alta/cambio/baja en `PostInteractions`; refresca contadores del servidor con
+  `refreshPostCounters` después de cada mutación.
 - Estados: enviando, resultado de operación, 404 contenido retirado, 409 concurrencia,
-  422 y 503; conservar texto ante error. Sin UI de notificaciones ajena al alcance.
-- Tests: validaciones/idempotencia/error; controles y formulario; E2E reacción/cambio/baja,
-  comentario y contadores reales. Documentar recuperación durable aún pendiente en backend.
+  422 y 503; conserva texto e `Idempotency-Key` ante error para reintento seguro.
+- Tests: regresiones P5, integración real de consistencia y `test_comment_pages.py`;
+  componentes `PostInteractions.test.tsx` y `CommentList.test.tsx`; E2E `interactions.spec.ts`
+  y `comments.spec.ts`, además de los scripts de validación P5.
 
 ### P6 — mensajería grupal
 
-- Entidades: Conversation, Message, read_by, presencia y unread; MongoDB/Redis.
-- POST `/problems/6/message` y `/messages` existen pero envío real pendiente (501).
-  No hay API suficiente de listado/historial/lectura para construir todo el flujo.
-- UI futura mínima: conversación y formulario (UUIDs, texto 1–10000); miembros/autorización
-  deben validarse en backend. Presencia P8 implementada no equivale a resolver P6.
-- Estados previstos: historial cargando/vacío/error, envío pendiente/error, lectura por participante.
-- Tests después de completar contratos: validaciones/permisos, render/interacción y E2E
-  entre participantes, persistencia antes de entrega, unread y lectura. Sin mensajes simulados.
+- Entidades: grupos, mensajes, read_through, presencia y unread; MongoDB/Redis.
+- API `/messages/conversations`, búsqueda `/messages/participants`, historial/envío/lectura
+  por grupo y estado de entrega por mensaje. Alias autenticado `/problems/6/message`.
+- UI `/mensajes/:conversationId?`: crear grupo buscando usuarios, seleccionar conversación,
+  paginar historial, enviar texto de 1–4000 y marcar lectura explícita hasta el último mensaje.
+- Historial/vacío/error, reintento con la misma clave y texto, distribución pendiente;
+  consultas periódicas y heartbeat P8, disposición escritorio/móvil.
+- Pruebas de componente y E2E de dos participantes; detalles en `problem_6.md`.
 
 ### P7 — moderación
 
@@ -156,7 +164,7 @@ incluye rutas todavía pendientes: OpenAPI no prueba comportamiento.
   dependencias del servidor. Registrar no concede roles; seed de desarrollo existente.
 - Formularios: reason spam/abuse/hate/violence/other, description opcional hasta 2000;
   decisión hide/reject y motivo 1–1000; reversión motivo 1–1000. ConfirmDialog para acciones.
-- UI: página de reporte con enlace directo, bandeja con filtro de estado (la API limita a 100 reportes,
+- UI: modal de reporte, bandeja con filtro de estado (la API limita a 100 reportes,
   sin paginación pública), detalle/historial y job. No inventar limit/offset.
   Estados pendientes/resueltos/revertidos, lista vacía, 401/403/404/409/422/503.
 - Integrar invalidación de post/feed/contadores tras job completado; sin reintentos/compensaciones
@@ -186,9 +194,10 @@ Vitest + Testing Library y Playwright desde la base. Sin Redux, SSR ni carpetas 
 `app/` contiene providers/router/layout; `features/system/` comprueba conexión real;
 `features/auth/` contiene identidad y sesión; `features/posts/` publicación, operaciones,
 contenido propio y preview de distribución P1; `features/feed/` contiene API, paginación
-y tarjetas con autor para P3; `features/moderation/` agrega reportes, bandeja por rol,
-decisiones, historial y seguimiento P7; `features/accounts/` agrega trazabilidad en una petición,
-suspensión/reactivación, presencia del titular y seguimiento P8;
+y tarjetas con autor para P3; `features/recommendations/` contiene sugerencias de segundo
+grado y consulta de amigos en común para P4; `features/interactions/` contiene reacciones
+y comentarios para P5; `features/messages/` contiene grupos, historial y lectura para P6;
+`features/social/` contiene perfiles, seguimiento, solicitudes y seguimiento de operaciones P2;
 `components/common/` mensajes reutilizables; `services/http/` cliente, errores y timeout;
 `services/api/` tipos OpenAPI; `styles/` diseño responsive; `tests/e2e/` arranque real.
 Cada funcionalidad futura tendrá su carpeta cuando se implemente.
@@ -196,7 +205,7 @@ Cada funcionalidad futura tendrá su carpeta cuando se implemente.
 Layout claro con sidebar escritorio, navegación compacta móvil, tarjetas blancas, tipografía
 del sistema, foco visible y enlaces accesibles. P1 agrega registro/login, publicaciones propias,
 composer y operación a la bienvenida/fallback 404. P3 convierte Inicio en feed y mueve
-las publicaciones propias a /mis-publicaciones. No se añaden botones de módulos pendientes.
+las publicaciones propias a /mis-publicaciones. P4 agrega /recomendaciones en el menú lateral.
 La bienvenida consume GET `/health/ready`, muestra servicios reales y permite reintentar.
 Readiness 503 se muestra como degradado. Las capturas de iteración 0 quedan como evidencia histórica.
 
@@ -225,13 +234,18 @@ Preparación: `iteration_0.md`. P1: `problem_1.md`, 69 tests frontend (38 unitar
 desktop/móvil en `screenshots/p1/`. Los escenarios de P1 usan API, workers y motores reales.
 P3: `problem_3.md`, 81 tests frontend (41 unitarios y 40 componentes), 18 E2E sobre
 build/preview y comprobación real de lautaro1/lautaro1000 viendo el post de Lautaro.
-Sin cambios de backend. Capturas en `screenshots/p3/`. No se reclama una ejecución completa
-de la suite Python.
-P7: `problem_7.md`, 114 tests frontend y 24 E2E contra Docker/Nginx, seis nuevos de
-moderación. Reportar, ocultar/rechazar/restaurar, permisos por rol, historial y operación;
-compatibilidad con UUID históricos del backend. Capturas en `screenshots/p7/`.
-Siguiente pendiente: P2; requiere autorización antes de comenzar.
+Sin cambios de backend. Capturas en `screenshots/p3/`.
+P4: `docs/problems/problem_04.md`, módulo `features/recommendations/` con 5 tests de componente
+en Vitest, 8 tests unitarios Python, 4 tests de integración real Neo4j/MongoDB y script HTTP
+`scripts/validar_problema4.py`.
+P5: `docs/problems/problem_05.md` y `docs/problem_05_consistency.md`, módulo `features/interactions/`
+con 7 tests de componente en Vitest, 14 tests unitarios Python en `test_problem_05_regressions.py`,
+11 tests de integración real en `test_problem_05_consistency.py` y scripts `scripts/validar_problema5.py`
+y `scripts/validar_problema5_fallas.py`.
 
-P8: `problem_8.md`, 139 tests frontend y 30 E2E contra Docker/Nginx, seis nuevos de cuentas.
-Se verifican feed, sugerencias, presencia, revocación, privacidad, compensación y conservación
-de moderaciones P7. Sin cambios backend. Capturas en `screenshots/p8/`; QA P8 limpiado al terminar.
+## Integración de moderación y cuentas
+
+P7 y P8 UI completos: reportes, decisiones, reversión, trazabilidad agregada y
+suspensión/reactivación. Ver problem_7.md y problem_8.md para las validaciones originales.
+Se conserva la navegación, perfiles/seguimiento, sugerencias, interacciones y mensajería
+de main. Ver integration_p7_p8.md para los resultados sobre la combinación final.
