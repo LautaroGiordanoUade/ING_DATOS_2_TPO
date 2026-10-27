@@ -28,6 +28,10 @@ class MongoPublicationJobs:
         await self._jobs.create_index(
             [("operation.status", 1), ("operation.created_at", 1)], name="publication_pending"
         )
+        await self._jobs.create_index("post.id", name="ix_publication_post")
+        await self._jobs.create_index(
+            [("post.user_id", 1), ("operation.status", 1)], name="ix_publication_author_status"
+        )
 
     async def enqueue(self, post: Post, key: str | None, fail_at: str | None) -> PublicationJob:
         author = await self._database["users"].find_one(

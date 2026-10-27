@@ -48,7 +48,8 @@ Para una selección, agregar un path, por ejemplo `tests/integration/test_redis_
 Sin `RUN_INTEGRATION_TESTS=1`, las pruebas que requieren motores se omiten: un resultado con
 integraciones omitidas no equivale a la suite completa.
 
-La validación registrada al integrar dataset y rendimiento P8 es **335 pruebas aprobadas**.
+La validación registrada tras la auditoría de índices es **337 pruebas aprobadas**;
+Ruff y mypy sobre 176 archivos de aplicación también aprobados. Ver [auditoría](index_audit.md).
 Los recorridos HTTP sobre volumen son una verificación adicional: ver [dataset](dataset.md)
 y [mediciones P8](problem_8_performance.md). Las pruebas de interfaz se describen en el
 [README del frontend](../frontend/README.md#validación).
