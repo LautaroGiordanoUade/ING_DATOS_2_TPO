@@ -5153,6 +5153,18 @@
             ],
             "title": "Fail At"
           },
+          "decision_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decision At"
+          },
           "created_at": {
             "type": "string",
             "format": "date-time",
@@ -5742,6 +5754,30 @@
               }
             ],
             "title": "Operation Id"
+          },
+          "resolution_operation_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolution Operation Id"
+          },
+          "resolution_report_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolution Report Id"
           }
         },
         "type": "object",

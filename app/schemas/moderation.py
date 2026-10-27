@@ -58,6 +58,8 @@ class ReportResponse(BaseModel):
     decision: str | None = None
     decision_reason: str | None = None
     operation_id: UUID | None = None
+    resolution_operation_id: UUID | None = None
+    resolution_report_id: UUID | None = None
 
 
 class LoginRequest(BaseModel):
