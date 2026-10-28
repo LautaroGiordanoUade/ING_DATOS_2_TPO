@@ -137,12 +137,11 @@ rutas en Swagger o respuestas en modo demo.
 
 - [x] Dockerfile/Compose: frontend, API, publication-worker, moderation-worker, MongoDB, Redis y Neo4j.
 - [x] Volúmenes y healthchecks de motores/API.
-- [x] La API ya no inicializa PostgreSQL; identidad/moderación se asignan a MongoDB.
+- [x] Identidad y moderación se almacenan en MongoDB.
 - [x] Registro de operaciones durable MongoDB y consulta por operation_id.
 - [x] Generador reproducible: 50000 publicaciones y población proporcional; carga por lotes, replay y verificación cruzada. Ver docs/dataset.md.
 - [x] Auditoría de índices/constraints y 20 planes MongoDB, 4 perfiles Neo4j y lecturas de repositorios sobre volumen; índices faltantes y evidencia en docs/index_audit.md.
 - [x] Respaldo/restauración AOF y reconstrucción lógica offline en Redis vacío, con verificación, reanudación y límites documentados en docs/redis_recovery.md.
-- PostgreSQL/Alembic quedan como código legado sin uso en ejecución; no son un cuarto motor.
 
 ## Informe y entrega
 

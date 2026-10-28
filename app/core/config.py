@@ -17,11 +17,6 @@ class Settings(BaseSettings):
     api_v1_prefix: str = "/api/v1"
     auth_secret: SecretStr = SecretStr("local-development-only-change-before-deployment")
     access_token_seconds: int = 3600
-    postgres_host: str = "localhost"
-    postgres_port: int = 5432
-    postgres_db: str = "niche_social"
-    postgres_user: str = "postgres"
-    postgres_password: SecretStr = SecretStr("")
 
     mongodb_url: str = "mongodb://localhost:27017"
     mongodb_database: str = "niche_social"
@@ -40,14 +35,6 @@ class Settings(BaseSettings):
         if self.app_env == "production" and self.app_demo_mode:
             raise ValueError("APP_DEMO_MODE cannot be enabled in production")
         return self
-
-    @property
-    def postgres_dsn(self) -> str:
-        password = self.postgres_password.get_secret_value()
-        return (
-            f"postgresql+asyncpg://{self.postgres_user}:{password}@"
-            f"{self.postgres_host}:{self.postgres_port}/{self.postgres_db}"
-        )
 
 
 @lru_cache
