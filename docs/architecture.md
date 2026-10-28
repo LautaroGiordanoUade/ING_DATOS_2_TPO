@@ -5,8 +5,7 @@
 Domain define entidades y contratos; Application coordina los casos de uso; Infrastructure
 implementa los drivers. La API FastAPI expone los comandos y consultas.
 
-Se eligieron tres motores NoSQL: MongoDB, Neo4j y Redis. PostgreSQL no se inicializa ni es
-necesario para ejecutar el sistema. Sus archivos y Alembic quedan como legado.
+Se eligieron tres motores NoSQL: MongoDB, Neo4j y Redis.
 
 MongoDB es fuente de verdad del contenido, comentarios y reacciones. También se asignan aquí
 usuarios y moderación, además de conversaciones, mensajes y lectura por participante.

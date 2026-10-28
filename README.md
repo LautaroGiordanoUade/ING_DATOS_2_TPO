@@ -44,7 +44,6 @@ antes de quedar saludable. El dataset de volumen se carga con un comando separad
 Los workers deben permanecer activos para completar y recuperar trabajos. Los volúmenes
 conservan los datos y coordinan los bloqueos locales. Redis usa AOF con sincronización
 cada segundo; una caída abrupta puede perder el último segundo de escrituras.
-PostgreSQL/Alembic permanecen como código legado y no participan del despliegue.
 
 Dentro de Docker se usan los nombres `mongo`, `redis` y `neo4j`; los puertos del host sólo
 se publican en localhost. Compose funciona sin copiar `.env`. El usuario local de Neo4j
