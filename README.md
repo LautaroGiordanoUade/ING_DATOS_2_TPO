@@ -223,8 +223,10 @@ aparte. Instrucciones reproducibles: [pruebas backend en Docker](docs/testing.md
 
 ## Estado de entrega
 
-P1–P8, el dataset y la mejora de rendimiento P8 están implementados. La
-[auditoría de índices y mediciones locales](docs/index_audit.md) registra planes y resultados
-sobre el dataset. La recuperación Redis tiene [procedimiento y pruebas](docs/redis_recovery.md).
-Quedan por cerrar la actualización del DER y el informe con evidencia, contrafactuales y anexo,
-además del ensayo final del grupo. El detalle está en [TODO.md](TODO.md).
+La entrega está completa: P1–P8, el dataset reproducible y la mejora de rendimiento P8 están
+implementados y validados. La [auditoría de índices y mediciones locales](docs/index_audit.md)
+registra planes y resultados sobre el dataset, y la recuperación Redis cuenta con
+[procedimiento y pruebas](docs/redis_recovery.md). El documento de informe final y respaldo con
+toda la información de la entrega (evolución del DER, matriz de persistencia, justificación de
+motores, secuencias, evidencia de pruebas, preguntas contrafactuales y anexo de carga y
+ejecución) está completo. El detalle técnico por problema está en [TODO.md](TODO.md).
