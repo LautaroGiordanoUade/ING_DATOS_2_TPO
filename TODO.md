@@ -1,8 +1,5 @@
 # Estado del Trabajo Práctico
 
-Estado del código de esta rama. Los puntos marcados pendientes siguen pendientes aunque tengan
-rutas en Swagger o respuestas en modo demo.
-
 ## Problema 1: publicación
 
 - [x] API real con respuesta 202 y trabajo durable MongoDB.
